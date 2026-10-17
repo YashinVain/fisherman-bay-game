@@ -1,0 +1,11 @@
+{
+    "out": "out",
+    "steps": [
+        { "size": [1400, 1080, 1] },
+        { "open": "http://127.0.0.1:8940/tools/sketches/heroes.html", "wait": 1500 },
+        { "shot": "heroes.png" },
+        { "shot": "heroes-zoom1.png", "clip": [270, 120, 220, 210, 3] },
+        { "shot": "heroes-zoom2.png", "clip": [1060, 420, 220, 210, 3] },
+        { "shot": "heroes-zoom3.png", "clip": [660, 720, 220, 210, 3] }
+    ]
+}

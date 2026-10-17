@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Варианты вида рыбалки</title>
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+    html, body { overflow: auto; height: auto; touch-action: auto; background: #e9f2f7; }
+    body { padding: 18px; }
+    h1 { margin: 0 0 6px; font-size: 26px; }
+    h2 { margin: 28px 0 10px; font-size: 22px; }
+    .wrap { display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 18px; }
+    .cell { background: #fff; border-radius: 20px; padding: 10px; box-shadow: 0 4px 0 #d6e2ea; }
+    .cell canvas { width: 100%; border-radius: 14px; display: block; }
+    .cap { padding: 8px 6px 2px; }
+    .cap b { font-size: 19px; }
+    .cap p { margin: 4px 0 0; font-weight: 700; color: var(--ink-soft); font-size: 14px; line-height: 1.35; }
+    .letter { display: inline-flex; width: 30px; height: 30px; border-radius: 50%; background: var(--sea); color: #fff; align-items: center; justify-content: center; margin-right: 6px; }
+    .navdemo { position: relative; height: 170px; border-radius: 14px; overflow: hidden; background: linear-gradient(#8fd3f2 0 45%, #4aa6d0 45%); }
+    /* Вариант 2: пузыри справа */
+    .bub { position: absolute; right: 12px; top: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .bub i { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #fff; box-shadow: 0 3px 0 rgba(0,0,0,.25); }
+    .bub i svg { width: 28px; height: 28px; }
+    /* Вариант 3: деревянные таблички */
+    .planks { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); display: flex; gap: 4px; }
+    .planks div { width: 70px; height: 62px; border-radius: 8px; background: repeating-linear-gradient(0deg, #c08a4e 0 9px, #b37c42 9px 11px); border: 3px solid #7a4f26; box-shadow: 0 4px 0 #5a3818; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff4dc; font-size: 11px; text-shadow: 0 1px 0 #5a3818; position: relative; }
+    .planks div::before { content: ''; position: absolute; top: -10px; left: 50%; width: 2px; height: 10px; background: #d8c28a; }
+    .planks svg { width: 30px; height: 30px; }
+    /* Вариант 4: цветные кубики */
+    .cubes { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); display: flex; gap: 8px; }
+    .cubes div { width: 62px; height: 62px; border-radius: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 5px 0 rgba(0,0,0,.25), inset 0 -4px 0 rgba(0,0,0,.12); }
+    .cubes svg { width: 34px; height: 34px; }
+    .cubes span, .bub span { font-size: 11px; color: #fff; -webkit-text-stroke: 3px rgba(0,0,0,.35); paint-order: stroke fill; }
+    .now .nav { position: absolute; transform: translateX(-50%) scale(.72); transform-origin: bottom center; }
+</style>
+</head>
+<body>
+<h1>Как ещё может выглядеть рыбалка</h1>
+<div class="muted">Эскизы. Игра пока не менялась — выбери вариант (или смесь), и я переделаю.</div>
+
+<h2>Вид сцены и рыбака</h2>
+<div class="wrap">
+    <div class="cell"><canvas id="cA" width="960" height="600"></canvas><div class="cap"><b><span class="letter">A</span>Лодка и подводный мир</b><p>Вид сбоку, вода «в разрезе»: видно, как рыбы плавают на разной глубине и подплывают к крючку. Опускаешь крючок на нужную глубину — сам выбираешь, кого ловить. Самый «живой» и необычный вариант, детям особенно понятно.</p></div></div>
+    <div class="cell"><canvas id="cB" width="960" height="600"></canvas><div class="cap"><b><span class="letter">B</span>Сидит на мостках</b><p>Рыбак в профиль сидит на краю мостков на ведёрке, ноги свисают, рядом кот. Уютно и «по-настоящему», рыбак с характером. Механика как сейчас — поплавок на воде.</p></div></div>
+    <div class="cell"><canvas id="cC" width="960" height="600"></canvas><div class="cap"><b><span class="letter">C</span>От первого лица из лодки</b><p>Видны только руки с удочкой и нос лодки — будто сам сидишь в лодке. Сильное погружение, удочка гнётся прямо перед глазами при вываживании.</p></div></div>
+    <div class="cell"><canvas id="cD" width="960" height="600"></canvas><div class="cap"><b><span class="letter">D</span>Островок-диорама</b><p>Камера чуть сверху: маленький остров с домиком, деревом и причалом посреди воды, вокруг видны тени рыб. Похоже на игрушку, очень мило. Острова можно украшать — ещё одна причина зайти в магазин.</p></div></div>
+</div>
+
+<h2>Кнопки меню</h2>
+<div class="wrap">
+    <div class="cell"><div class="navdemo now" id="n1"></div><div class="cap"><b><span class="letter">1</span>Как сейчас</b><p>Белая панель снизу.</p></div></div>
+    <div class="cell"><div class="navdemo" id="n2"></div><div class="cap"><b><span class="letter">2</span>Пузыри сбоку</b><p>Круглые цветные кнопки столбиком справа — середина экрана свободна для воды.</p></div></div>
+    <div class="cell"><div class="navdemo" id="n3"></div><div class="cap"><b><span class="letter">3</span>Деревянные таблички</b><p>Кнопки-дощечки на верёвочках — как вывески на рыбацкой пристани.</p></div></div>
+    <div class="cell"><div class="navdemo" id="n4"></div><div class="cap"><b><span class="letter">4</span>Цветные кубики</b><p>Каждый раздел своего цвета, без общей панели. Ярко и понятно даже малышам.</p></div></div>
+</div>
+
+<script>window.FB = { lang: 'ru', t: (k) => k };</script>
+<script src="../../js/core/util.js"></script>
+<script src="../../js/data/fish.js"></script>
+<script src="../../js/view/fishart.js"></script>
+<script src="../../js/ui/icons.js"></script>
+<script>
+const U = FB.U;
+const fishImg = (id, size) => FB.fishArt.canvas(id, size);
+const drawFish = (ctx, id, x, y, size, flip, alpha) => {
+    const img = fishImg(id, 128);
+    ctx.save(); ctx.globalAlpha = alpha == null ? 1 : alpha; ctx.translate(x, y); if (flip) ctx.scale(-1, 1);
+    ctx.drawImage(img, -size / 2, -size / 2 * img.height / img.width, size, size * img.height / img.width);
+    ctx.restore();
+};
+const OUT = 'rgba(30,25,40,.6)';
+function sky(ctx, W, H, hy, top, bot) {
+    const g = ctx.createLinearGradient(0, 0, 0, hy); g.addColorStop(0, top); g.addColorStop(1, bot);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, hy + 2);
+}
+function cloud(ctx, x, y, s) {
+    ctx.fillStyle = '#d8e8f4';
+    [[0, 6, 30], [34, -6, 38], [72, 4, 30], [36, 12, 34]].forEach(([dx, dy, r]) => { ctx.beginPath(); ctx.arc(x + dx * s, y + dy * s + 4, r * s, 0, 7); ctx.fill(); });
+    ctx.fillStyle = '#fff';
+    [[0, 6, 30], [34, -6, 38], [72, 4, 30], [36, 12, 34]].forEach(([dx, dy, r]) => { ctx.beginPath(); ctx.arc(x + dx * s, y + dy * s, r * s, 0, 7); ctx.fill(); });
+}
+function hills(ctx, W, y, amp, col, ph) {
+    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, y + 40);
+    for (let x = 0; x <= W; x += 10) ctx.lineTo(x, y - amp * (0.6 + 0.3 * Math.sin(x / W * 6 + ph) + 0.1 * Math.sin(x / W * 17 + ph)));
+    ctx.lineTo(W, y + 40); ctx.fill();
+}
+function tree(ctx, x, y, r, col) {
+    ctx.fillStyle = '#6a4a2a'; ctx.fillRect(x - r * 0.12, y - r * 0.7, r * 0.24, r * 0.8);
+    ctx.fillStyle = col; [[0, -1.2, 0.9], [-0.6, -0.85, 0.65], [0.6, -0.85, 0.68]].forEach(([a, b, c]) => { ctx.beginPath(); ctx.arc(x + a * r, y + b * r, c * r, 0, 7); ctx.fill(); });
+}
+function sun(ctx, x, y, r) {
+    const g = ctx.createRadialGradient(x, y, r * 0.5, x, y, r * 5); g.addColorStop(0, 'rgba(255,248,200,.9)'); g.addColorStop(1, 'rgba(255,248,200,0)');
+    ctx.fillStyle = g; ctx.fillRect(x - r * 5, y - r * 5, r * 10, r * 10);
+    ctx.fillStyle = '#fff6c8'; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+}
+function reeds(ctx, x0, x1, base, h, col) {
+    ctx.lineCap = 'round';
+    for (let x = x0; x < x1; x += 7) {
+        const hh = h * (0.55 + ((x * 37) % 45) / 100), lean = (((x * 13) % 20) - 10) / 40 * hh;
+        ctx.strokeStyle = (x / 7) % 2 ? col : U.shade(col, -0.2); ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(x, base); ctx.quadraticCurveTo(x + lean * 0.2, base - hh * 0.6, x + lean, base - hh); ctx.stroke();
+    }
+}
+// Чиби-рыбак в профиль (смотрит вправо). sit — сидит
+function chibi(ctx, x, y, s, opt) {
+    opt = opt || {};
+    ctx.save(); ctx.translate(x, y); ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = OUT;
+    if (opt.sit) {
+        // ноги свисают
+        ctx.fillStyle = '#3d5478';
+        ctx.beginPath(); ctx.roundRect(-4 * s, -14 * s, 30 * s, 13 * s, 6 * s); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.roundRect(16 * s, -12 * s, 11 * s, 30 * s, 5 * s); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#e6c24a'; ctx.beginPath(); ctx.roundRect(14 * s, 16 * s, 18 * s, 9 * s, 4 * s); ctx.fill(); ctx.stroke();
+    } else {
+        ctx.fillStyle = '#3d5478';
+        ctx.beginPath(); ctx.roundRect(-10 * s, -18 * s, 20 * s, 18 * s, 5 * s); ctx.fill(); ctx.stroke();
+    }
+    // тело
+    ctx.fillStyle = opt.jacket || '#f2b33a';
+    ctx.beginPath(); ctx.roundRect(-16 * s, -50 * s, 30 * s, 38 * s, 12 * s); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.beginPath(); ctx.roundRect(-12 * s, -46 * s, 8 * s, 26 * s, 4 * s); ctx.fill();
+    // голова — большая, мультяшная
+    ctx.fillStyle = '#f6cfa6'; ctx.beginPath(); ctx.arc(0, -70 * s, 22 * s, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#e8a888'; ctx.beginPath(); ctx.arc(14 * s, -64 * s, 5 * s, 0, 7); ctx.fill();
+    ctx.fillStyle = '#2a2a34'; ctx.beginPath(); ctx.ellipse(10 * s, -73 * s, 3 * s, 4 * s, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(11 * s, -75 * s, 1.2 * s, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#a0603a'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(13 * s, -62 * s, 5 * s, 0.3, 1.8); ctx.stroke();
+    ctx.strokeStyle = OUT; ctx.lineWidth = 3;
+    // шляпа-панама
+    ctx.fillStyle = opt.hat || '#3a8ad8';
+    ctx.beginPath(); ctx.ellipse(2 * s, -86 * s, 30 * s, 7 * s, -0.08, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0, -92 * s, 18 * s, 13 * s, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.fillRect(-18 * s, -92 * s, 36 * s, 4 * s);
+    // рука к удочке
+    ctx.fillStyle = opt.jacket || '#f2b33a';
+    ctx.beginPath(); ctx.roundRect(0, -42 * s, 24 * s, 10 * s, 5 * s); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#f6cfa6'; ctx.beginPath(); ctx.arc(26 * s, -37 * s, 6 * s, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.restore();
+    return { hx: x + 26 * s, hy: y - 37 * s };
+}
+function rod(ctx, hx, hy, tx, ty, bend) {
+    const mx = (hx + tx) / 2 + bend * 0.3, my = (hy + ty) / 2 + bend;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#5a3a22'; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(hx - (tx - hx) * 0.15, hy - (ty - hy) * 0.15); ctx.quadraticCurveTo(mx, my, tx, ty); ctx.stroke();
+    ctx.strokeStyle = '#d8a85a'; ctx.lineWidth = 4; ctx.stroke();
+}
+function floatAt(ctx, x, y, r) {
+    ctx.lineWidth = 2.5; ctx.strokeStyle = OUT;
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#e8402a'; ctx.beginPath(); ctx.arc(x, y, r, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillRect(x - 2, y - r * 2.4, 4, r * 1.5);
+    ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y + r * 0.4, r * 2.4, r * 0.6, 0, 0, 7); ctx.stroke();
+}
+function line(ctx, x0, y0, x1, y1, sag) {
+    ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo((x0 + x1) / 2, Math.max(y0, y1) + sag, x1, y1); ctx.stroke();
+}
+
+// ---------- A: лодка и подводный мир ----------
+(function () {
+    const c = document.getElementById('cA'), ctx = c.getContext('2d'), W = c.width, H = c.height, wl = 210;
+    sky(ctx, W, H, wl, '#6cc4f4', '#d6f1ff'); sun(ctx, 820, 70, 34); cloud(ctx, 120, 70, 0.9); cloud(ctx, 520, 50, 0.7);
+    hills(ctx, W, wl - 6, 40, '#9fd08a', 1); for (let i = 0; i < 7; i++) tree(ctx, 60 + i * 140, wl - 18 - (i % 2) * 8, 16, i % 2 ? '#5aa04a' : '#6ab452');
+    // Вода в разрезе
+    const g = ctx.createLinearGradient(0, wl, 0, H); g.addColorStop(0, '#7fd0ee'); g.addColorStop(0.5, '#2f8fbe'); g.addColorStop(1, '#14507a');
+    ctx.fillStyle = g; ctx.fillRect(0, wl, W, H - wl);
+    // Лучи света под водой
+    ctx.fillStyle = 'rgba(255,255,255,.08)';
+    [120, 380, 640].forEach(x => { ctx.beginPath(); ctx.moveTo(x, wl); ctx.lineTo(x + 70, wl); ctx.lineTo(x + 170, H); ctx.lineTo(x + 40, H); ctx.fill(); });
+    // Дно
+    ctx.fillStyle = '#c8b07a'; ctx.beginPath(); ctx.moveTo(0, H); for (let x = 0; x <= W; x += 20) ctx.lineTo(x, H - 40 - 18 * Math.sin(x / 90)); ctx.lineTo(W, H); ctx.fill();
+    ctx.fillStyle = '#8a949a'; [[180, H - 50, 40], [700, H - 46, 54]].forEach(([x, y, r]) => { ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.55, 0, Math.PI, 0); ctx.fill(); });
+    ctx.strokeStyle = '#3f8f4a'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+    [[90, 4], [110, 5], [820, 4], [850, 6], [880, 3]].forEach(([x, n]) => { ctx.beginPath(); ctx.moveTo(x, H - 40); for (let i = 1; i <= n; i++) ctx.quadraticCurveTo(x + (i % 2 ? 14 : -14), H - 40 - i * 22 + 11, x, H - 40 - i * 22); ctx.stroke(); });
+    // Пузырьки
+    ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2;
+    [[300, 420, 5], [310, 380, 3], [760, 300, 4], [770, 270, 3]].forEach(([x, y, r]) => { ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke(); });
+    // Рыбы на разных глубинах (подписи глубины)
+    drawFish(ctx, 'crucian', 250, 270, 70, false);
+    drawFish(ctx, 'perch', 640, 300, 64, true);
+    drawFish(ctx, 'rudd', 760, 360, 60, true, 0.95);
+    drawFish(ctx, 'bream', 300, 420, 110, false);
+    drawFish(ctx, 'carp', 700, 470, 130, true);
+    drawFish(ctx, 'goldcarp', 160, 520, 120, false, 0.55);
+    // Шкала глубины
+    ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.font = '800 20px Nunito'; ctx.textAlign = 'left';
+    [['1 м', 260], ['3 м', 380], ['5 м', 500]].forEach(([t, y]) => { ctx.fillText(t, 18, y); ctx.fillRect(60, y - 7, 18, 3); });
+    // Лодка
+    ctx.lineWidth = 3; ctx.strokeStyle = OUT;
+    ctx.fillStyle = '#d8573e'; ctx.beginPath(); ctx.moveTo(390, wl - 26); ctx.lineTo(590, wl - 26); ctx.quadraticCurveTo(575, wl + 22, 540, wl + 26); ctx.lineTo(430, wl + 26); ctx.quadraticCurveTo(398, wl + 18, 390, wl - 26); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#f6e6c8'; ctx.fillRect(392, wl - 26, 196, 9); ctx.strokeRect(392, wl - 26, 196, 9);
+    const h = chibi(ctx, 455, wl - 22, 1.0, { sit: true });
+    // Удочка и леска вниз к крючку
+    rod(ctx, h.hx, h.hy, 640, wl - 120, 10);
+    ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(640, wl - 120); ctx.lineTo(640, 395); ctx.stroke();
+    floatAt(ctx, 640, wl, 9);
+    // Крючок с червяком и рыба, которая подплывает
+    ctx.strokeStyle = '#c8d0d8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(640, 395); ctx.lineTo(640, 410); ctx.arc(633, 410, 7, 0, Math.PI); ctx.stroke();
+    ctx.strokeStyle = '#e8869a'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(628, 412); ctx.quadraticCurveTo(620, 425, 632, 432); ctx.stroke();
+    drawFish(ctx, 'tench', 560, 418, 84, false);
+    ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.font = '900 30px Nunito'; ctx.fillText('?', 600, 392);
+})();
+
+// ---------- B: сидит на мостках ----------
+(function () {
+    const c = document.getElementById('cB'), ctx = c.getContext('2d'), W = c.width, H = c.height, hy = 250;
+    sky(ctx, W, H, hy, '#ffc79a', '#fff1d6'); sun(ctx, 720, 170, 46); cloud(ctx, 160, 60, 0.8);
+    hills(ctx, W, hy - 6, 60, '#b9c98a', 2); for (let i = 0; i < 8; i++) tree(ctx, 40 + i * 125, hy - 10 - (i % 3) * 6, 18, i % 2 ? '#7aa85a' : '#8ab868');
+    const g = ctx.createLinearGradient(0, hy, 0, H); g.addColorStop(0, '#ffd8b0'); g.addColorStop(0.15, '#8fcfe0'); g.addColorStop(1, '#2e7fa8');
+    ctx.fillStyle = g; ctx.fillRect(0, hy, W, H - hy);
+    ctx.fillStyle = 'rgba(255,240,200,.5)'; ctx.beginPath(); ctx.moveTo(700, hy); ctx.lineTo(740, hy); ctx.lineTo(820, H); ctx.lineTo(640, H); ctx.fill();
+    reeds(ctx, 820, 960, 520, 120, '#6a9a3a');
+    // Мостки сбоку
+    ctx.fillStyle = '#5a3a20'; [60, 230, 380].forEach(x => ctx.fillRect(x, 440, 18, 160));
+    ctx.fillStyle = '#b07a42'; ctx.fillRect(0, 420, 420, 30); ctx.strokeStyle = OUT; ctx.lineWidth = 3; ctx.strokeRect(-2, 420, 422, 30);
+    ctx.strokeStyle = 'rgba(80,50,20,.4)'; for (let x = 40; x < 420; x += 50) { ctx.beginPath(); ctx.moveTo(x, 420); ctx.lineTo(x, 450); ctx.stroke(); }
+    // Ведро и рыбак
+    ctx.fillStyle = '#7aa0b8'; ctx.beginPath(); ctx.moveTo(220, 420); ctx.lineTo(276, 420); ctx.lineTo(270, 370); ctx.lineTo(226, 370); ctx.closePath(); ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = OUT; ctx.stroke();
+    const h = chibi(ctx, 250, 372, 1.45, { sit: true, jacket: '#5aa84a', hat: '#e8c060' });
+    // Кот рядом
+    ctx.fillStyle = '#f0903a'; ctx.strokeStyle = OUT; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(110, 400, 26, 22, 0, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(126, 370, 17, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(116, 358); ctx.lineTo(118, 342); ctx.lineTo(128, 354); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(132, 355); ctx.lineTo(140, 341); ctx.lineTo(143, 358); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#2a2a34'; ctx.beginPath(); ctx.arc(134, 370, 2.5, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#f0903a'; ctx.lineWidth = 8; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(86, 410); ctx.quadraticCurveTo(60, 400, 70, 375); ctx.stroke();
+    rod(ctx, h.hx, h.hy, 600, 230, 20);
+    floatAt(ctx, 640, 380, 10);
+    line(ctx, 600, 230, 640, 372, 20);
+    drawFish(ctx, 'carp', 600, 470, 90, false, 0.25);
+})();
+
+// ---------- C: от первого лица ----------
+(function () {
+    const c = document.getElementById('cC'), ctx = c.getContext('2d'), W = c.width, H = c.height, hy = 230;
+    sky(ctx, W, H, hy, '#4fb0ee', '#d4efff'); sun(ctx, 200, 80, 34); cloud(ctx, 600, 60, 0.8);
+    // горы
+    ctx.fillStyle = '#9fb4cc'; ctx.beginPath(); ctx.moveTo(0, hy); [[120, 120], [260, 170], [420, 90], [600, 160], [760, 100], [960, 150]].forEach(([x, y]) => ctx.lineTo(x, y)); ctx.lineTo(W, hy); ctx.fill();
+    ctx.fillStyle = '#fff'; [[420, 90], [120, 120], [760, 100]].forEach(([x, y]) => { ctx.beginPath(); ctx.moveTo(x - 30, y + 30); ctx.lineTo(x, y); ctx.lineTo(x + 30, y + 30); ctx.fill(); });
+    hills(ctx, W, hy, 26, '#3e6a58', 3);
+    const g = ctx.createLinearGradient(0, hy, 0, H); g.addColorStop(0, '#9ad8f0'); g.addColorStop(1, '#1a5f9e');
+    ctx.fillStyle = g; ctx.fillRect(0, hy, W, H - hy);
+    ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2;
+    for (let i = 0; i < 40; i++) { const y = hy + 10 + (i * 37) % 300, x = (i * 173) % W, l = 10 + (y - hy) * 0.12; ctx.beginPath(); ctx.moveTo(x - l, y); ctx.lineTo(x + l, y); ctx.stroke(); }
+    floatAt(ctx, 540, 330, 8);
+    // Нос лодки
+    ctx.fillStyle = '#c8945a'; ctx.strokeStyle = OUT; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(150, H); ctx.quadraticCurveTo(300, 470, 480, 430); ctx.quadraticCurveTo(660, 470, 810, H); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#d8573e'; ctx.lineWidth = 16; ctx.beginPath(); ctx.moveTo(150, H); ctx.quadraticCurveTo(300, 470, 480, 430); ctx.quadraticCurveTo(660, 470, 810, H); ctx.stroke();
+    // Удочка из центра вверх
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#3a2a22'; ctx.lineWidth = 16; ctx.beginPath(); ctx.moveTo(470, 640); ctx.lineTo(500, 500); ctx.stroke();
+    ctx.strokeStyle = '#5a3a22'; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(500, 500); ctx.quadraticCurveTo(540, 300, 530, 200); ctx.stroke();
+    ctx.strokeStyle = '#d8a85a'; ctx.lineWidth = 5; ctx.stroke();
+    line(ctx, 530, 200, 540, 322, 30);
+    // Катушка
+    ctx.fillStyle = '#5a6470'; ctx.beginPath(); ctx.arc(530, 540, 26, 0, 7); ctx.fill(); ctx.strokeStyle = OUT; ctx.lineWidth = 3; ctx.stroke();
+    ctx.fillStyle = '#c8d0d8'; ctx.beginPath(); ctx.arc(530, 540, 15, 0, 7); ctx.fill();
+    // Руки в рукавах
+    const hand = (x, y, r) => {
+        ctx.fillStyle = '#4f8a3a'; ctx.beginPath(); ctx.ellipse(x + (x < 500 ? -60 : 60), y + 70, 46, 70, x < 500 ? -0.6 : 0.6, 0, 7); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#f6cfa6'; ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.8, 0, 0, 7); ctx.fill(); ctx.stroke();
+    };
+    hand(470, 560, 30); hand(560, 520, 26);
+})();
+
+// ---------- D: островок-диорама ----------
+(function () {
+    const c = document.getElementById('cD'), ctx = c.getContext('2d'), W = c.width, H = c.height;
+    const g = ctx.createRadialGradient(480, 300, 60, 480, 300, 600); g.addColorStop(0, '#7ad8f0'); g.addColorStop(1, '#2a8ac0');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 3;
+    for (let i = 0; i < 30; i++) { const x = (i * 211) % W, y = (i * 97) % H; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 12, y - 5, x + 24, y); ctx.stroke(); }
+    // Тени рыб
+    ctx.fillStyle = 'rgba(10,40,70,.25)';
+    [[180, 160, 0.3], [780, 470, -0.4], [820, 150, 0.2], [140, 470, -0.2]].forEach(([x, y, a]) => { ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.beginPath(); ctx.ellipse(0, 0, 34, 12, 0, 0, 7); ctx.fill(); ctx.beginPath(); ctx.moveTo(-30, 0); ctx.lineTo(-50, -10); ctx.lineTo(-50, 10); ctx.fill(); ctx.restore(); });
+    // Остров: песок, трава, бок
+    ctx.fillStyle = '#9a7a4a'; ctx.beginPath(); ctx.ellipse(470, 330, 230, 120, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#f2dca0'; ctx.beginPath(); ctx.ellipse(470, 310, 230, 115, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#7cc45a'; ctx.beginPath(); ctx.ellipse(460, 295, 190, 92, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#8fd46a'; ctx.beginPath(); ctx.ellipse(440, 280, 120, 50, 0, 0, 7); ctx.fill();
+    // Домик
+    ctx.lineWidth = 3; ctx.strokeStyle = OUT;
+    ctx.fillStyle = '#f4e2c4'; ctx.fillRect(330, 210, 90, 64); ctx.strokeRect(330, 210, 90, 64);
+    ctx.fillStyle = '#d8573e'; ctx.beginPath(); ctx.moveTo(318, 214); ctx.lineTo(375, 160); ctx.lineTo(432, 214); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#6a4228'; ctx.fillRect(366, 240, 20, 34);
+    ctx.fillStyle = '#bfe6f6'; ctx.fillRect(338, 226, 18, 16);
+    tree(ctx, 540, 260, 34, '#4f9a3c'); tree(ctx, 290, 300, 22, '#5fae48');
+    // Причал вправо
+    ctx.fillStyle = '#b07a42'; ctx.fillRect(560, 320, 170, 26); ctx.strokeRect(560, 320, 170, 26);
+    ctx.fillStyle = '#5a3a20'; [600, 660, 720].forEach(x => ctx.fillRect(x - 4, 346, 8, 22));
+    const h = chibi(ctx, 690, 322, 0.8, { jacket: '#f2b33a' });
+    rod(ctx, h.hx, h.hy, 800, 200, 12);
+    floatAt(ctx, 850, 330, 8);
+    line(ctx, 800, 200, 850, 324, 20);
+    // Лодка у берега и уточки
+    ctx.fillStyle = '#3a7ad8'; ctx.beginPath(); ctx.ellipse(250, 430, 46, 14, 0.2, 0, Math.PI); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fff'; [[140, 250], [160, 262]].forEach(([x, y]) => { ctx.beginPath(); ctx.ellipse(x, y, 10, 6, 0, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(x + 7, y - 6, 5, 0, 7); ctx.fill(); });
+})();
+
+// ---------- Кнопки ----------
+const items = [['map', 'Места', '#f2a83a'], ['album', 'Альбом', '#3a9ad8'], ['trophy', 'Топ', '#e8c43a'], ['shop', 'Магазин', '#ff6f59'], ['tasks', 'Задания', '#5ec65a']];
+document.getElementById('n1').innerHTML = '<div class="nav" style="left:50%;bottom:8px">' + items.map(([ic, t]) => '<button>' + FB.ic(ic) + '<span>' + t + '</span></button>').join('') + '</div>';
+document.getElementById('n2').innerHTML = '<div class="bub">' + items.map(([ic, t, c]) => '<i style="background:' + c + '" title="' + t + '">' + FB.ic(ic) + '</i>').join('') + '</div>';
+document.getElementById('n2').style.height = '290px';
+document.getElementById('n3').innerHTML = '<div class="planks">' + items.map(([ic, t]) => '<div>' + FB.ic(ic) + t + '</div>').join('') + '</div>';
+document.getElementById('n4').innerHTML = '<div class="cubes">' + items.map(([ic, t, c]) => '<div style="background:' + c + '">' + FB.ic(ic) + '<span>' + t + '</span></div>').join('') + '</div>';
+</script>
+</body>
+</html>

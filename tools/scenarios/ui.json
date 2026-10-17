@@ -1,0 +1,22 @@
+{
+    "out": "out",
+    "steps": [
+        { "size": [1100, 680, 1] },
+        { "open": "http://127.0.0.1:8940/dist/fisherman-bay/index.html", "wait": 2500 },
+        { "shot": "u0-title.png" },
+        { "js": "document.querySelector('.title .btn').click();", "sleep": 900 },
+        { "js": "FB.ui.closeAll(); FB.S.coins = 6000; FB.S.pearls = 150; FB.S.xp = 4000; FB.S.level = FB.state.levelFromXp(4000); FB.hud.update();", "sleep": 500 },
+        { "js": "FB.shopUI.open('look');", "sleep": 900 },
+        { "shot": "u1-shop-who.png" },
+        { "js": "FB.ui.closeAll(); setTimeout(() => FB.shopUI.open('gear'), 300);", "sleep": 1200 },
+        { "shot": "u2-shop-gear.png" },
+        { "js": "FB.ui.closeAll(); setTimeout(() => FB.panels.places(), 300);", "sleep": 1200 },
+        { "shot": "u3-places.png" },
+        { "js": "FB.ui.closeAll(); FB.S.who = 'girl'; FB.S.look.hat = 'hat_panama'; FB.S.owned.push('hat_panama','pet_cat','bt_rowboat'); FB.S.look.pet = 'pet_cat';", "sleep": 900 },
+        { "shot": "u4-girl-cat.png" },
+        { "js": "FB.S.who = 'grandpa'; FB.S.look.boat = 'bt_rowboat'; FB.S.look.pet = 'pet_none'; FB.scene.setPlace('mountain', 'night');", "sleep": 900 },
+        { "shot": "u5-grandpa-boat-night.png" },
+        { "js": "FB.catchCard.levelUp({ level: 6, ponds: [FB.pondById.mountain] });", "sleep": 1200 },
+        { "shot": "u6-levelup.png" }
+    ]
+}

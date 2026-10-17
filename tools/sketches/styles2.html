@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Стили 2 и 6</title>
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+    html, body { overflow: auto; height: auto; touch-action: auto; background: #e9f2f7; }
+    body { padding: 18px; }
+    h1 { margin: 0 0 4px; font-size: 26px; }
+    h2 { margin: 22px 0 0; font-size: 21px; }
+    .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 10px; }
+    .cell { background: #fff; border-radius: 18px; padding: 8px; box-shadow: 0 4px 0 #d6e2ea; }
+    .cell canvas { width: 100%; border-radius: 12px; display: block; }
+    .cap { padding: 6px 4px 2px; }
+    .cap b { font-size: 17px; }
+    .cap p { margin: 3px 0 0; font-weight: 700; color: var(--ink-soft); font-size: 13px; line-height: 1.3; }
+    .n { display: inline-flex; min-width: 34px; height: 26px; padding: 0 6px; border-radius: 13px; background: var(--sea); color: #fff; align-items: center; justify-content: center; margin-right: 6px; font-size: 14px; }
+</style>
+</head>
+<body>
+<h1>Стили 2 и 6 — варианты</h1>
+<div class="muted">Один и тот же мальчик в одной позе. Сверху — мягкий объём, ниже — силуэты, внизу — смеси.</div>
+<h2>Стиль 2: мягкий объём</h2>
+<div class="grid" id="g2"></div>
+<h2>Стиль 6: силуэт</h2>
+<div class="grid" id="g6"></div>
+<h2>Смесь 2 + 6: мягкий объём в контровом свете</h2>
+<div class="grid" id="gm"></div>
+<script>window.FB = { lang: 'ru', t: (k) => k };</script>
+<script src="../../js/core/util.js"></script>
+<script>
+const U = FB.U, TAU = Math.PI * 2;
+const W = 720, H = 540, X = 230, Y = 380, HH = 270;
+const off = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; };
+
+// ---------- Фоны ----------
+function scene(ctx, mood) {
+    const hy = H * 0.42;
+    const skies = { day: ['#6cc4f4', '#d6f1ff'], sunset: ['#3a2a6a', '#ff8a5a'], night: ['#0b1236', '#2a3a78'], dawn: ['#b8b4e0', '#ffd9d0'] };
+    let g = ctx.createLinearGradient(0, 0, 0, hy); g.addColorStop(0, skies[mood][0]); g.addColorStop(1, skies[mood][1]);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, hy);
+    if (mood === 'night') {
+        const r = U.seeded(7);
+        for (let i = 0; i < 90; i++) { ctx.fillStyle = 'rgba(255,255,255,' + (0.3 + r() * 0.7) + ')'; ctx.beginPath(); ctx.arc(r() * W, r() * hy * 0.9, 0.5 + r() * 1.4, 0, TAU); ctx.fill(); }
+    }
+    // Светило: солнце на закате/рассвете, луна ночью — за спиной рыбака справа
+    const sun = { day: null, sunset: [560, hy - 10, 44, '#fff1c0', 'rgba(255,190,110,'], night: [520, 120, 50, '#fff8dc', 'rgba(200,220,255,'], dawn: [540, hy - 6, 36, '#fff6ee', 'rgba(255,220,230,'] }[mood];
+    if (sun) {
+        const [sx, sy, sr, col, glow] = sun;
+        const sg = ctx.createRadialGradient(sx, sy, sr * 0.3, sx, sy, sr * 4.5);
+        sg.addColorStop(0, glow + '0.95)'); sg.addColorStop(0.3, glow + '0.45)'); sg.addColorStop(1, glow + '0)');
+        ctx.fillStyle = sg; ctx.fillRect(0, 0, W, hy + 40);
+        ctx.fillStyle = col; ctx.beginPath(); ctx.arc(sx, sy, sr, 0, TAU); ctx.fill();
+        if (mood === 'night') { ctx.fillStyle = 'rgba(200,190,150,0.35)'; [[-14, -10, 12], [12, 12, 9], [6, -20, 6]].forEach(([dx, dy, r]) => { ctx.beginPath(); ctx.arc(sx + dx, sy + dy, r, 0, TAU); ctx.fill(); }); }
+    }
+    if (mood === 'dawn') { ctx.fillStyle = '#c8c0e4'; ctx.beginPath(); ctx.moveTo(0, hy); for (let x = 0; x <= W; x += 10) ctx.lineTo(x, hy - 40 - 18 * Math.sin(x / 90 + 1)); ctx.lineTo(W, hy); ctx.closePath(); ctx.fill(); }
+    const hill = { day: '#9fd08a', sunset: '#5a3a6a', night: '#141c44', dawn: '#a6a0cc' }[mood];
+    ctx.fillStyle = hill;
+    ctx.beginPath(); ctx.moveTo(0, hy); for (let x = 0; x <= W; x += 10) ctx.lineTo(x, hy - 18 - 10 * Math.sin(x / 60)); ctx.lineTo(W, hy); ctx.fill();
+    const water = { day: ['#9ad8ea', '#2e8fb4'], sunset: ['#ff9a6a', '#3a2a5a'], night: ['#1e2c64', '#070c26'], dawn: ['#f2d0d8', '#8c8cc0'] }[mood];
+    g = ctx.createLinearGradient(0, hy, 0, H); g.addColorStop(0, water[0]); g.addColorStop(1, water[1]);
+    ctx.fillStyle = g; ctx.fillRect(0, hy, W, H - hy);
+    if (sun) {
+        const pg = ctx.createLinearGradient(0, hy, 0, H);
+        pg.addColorStop(0, sun[4] + '0.7)'); pg.addColorStop(1, sun[4] + '0)');
+        ctx.fillStyle = pg; ctx.beginPath(); ctx.moveTo(sun[0] - 20, hy); ctx.lineTo(sun[0] + 20, hy); ctx.lineTo(sun[0] + 90, H); ctx.lineTo(sun[0] - 60, H); ctx.fill();
+    }
+    ctx.fillStyle = { day: 'rgba(255,255,255,.5)', sunset: 'rgba(255,220,160,.6)', night: 'rgba(200,220,255,.4)', dawn: 'rgba(255,255,255,.6)' }[mood];
+    for (let i = 0; i < 18; i++) { const x = (i * 97) % W, y = hy + 20 + (i * 53) % (H - hy - 30); ctx.fillRect(x, y, 16 + (y - hy) * 0.08, 2); }
+    if (mood === 'dawn') {
+        for (let i = 0; i < 3; i++) { const fg = ctx.createLinearGradient(0, hy - 20 + i * 50, 0, hy + 30 + i * 50); fg.addColorStop(0, 'rgba(255,255,255,0)'); fg.addColorStop(0.5, 'rgba(255,255,255,0.4)'); fg.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = fg; ctx.fillRect(0, hy - 20 + i * 50, W, 50); }
+    }
+}
+function pier(ctx, color) {
+    const h = HH, end = X + h * 0.22, y = Y;
+    const c = color || { post: '#7a5228', top: '#c08a4e', face: '#a8743a' };
+    ctx.fillStyle = c.post; ctx.fillRect(end - h * 0.1, y + h * 0.1, h * 0.07, h * 0.4); ctx.fillRect(end - h * 0.9, y + h * 0.1, h * 0.07, h * 0.4);
+    ctx.fillStyle = c.top; ctx.fillRect(-10, y - h * 0.035, end + 10, h * 0.07);
+    ctx.fillStyle = c.face; ctx.fillRect(-10, y + h * 0.035, end + 10, h * 0.08);
+}
+function rod(ctx, hx, hy, col, line, glowFloat) {
+    const a = -0.8, len = HH * 1.6, tx = hx + Math.cos(a) * len, ty = hy + Math.sin(a) * len;
+    const bx = hx - Math.cos(a) * len * 0.11, by = hy - Math.sin(a) * len * 0.11;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = col || '#6a4a24'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(tx, ty); ctx.stroke();
+    if (!col) { ctx.strokeStyle = '#d8b06a'; ctx.lineWidth = 3.5; ctx.stroke(); }
+    ctx.strokeStyle = line || 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.quadraticCurveTo(tx + 40, ty + 60, tx + 60, ty + 140); ctx.stroke();
+    const fx = tx + 60, fy = ty + 140;
+    if (glowFloat) { const g = ctx.createRadialGradient(fx, fy, 2, fx, fy, 40); g.addColorStop(0, 'rgba(255,120,90,0.7)'); g.addColorStop(1, 'rgba(255,120,90,0)'); ctx.fillStyle = g; ctx.fillRect(fx - 40, fy - 40, 80, 80); }
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(fx, fy, 8, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#ff4a2a'; ctx.beginPath(); ctx.arc(fx, fy, 8, Math.PI, 0); ctx.fill();
+}
+
+// ---------- Мягкий рыбак ----------
+// P — цвета, o — настройки: big (голова больше), outline (цветной контур),
+// flat (без переливов и деталей — для силуэтов), pastel, eyes ('bead' | 'big')
+const BOY = { skin: '#ffd2b0', hair: '#7a4626', jacket: '#3fa060', shirt: '#f4ead6', pants: '#4a72b0', boots: '#f6c53a', cap: '#e8483a', brim: '#b8302a', eye: '#2a1e22', brow: '#6a3a22', mouth: '#a04a3a', cheek: 'rgba(255,110,120,0.5)' };
+const PASTEL = { skin: '#ffe0cc', hair: '#a87a5a', jacket: '#7ccca0', shirt: '#fff6ea', pants: '#8aa8d8', boots: '#ffd88a', cap: '#ff9a8a', brim: '#e8786a', eye: '#4a3a44', brow: '#9a6a52', mouth: '#c06a62', cheek: 'rgba(255,130,140,0.45)' };
+
+function softBoy(ctx, P, o) {
+    o = o || {};
+    const h = HH, k = o.big ? 1.32 : 1;
+    const flat = !!o.flat;
+    const lighten = (c, v) => flat ? c : U.shade(c, v);
+    const radial = (c, x0, y0, x1, y1) => {
+        if (flat) return c;
+        const g = ctx.createRadialGradient(x1 - (x1 - x0) * 0.25, y0 + (y1 - y0) * 0.2, 1, (x0 + x1) / 2, (y0 + y1) / 2, Math.max(x1 - x0, y1 - y0) * 0.75);
+        g.addColorStop(0, U.shade(c, 0.24)); g.addColorStop(0.55, c); g.addColorStop(1, U.shade(c, -0.26));
+        return g;
+    };
+    const vlin = (c, y0, y1) => { if (flat) return c; const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, U.shade(c, 0.2)); g.addColorStop(1, U.shade(c, -0.15)); return g; };
+    const oc = (c) => U.shade(c, -0.45);
+    const lw = Math.max(2, h * 0.009);
+    const limb = (pts, w, c) => {
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        if (o.outline) { ctx.strokeStyle = oc(c); ctx.lineWidth = w + lw * 2; ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); pts.slice(1).forEach(p => ctx.lineTo(p[0], p[1])); ctx.stroke(); }
+        const ys = pts.map(p => p[1]);
+        ctx.strokeStyle = vlin(c, Math.min(...ys) - w / 2, Math.max(...ys) + w / 2); ctx.lineWidth = w;
+        ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); pts.slice(1).forEach(p => ctx.lineTo(p[0], p[1])); ctx.stroke();
+    };
+    const fillPath = (path, c, box) => {
+        ctx.fillStyle = box ? radial(c, box[0], box[1], box[2], box[3]) : c; ctx.fill(path);
+        if (o.outline) { ctx.strokeStyle = oc(c); ctx.lineWidth = lw; ctx.stroke(path); }
+    };
+    ctx.save(); ctx.translate(X, Y);
+    if (!flat) { ctx.shadowColor = 'rgba(20,40,80,0.2)'; ctx.shadowBlur = h * 0.04; ctx.shadowOffsetY = h * 0.015; }
+    // Ноги и сапоги
+    const legs = [[[h * 0.04, -h * 0.07], [h * 0.25, -h * 0.085], [h * 0.25, h * 0.22], U.shade(P.pants, flat ? 0 : -0.15)], [[-h * 0.02, -h * 0.05], [h * 0.285, -h * 0.05], [h * 0.3, h * 0.25], P.pants]];
+    legs.forEach(([a, b, c, col]) => {
+        limb([a, b, c], h * 0.14, col);
+        const boot = new Path2D();
+        boot.moveTo(c[0] - h * 0.07, c[1] - h * 0.05);
+        boot.lineTo(c[0] + h * 0.06, c[1] - h * 0.05);
+        boot.lineTo(c[0] + h * 0.065, c[1] + h * 0.01);
+        boot.bezierCurveTo(c[0] + h * 0.13, c[1] + h * 0.01, c[0] + h * 0.16, c[1] + h * 0.035, c[0] + h * 0.155, c[1] + h * 0.07);
+        boot.lineTo(c[0] - h * 0.07, c[1] + h * 0.07);
+        boot.closePath();
+        fillPath(boot, P.boots, [c[0] - h * 0.07, c[1] - h * 0.05, c[0] + h * 0.16, c[1] + h * 0.07]);
+    });
+    // Дальняя рука
+    limb([[h * 0.09, -h * 0.47], [h * 0.17, -h * 0.24], [h * 0.33, -h * 0.3]], h * 0.11, U.shade(P.jacket, flat ? 0 : -0.22));
+    // Тело
+    const torso = new Path2D();
+    torso.moveTo(-h * 0.17, -h * 0.02);
+    torso.bezierCurveTo(-h * 0.215, -h * 0.2, -h * 0.205, -h * 0.4, -h * 0.12, -h * 0.5);
+    torso.quadraticCurveTo(-h * 0.02, -h * 0.575, h * 0.1, -h * 0.535);
+    torso.bezierCurveTo(h * 0.2, -h * 0.47, h * 0.235, -h * 0.3, h * 0.215, -h * 0.08);
+    torso.quadraticCurveTo(h * 0.205, h * 0.012, h * 0.08, h * 0.012);
+    torso.closePath();
+    fillPath(torso, P.jacket, [-h * 0.21, -h * 0.57, h * 0.235, h * 0.01]);
+    ctx.shadowColor = 'transparent';
+    if (!flat) {
+        ctx.save(); ctx.clip(torso);
+        ctx.fillStyle = 'rgba(255,255,255,0.16)';
+        ctx.beginPath(); ctx.roundRect(-h * 0.1, -h * 0.22, h * 0.1, h * 0.08, h * 0.02); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(h * 0.09, -h * 0.22, h * 0.09, h * 0.08, h * 0.02); ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.12)'; ctx.lineWidth = h * 0.008;
+        ctx.beginPath(); ctx.moveTo(h * 0.085, -h * 0.5); ctx.lineTo(h * 0.1, -h * 0.02); ctx.stroke();
+        ctx.restore();
+        const shirt = new Path2D(); shirt.moveTo(-h * 0.01, -h * 0.57); shirt.lineTo(h * 0.13, -h * 0.55); shirt.lineTo(h * 0.08, -h * 0.4); shirt.closePath();
+        fillPath(shirt, P.shirt);
+    }
+    // Голова
+    const R = h * 0.235 * k;
+    ctx.save(); ctx.translate(h * 0.07, -h * 0.79 - (k - 1) * h * 0.22);
+    if (!flat) { ctx.shadowColor = 'rgba(40,30,60,0.28)'; ctx.shadowBlur = R * 0.3; ctx.shadowOffsetY = R * 0.12; }
+    const face = new Path2D();
+    face.moveTo(-0.52 * R, 0.66 * R);
+    face.bezierCurveTo(-1.02 * R, 0.42 * R, -1.08 * R, -0.5 * R, -0.45 * R, -0.88 * R);
+    face.bezierCurveTo(0.02 * R, -1.13 * R, 0.76 * R, -0.96 * R, 0.9 * R, -0.45 * R);
+    face.bezierCurveTo(0.98 * R, -0.2 * R, 0.95 * R, -0.02 * R, 0.93 * R, 0.1 * R);
+    face.bezierCurveTo(1.02 * R, 0.26 * R, 1.0 * R, 0.45 * R, 0.88 * R, 0.58 * R);
+    face.bezierCurveTo(0.74 * R, 0.82 * R, 0.52 * R, 0.94 * R, 0.3 * R, 0.94 * R);
+    face.bezierCurveTo(0.04 * R, 0.95 * R, -0.24 * R, 0.84 * R, -0.52 * R, 0.66 * R);
+    face.closePath();
+    fillPath(face, P.skin, [-R, -R, R, R]);
+    ctx.shadowColor = 'transparent';
+    // Нос — маленький мягкий бугорок
+    const nose = new Path2D(); nose.ellipse(0.95 * R, 0.27 * R, 0.11 * R, 0.09 * R, 0, 0, TAU);
+    fillPath(nose, flat ? P.skin : U.shade(P.skin, -0.04), flat ? null : [0.84 * R, 0.18 * R, 1.06 * R, 0.36 * R]);
+    // Волосы
+    const hair = new Path2D();
+    hair.moveTo(-0.6 * R, 0.62 * R);
+    hair.bezierCurveTo(-1.15 * R, 0.3 * R, -1.1 * R, -0.65 * R, -0.4 * R, -0.95 * R);
+    hair.bezierCurveTo(0.1 * R, -1.15 * R, 0.85 * R, -0.95 * R, 0.98 * R, -0.35 * R);
+    hair.quadraticCurveTo(0.84 * R, -0.18 * R, 0.72 * R, -0.36 * R);
+    hair.quadraticCurveTo(0.58 * R, -0.1 * R, 0.42 * R, -0.32 * R);
+    hair.quadraticCurveTo(0.26 * R, -0.06 * R, 0.08 * R, -0.34 * R);
+    hair.quadraticCurveTo(-0.2 * R, -0.26 * R, -0.24 * R, 0.22 * R);
+    hair.quadraticCurveTo(-0.45 * R, 0.3 * R, -0.6 * R, 0.62 * R);
+    hair.closePath();
+    fillPath(hair, P.hair, [-1.1 * R, -1.1 * R, R, 0.6 * R]);
+    if (!flat) { ctx.strokeStyle = 'rgba(255,225,190,0.5)'; ctx.lineWidth = R * 0.08; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(-0.1 * R, -0.25 * R, 0.66 * R, -2.6, -2.05); ctx.stroke(); }
+    // Ухо
+    const ear = new Path2D(); ear.ellipse(-0.42 * R, 0.16 * R, 0.16 * R, 0.21 * R, -0.15, 0, TAU);
+    fillPath(ear, P.skin, flat ? null : [-0.58 * R, -0.05 * R, -0.26 * R, 0.37 * R]);
+    if (!flat) {
+        // Глаза
+        const big = o.eyes === 'big';
+        [[0.14, 0.1, 1], [0.62, 0.08, 0.8]].forEach(([ex, ey, sc]) => {
+            const x = ex * R, y = ey * R;
+            if (big) {
+                ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(x, y, 0.13 * R * sc, 0.17 * R, 0, 0, TAU); ctx.fill();
+                ctx.fillStyle = P.eye; ctx.beginPath(); ctx.ellipse(x + 0.02 * R, y + 0.01 * R, 0.1 * R * sc, 0.14 * R, 0, 0, TAU); ctx.fill();
+            } else {
+                ctx.fillStyle = P.eye; ctx.beginPath(); ctx.ellipse(x, y, 0.09 * R * sc, 0.13 * R, 0, 0, TAU); ctx.fill();
+            }
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath(); ctx.arc(x - 0.025 * R, y - 0.05 * R, (big ? 0.05 : 0.038) * R, 0, TAU); ctx.fill();
+            ctx.beginPath(); ctx.arc(x + 0.035 * R, y + 0.05 * R, 0.016 * R, 0, TAU); ctx.fill();
+        });
+        ctx.strokeStyle = P.brow; ctx.lineWidth = R * 0.055; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(0.02 * R, -0.13 * R); ctx.quadraticCurveTo(0.14 * R, -0.22 * R, 0.27 * R, -0.16 * R); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0.52 * R, -0.16 * R); ctx.quadraticCurveTo(0.64 * R, -0.23 * R, 0.75 * R, -0.15 * R); ctx.stroke();
+        ctx.strokeStyle = P.mouth; ctx.lineWidth = R * 0.05;
+        ctx.beginPath(); ctx.moveTo(0.42 * R, 0.55 * R); ctx.quadraticCurveTo(0.58 * R, 0.68 * R, 0.74 * R, 0.54 * R); ctx.stroke();
+        [[0.0, 0.42, 0.22], [0.8, 0.42, 0.15]].forEach(([bx, by, br]) => { const g = ctx.createRadialGradient(bx * R, by * R, 0, bx * R, by * R, br * R); g.addColorStop(0, P.cheek); g.addColorStop(1, 'rgba(255,110,120,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(bx * R, by * R, br * R, 0, TAU); ctx.fill(); });
+        ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.arc(0.98 * R, 0.23 * R, 0.03 * R, 0, TAU); ctx.fill();
+        // Мягкая тень от козырька на лбу
+        ctx.save(); ctx.clip(face);
+        const fs = ctx.createLinearGradient(0, -0.45 * R, 0, -0.1 * R); fs.addColorStop(0, 'rgba(90,30,30,0.28)'); fs.addColorStop(1, 'rgba(90,30,30,0)');
+        ctx.fillStyle = fs; ctx.fillRect(-R, -0.45 * R, 2 * R, 0.35 * R);
+        ctx.restore();
+    }
+    // Кепка
+    const dome = new Path2D();
+    dome.moveTo(-1.0 * R, -0.38 * R); dome.bezierCurveTo(-1.02 * R, -1.3 * R, 0.9 * R, -1.36 * R, 0.98 * R, -0.48 * R); dome.quadraticCurveTo(0, -0.24 * R, -1.0 * R, -0.38 * R); dome.closePath();
+    fillPath(dome, P.cap, [-R, -1.25 * R, R, -0.3 * R]);
+    const brim = new Path2D();
+    brim.moveTo(0.4 * R, -0.48 * R); brim.quadraticCurveTo(1.25 * R, -0.64 * R, 1.52 * R, -0.36 * R); brim.quadraticCurveTo(1.0 * R, -0.24 * R, 0.45 * R, -0.3 * R); brim.closePath();
+    fillPath(brim, P.brim);
+    if (!flat) { ctx.fillStyle = 'rgba(255,255,255,0.32)'; ctx.beginPath(); ctx.ellipse(-0.3 * R, -0.88 * R, 0.3 * R, 0.1 * R, -0.35, 0, TAU); ctx.fill(); }
+    ctx.restore();
+    // Ближняя рука с кулаком
+    limb([[-h * 0.02, -h * 0.45], [h * 0.08, -h * 0.2], [h * 0.27, -h * 0.26]], h * 0.115, P.jacket);
+    const fist = new Path2D(); fist.ellipse(h * 0.3, -h * 0.27, h * 0.05, h * 0.046, 0, 0, TAU);
+    fillPath(fist, P.skin, flat ? null : [h * 0.25, -h * 0.32, h * 0.35, -h * 0.22]);
+    ctx.restore();
+    return [X + h * 0.3, Y - h * 0.27];
+}
+
+// ---------- Свет: кайма по краю силуэта и свечение ----------
+// draw(ctx, P, o) рисует рыбака; light — откуда свет: dx, dy (смещение каймы),
+// rim — цвет каймы, glow — цвет свечения вокруг, back — затемнить переднюю сторону
+function lit(ctx, draw, P, o, light) {
+    const A = off(), S = off(), Rm = off();
+    const hand = draw(A.getContext('2d'), P, o);
+    const mono = {}; Object.keys(P).forEach(k => { mono[k] = '#000000'; });
+    draw(S.getContext('2d'), mono, Object.assign({}, o, { flat: true, outline: false }));
+    const a = A.getContext('2d');
+    if (light.tint) {
+        // Общий оттенок времени суток (ночью всё синее и темнее)
+        a.globalCompositeOperation = 'source-atop';
+        a.fillStyle = light.tint; a.fillRect(0, 0, W, H);
+        a.globalCompositeOperation = 'source-over';
+    }
+    if (light.back) {
+        // Свет сзади-справа: сторона к нам темнее
+        a.globalCompositeOperation = 'source-atop';
+        const g = a.createLinearGradient(X - HH * 0.3, 0, X + HH * 0.5, 0);
+        g.addColorStop(0, light.back); g.addColorStop(1, 'rgba(0,0,0,0)');
+        a.fillStyle = g; a.fillRect(0, 0, W, H);
+        a.globalCompositeOperation = 'source-over';
+    }
+    if (light.warm) {
+        // Тёплый свет фонаря спереди-слева
+        a.globalCompositeOperation = 'source-atop';
+        const [lx, ly, lr, lc] = light.warm;
+        const g = a.createRadialGradient(lx, ly, 2, lx, ly, lr);
+        g.addColorStop(0, lc); g.addColorStop(1, 'rgba(255,170,80,0)');
+        a.fillStyle = g; a.fillRect(0, 0, W, H);
+        a.globalCompositeOperation = 'source-over';
+    }
+    const r = Rm.getContext('2d');
+    r.drawImage(S, 0, 0);
+    r.globalCompositeOperation = 'source-in';
+    r.fillStyle = light.rim; r.fillRect(0, 0, W, H);
+    r.globalCompositeOperation = 'destination-out';
+    r.drawImage(S, -light.dx, -light.dy);
+    if (light.glow) {
+        ctx.save(); ctx.shadowColor = light.glow; ctx.shadowBlur = 26; ctx.globalAlpha = 0.55;
+        const gl = off(), gc = gl.getContext('2d'); gc.drawImage(S, 0, 0); gc.globalCompositeOperation = 'source-in'; gc.fillStyle = light.glow; gc.fillRect(0, 0, W, H);
+        ctx.drawImage(gl, 0, 0); ctx.restore();
+    }
+    ctx.drawImage(A, 0, 0);
+    ctx.drawImage(Rm, 0, 0);
+    return hand;
+}
+
+function lantern(ctx, x, y, on) {
+    if (on) { const g = ctx.createRadialGradient(x, y, 4, x, y, 140); g.addColorStop(0, 'rgba(255,200,110,0.55)'); g.addColorStop(1, 'rgba(255,200,110,0)'); ctx.fillStyle = g; ctx.fillRect(x - 140, y - 140, 280, 280); }
+    ctx.fillStyle = '#2a2030'; ctx.fillRect(x - 10, y - 26, 20, 4); ctx.fillRect(x - 12, y + 12, 24, 5);
+    ctx.fillStyle = on ? '#ffd27a' : '#555'; ctx.fillRect(x - 9, y - 22, 18, 34);
+    ctx.strokeStyle = '#2a2030'; ctx.lineWidth = 2.5; ctx.strokeRect(x - 9, y - 22, 18, 34);
+    ctx.beginPath(); ctx.moveTo(x, y - 22); ctx.lineTo(x, y + 12); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y - 30, 7, Math.PI, 0); ctx.stroke();
+}
+
+// ---------- Варианты ----------
+const pierDark = (c) => ({ post: c, top: c, face: c });
+const variants = {
+    g2: [
+        ['2.1', 'Мягкий, без контура', 'Формы лепятся светом и тенью, глаза-бусинки.', (ctx) => { scene(ctx, 'day'); pier(ctx); const hd = softBoy(ctx, BOY, {}); rod(ctx, hd[0], hd[1]); }],
+        ['2.2', 'Мягкий + цветной контур', 'Та же мягкость, но края подчёркнуты тёмным оттенком своего цвета — чётче читается на телефоне.', (ctx) => { scene(ctx, 'day'); pier(ctx); const hd = softBoy(ctx, BOY, { outline: true }); rod(ctx, hd[0], hd[1]); }],
+        ['2.3', 'Мягкий, большеголовый', 'Голова крупнее, глаза с белками — милее и выразительнее.', (ctx) => { scene(ctx, 'day'); pier(ctx); const hd = softBoy(ctx, BOY, { big: true, eyes: 'big', outline: true }); rod(ctx, hd[0], hd[1]); }],
+        ['2.4', 'Мягкая пастель', 'Нежные цвета и лёгкий свет солнца по краю — спокойно и уютно.', (ctx) => { scene(ctx, 'dawn'); pier(ctx, { post: '#a07a6a', top: '#e8c0a8', face: '#c8a090' }); const hd = lit(ctx, softBoy, PASTEL, { big: true, eyes: 'big' }, { dx: 5, dy: -3, rim: 'rgba(255,245,230,0.85)' }); rod(ctx, hd[0], hd[1]); }]
+    ],
+    g6: [
+        ['6.1', 'Закат', 'Тёмный силуэт, тёплая кайма от солнца, яркая только кепка.', (ctx) => {
+            scene(ctx, 'sunset'); pier(ctx, pierDark('#1f1838'));
+            const P = Object.assign({}, BOY); Object.keys(P).forEach(k => { P[k] = '#1f1838'; }); P.cap = '#ff6a4a'; P.brim = '#e04a3a';
+            const hd = lit(ctx, softBoy, P, { flat: true }, { dx: 5, dy: -3, rim: '#ffc078', glow: 'rgba(255,170,100,0.6)' }); rod(ctx, hd[0], hd[1], '#1f1838', 'rgba(255,230,180,.9)', true);
+        }],
+        ['6.2', 'Ночь и луна', 'Луна за спиной даёт холодную кайму, фонарик — тёплое пятно света.', (ctx) => {
+            scene(ctx, 'night'); pier(ctx, pierDark('#0a0c1e'));
+            const P = Object.assign({}, BOY); Object.keys(P).forEach(k => { P[k] = '#0d1028'; }); P.cap = '#7a2a3a'; P.brim = '#5a1e2a';
+            lantern(ctx, X - 95, Y - 40, true);
+            const hd = lit(ctx, softBoy, P, { flat: true }, { dx: 5, dy: -4, rim: '#cfe0ff', glow: 'rgba(140,170,255,0.25)', warm: [X - 95, Y - 40, 160, 'rgba(255,190,110,0.45)'] }); rod(ctx, hd[0], hd[1], '#0a0c1e', 'rgba(200,220,255,.8)', true);
+        }],
+        ['6.3', 'Рассвет в тумане', 'Светлый сиреневый силуэт в дымке — нежно и спокойно.', (ctx) => {
+            scene(ctx, 'dawn'); pier(ctx, pierDark('#7a6ea0'));
+            const P = Object.assign({}, BOY); Object.keys(P).forEach(k => { P[k] = '#6e6496'; }); P.cap = '#e87a8a'; P.brim = '#c8607a';
+            const hd = lit(ctx, softBoy, P, { flat: true }, { dx: 4, dy: -3, rim: '#fff0f4' }); rod(ctx, hd[0], hd[1], '#6e6496', 'rgba(255,255,255,.9)');
+            const fg = ctx.createLinearGradient(0, Y + 20, 0, H); fg.addColorStop(0, 'rgba(255,240,245,0)'); fg.addColorStop(1, 'rgba(255,240,245,0.55)'); ctx.fillStyle = fg; ctx.fillRect(0, Y + 20, W, H);
+        }],
+        ['6.4', 'Полусилуэт', 'Силуэт, но одежда чуть видна своим цветом — тёмная зелень, синие штаны, красная кепка.', (ctx) => {
+            scene(ctx, 'sunset'); pier(ctx, pierDark('#2a1e3a'));
+            const P = { skin: '#4a3448', hair: '#2a1a24', jacket: '#1e4a3a', shirt: '#3a3040', pants: '#1e2a52', boots: '#5a4020', cap: '#c83a3a', brim: '#9a2a2a', eye: '#000', brow: '#000', mouth: '#000', cheek: 'rgba(0,0,0,0)' };
+            const hd = lit(ctx, softBoy, P, { flat: true }, { dx: 5, dy: -3, rim: '#ffc078', glow: 'rgba(255,170,100,0.5)' }); rod(ctx, hd[0], hd[1], '#2a1e3a', 'rgba(255,230,180,.9)', true);
+        }]
+    ],
+    gm: [
+        ['М.1', 'Закат: мягкий + кайма', 'Видно лицо и одежду, но свет сзади: тёплая кайма по краю, передняя сторона в тени.', (ctx) => {
+            scene(ctx, 'sunset'); pier(ctx, pierDark('#3a2848'));
+            const hd = lit(ctx, softBoy, BOY, { outline: true }, { dx: 5, dy: -3, rim: '#ffc078', glow: 'rgba(255,170,100,0.35)', tint: 'rgba(150,60,110,0.22)', back: 'rgba(60,20,80,0.5)' }); rod(ctx, hd[0], hd[1], '#3a2848', 'rgba(255,230,180,.9)', true);
+        }],
+        ['М.2', 'Ночь: мягкий + фонарик', 'Холодная кайма от луны и тёплый свет фонаря на лице — очень уютно.', (ctx) => {
+            scene(ctx, 'night'); pier(ctx, pierDark('#141838'));
+            lantern(ctx, X - 95, Y - 40, true);
+            const hd = lit(ctx, softBoy, BOY, { outline: true }, { dx: 5, dy: -4, rim: '#cfe0ff', glow: 'rgba(140,170,255,0.25)', tint: 'rgba(16,26,90,0.55)', back: 'rgba(5,10,40,0.45)', warm: [X - 95, Y - 40, 230, 'rgba(255,170,80,0.6)'] }); rod(ctx, hd[0], hd[1], '#141838', 'rgba(200,220,255,.8)', true);
+        }],
+        ['М.3', 'День: мягкий + лёгкая кайма', 'Обычный день, но по краю — тонкий солнечный блик. Самый «объёмный» дневной вариант.', (ctx) => {
+            scene(ctx, 'day'); pier(ctx);
+            const hd = lit(ctx, softBoy, BOY, { outline: true }, { dx: 4, dy: -3, rim: 'rgba(255,250,225,0.9)' }); rod(ctx, hd[0], hd[1]);
+        }],
+        ['М.4', 'Пастельный закат, большеголовый', 'Милые пропорции из 2.3 в тёплом свете заката.', (ctx) => {
+            scene(ctx, 'sunset'); pier(ctx, pierDark('#4a3858'));
+            const hd = lit(ctx, softBoy, PASTEL, { big: true, eyes: 'big', outline: true }, { dx: 5, dy: -3, rim: '#ffd29a', glow: 'rgba(255,170,100,0.3)', tint: 'rgba(160,70,120,0.18)', back: 'rgba(90,40,90,0.4)' }); rod(ctx, hd[0], hd[1], '#4a3858', 'rgba(255,230,180,.9)', true);
+        }]
+    ]
+};
+Object.entries(variants).forEach(([gid, list]) => {
+    const box = document.getElementById(gid);
+    list.forEach(([num, name, desc, draw]) => {
+        const cell = document.createElement('div'); cell.className = 'cell';
+        const c = document.createElement('canvas'); c.width = W; c.height = H;
+        draw(c.getContext('2d'));
+        cell.appendChild(c);
+        const cap = document.createElement('div'); cap.className = 'cap';
+        cap.innerHTML = '<b><span class="n">' + num + '</span>' + name + '</b><p>' + desc + '</p>';
+        cell.appendChild(cap);
+        box.appendChild(cell);
+    });
+});
+</script>
+</body>
+</html>

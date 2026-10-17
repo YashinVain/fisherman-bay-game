@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Рыбаки и погода</title>
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+    html, body { overflow: auto; height: auto; touch-action: auto; background: #e9f2f7; }
+    body { padding: 18px; }
+    h1 { margin: 0 0 4px; font-size: 26px; }
+    .table { display: grid; grid-template-columns: 110px repeat(5, minmax(0, 1fr)); gap: 10px; margin-top: 14px; align-items: center; }
+    .head { font-size: 18px; text-align: center; }
+    .head small { display: block; font-size: 12px; color: var(--ink-soft); font-weight: 700; }
+    .who { font-size: 19px; }
+    canvas { width: 100%; border-radius: 12px; display: block; background: #fff; box-shadow: 0 3px 0 #d6e2ea; }
+</style>
+</head>
+<body>
+<h1>Три рыбака × пять погод</h1>
+<div class="muted">Свет меняется вместе с погодой и временем суток, а рыбак меняется вместе со светом. Голова у всех одного размера и сидит на шее.</div>
+<div class="table" id="t"></div>
+<script>window.FB = { lang: 'ru', t: (k) => k };</script>
+<script src="../../js/core/util.js"></script>
+<script src="softhero.js"></script>
+<script>
+const moods = [['day', 'День', 'солнце сбоку'], ['sunset', 'Вечер', 'закат за спиной'], ['night', 'Ночь', 'луна и фонарь'], ['rain', 'Дождь', 'холодный свет'], ['fog', 'Туман', 'всё в дымке']];
+const who = [['boy', 'Мальчик'], ['girl', 'Девочка'], ['grandpa', 'Дедушка']];
+const t = document.getElementById('t');
+t.insertAdjacentHTML('beforeend', '<div></div>');
+moods.forEach(([, name, sub]) => t.insertAdjacentHTML('beforeend', '<div class="head">' + name + '<small>' + sub + '</small></div>'));
+who.forEach(([id, name]) => {
+    t.insertAdjacentHTML('beforeend', '<div class="who">' + name + '</div>');
+    moods.forEach(([m]) => {
+        const c = document.createElement('canvas'); c.width = W; c.height = H;
+        drawSoft(c.getContext('2d'), m, id);
+        t.appendChild(c);
+    });
+});
+</script>
+</body>
+</html>

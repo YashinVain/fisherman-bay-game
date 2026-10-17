@@ -1,0 +1,8 @@
+{
+    "out": "out",
+    "steps": [
+        { "size": [1400, 1080, 1] },
+        { "open": "http://127.0.0.1:8940/tools/sketches/heroes.html", "wait": 1500 },
+        { "shot": "heroes.png" }
+    ]
+}

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Варианты рыбака</title>
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+    html, body { overflow: auto; height: auto; touch-action: auto; background: #e9f2f7; }
+    body { padding: 18px; }
+    h1 { margin: 0 0 4px; font-size: 26px; }
+    .row { display: grid; grid-template-columns: 170px repeat(3, minmax(0, 1fr)); gap: 12px; align-items: center; margin-top: 14px; }
+    .who { font-size: 22px; }
+    .who small { display: block; font-size: 13px; color: var(--ink-soft); font-weight: 700; }
+    canvas { width: 100%; border-radius: 16px; background: #fff; box-shadow: 0 4px 0 #d6e2ea; display: block; }
+</style>
+</head>
+<body>
+<h1>Новый рыбак — какой больше нравится?</h1>
+<div class="muted">В каждой строке один персонаж в разной одежде и с разным настроением: спокойный, тянет рыбу, радуется улову.</div>
+<div id="rows"></div>
+<script>window.FB = { lang: 'ru', t: (k) => k };</script>
+<script src="../../js/core/util.js"></script>
+<script src="../../js/data/gear.js"></script>
+<script src="hero-detailed.js"></script>
+<script>
+const U = FB.U, C = FB.cosById;
+const looks = [
+    { hat: 'hat_cap', jacket: 'jk_green', face: 'calm', lean: 0, rod: -0.8, bend: 0.05 },
+    { hat: 'hat_beanie', jacket: 'jk_yellow', face: 'strain', lean: -0.8, rod: -1.25, bend: 0.85 },
+    { hat: 'hat_straw', jacket: 'jk_plaid', face: 'happy', lean: -0.2, rod: -1.0, bend: 0.2 }
+];
+const people = [['boy', 'Мальчик', 'весёлый, с веснушками'], ['girl', 'Девочка', 'с хвостиком'], ['grandpa', 'Дедушка', 'с бородой и в очках']];
+function scene(ctx, W, H) {
+    const hy = H * 0.42;
+    let g = ctx.createLinearGradient(0, 0, 0, hy); g.addColorStop(0, '#6cc4f4'); g.addColorStop(1, '#d6f1ff');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, hy);
+    ctx.fillStyle = '#9fd08a'; ctx.beginPath(); ctx.moveTo(0, hy); for (let x = 0; x <= W; x += 10) ctx.lineTo(x, hy - 18 - 10 * Math.sin(x / 60)); ctx.lineTo(W, hy); ctx.fill();
+    g = ctx.createLinearGradient(0, hy, 0, H); g.addColorStop(0, '#9ad8ea'); g.addColorStop(1, '#2e8fb4');
+    ctx.fillStyle = g; ctx.fillRect(0, hy, W, H - hy);
+    ctx.fillStyle = 'rgba(255,255,255,.5)'; for (let i = 0; i < 18; i++) { const x = (i * 97) % W, y = hy + 20 + (i * 53) % (H - hy - 30); ctx.fillRect(x, y, 16 + (y - hy) * 0.08, 2); }
+}
+function pier(ctx, x, y, h) {
+    const end = x + h * 0.22;
+    ctx.fillStyle = '#7a5228'; ctx.fillRect(end - h * 0.1, y + h * 0.1, h * 0.07, h * 0.4); ctx.fillRect(end - h * 0.9, y + h * 0.1, h * 0.07, h * 0.4);
+    ctx.fillStyle = '#c08a4e'; ctx.fillRect(-10, y - h * 0.035, end + 10, h * 0.07);
+    ctx.fillStyle = '#a8743a'; ctx.fillRect(-10, y + h * 0.035, end + 10, h * 0.08);
+    ctx.strokeStyle = '#3b2a33'; ctx.lineWidth = 2; ctx.strokeRect(-10, y - h * 0.035, end + 10, h * 0.155);
+}
+function rod(ctx, hx, hy, a, bend, len) {
+    const tipA = a + bend * 0.55;
+    const tx = hx + Math.cos(tipA) * len, ty = hy + Math.sin(tipA) * len;
+    const bx = hx - Math.cos(a) * len * 0.11, by = hy - Math.sin(a) * len * 0.11;
+    const mx = hx + Math.cos(a) * len * 0.55, my = hy + Math.sin(a) * len * 0.55;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#6a4a24'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(bx, by); ctx.quadraticCurveTo(mx, my, tx, ty); ctx.stroke();
+    ctx.strokeStyle = '#d8b06a'; ctx.lineWidth = 3.5; ctx.stroke();
+    ctx.strokeStyle = '#3a2a22'; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(hx, hy); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.quadraticCurveTo(tx + 40, ty + 60, tx + 60, ty + 140); ctx.stroke();
+}
+const rows = document.getElementById('rows');
+people.forEach(([who, name, sub]) => {
+    const row = document.createElement('div'); row.className = 'row';
+    row.innerHTML = '<div class="who">' + name + '<small>' + sub + '</small></div>';
+    looks.forEach((lk, i) => {
+        const c = document.createElement('canvas'); c.width = 720; c.height = 540;
+        const ctx = c.getContext('2d');
+        scene(ctx, c.width, c.height);
+        const h = 270, x = 230, y = 380;
+        pier(ctx, x, y, h);
+        const o = { x, y, h, who, hat: C[lk.hat], jacket: C[lk.jacket], face: lk.face, lean: lk.lean, t: 0.7 + i, legs: true };
+        FB.hero.back(ctx, o);
+        const hd = FB.hero.localHand(o);
+        const ang = lk.lean * 0.12, hx = x + hd[0] * Math.cos(ang) - hd[1] * Math.sin(ang), hy = y + hd[0] * Math.sin(ang) + hd[1] * Math.cos(ang);
+        rod(ctx, hx, hy, lk.rod, lk.bend, h * 1.6);
+        FB.hero.front(ctx, o);
+        row.appendChild(c);
+    });
+    rows.appendChild(row);
+});
+</script>
+</body>
+</html>

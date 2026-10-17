@@ -1,0 +1,8 @@
+{
+    "out": "out",
+    "steps": [
+        { "size": [1500, 1340, 1] },
+        { "open": "http://127.0.0.1:8940/tools/sketches/styles2.html", "wait": 2000 },
+        { "shot": "styles2.png" }
+    ]
+}

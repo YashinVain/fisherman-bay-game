@@ -1,0 +1,11 @@
+{
+    "out": "out",
+    "steps": [
+        { "size": [1500, 1080, 1] },
+        { "open": "http://127.0.0.1:8940/tools/sketches/styles.html", "wait": 1500 },
+        { "shot": "styles.png" },
+        { "shot": "styles-z1.png", "clip": [18, 100, 490, 370, 2] },
+        { "shot": "styles-z2.png", "clip": [505, 100, 490, 370, 2] },
+        { "shot": "styles-z3.png", "clip": [995, 100, 490, 370, 2] }
+    ]
+}

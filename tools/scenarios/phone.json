@@ -1,0 +1,16 @@
+{
+    "out": "out",
+    "steps": [
+        { "size": [390, 844, 2, true] },
+        { "open": "http://127.0.0.1:8940/", "wait": 2500 },
+        { "shot": "p0-title.png" },
+        { "js": "document.querySelector('.title .btn').click();", "sleep": 900 },
+        { "js": "FB.ui.closeAll();", "sleep": 700 },
+        { "shot": "p1-idle.png" },
+        { "js": "const F = FB.fishing; window.__ap = setInterval(() => { if (F.phase === 'bite') { F.press(0,0); F.release(); } if (F.phase !== 'fight') return; if (F.tension < 0.5) F.holding = true; else if (F.tension > 0.7) F.holding = false; }, 30); const p = FB.scene.project(0.3, 0.45); F.press(p.x, p.y); F.release();", "sleep": 300 },
+        { "js": "await new Promise(r => { const t = setInterval(() => { if (FB.fishing.phase === 'fight') { clearInterval(t); r(); } }, 20); setTimeout(r, 9000); });", "sleep": 1200 },
+        { "shot": "p2-fight.png" },
+        { "js": "await new Promise(r => { const t = setInterval(() => { if (FB.ui.isOpen()) { clearInterval(t); r(); } }, 50); setTimeout(r, 30000); });", "sleep": 700 },
+        { "shot": "p3-card.png" }
+    ]
+}

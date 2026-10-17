@@ -1,0 +1,207 @@
+// hud.js — то, что видно поверх рыбалки: уровень, монеты, жемчуг, плашка
+// турнира, нижние кнопки, наживка, подсказки, полоска вываживания и титульный экран.
+
+(function (FB) {
+    const H = FB.hud = {};
+    const UI = FB.ui, U = FB.U;
+    let els = {};
+
+    // ---------- Титульный экран ----------
+    H.showTitle = (onPlay) => {
+        const cfg = FB.state.weekCfg();
+        const fish = FB.fishById[cfg.fish];
+        const title = UI.el('div.title', {}, [
+            UI.el('div.logo', { html:
+                '<img class="logo-fish" src="' + FB.fishArt.url('goldcarp', 140) + '" alt="">' +
+                '<span class="logo-top">' + FB.t('logo_top') + '</span>' +
+                '<span class="logo-big" data-t="' + FB.t('logo_big') + '">' + FB.t('logo_big') + '</span>' }),
+            UI.el('div.mid', {}, [
+                UI.el('div.week-card', { html:
+                    '<img src="' + FB.fishArt.url(fish.id, 90) + '" alt="">' +
+                    '<div><div class="k">' + FB.t('week_tourney') + ' · ' + U.duration(FB.week.end(cfg.idx) - FB.sdk.now()) + '</div>' +
+                    '<div class="v">' + U.esc(FB.name(FB.pondById[cfg.pond])) + '</div>' +
+                    '<div class="v">' + FB.t('fish_of_week') + ': <b style="color:var(--sun)">' + U.esc(FB.name(fish)) + ' ×2</b></div></div>' })
+            ]),
+            UI.el('div.btns', {}, [
+                UI.btn('big pulse', FB.ic('play') + FB.t('play'), () => {
+                    title.classList.add('out');
+                    setTimeout(() => title.remove(), 500);
+                    onPlay();
+                }),
+                UI.el('div.row', {}, [
+                    UI.btn('blue small', FB.ic('trophy') + FB.t('nav_top'), () => FB.top.open()),
+                    UI.el('button.round', { html: FB.ic('gear'), onclick: () => { FB.audio.play('click'); FB.panels.settings(); } })
+                ])
+            ])
+        ]);
+        UI.root().appendChild(title);
+    };
+
+    // ---------- Основной интерфейс ----------
+    H.build = () => {
+        const root = UI.root();
+        const top = UI.el('div.hud-top');
+        els.lvl = UI.el('button.lvl', { onclick: () => { FB.audio.play('click'); FB.panels.profile(); } });
+        els.coins = UI.el('button.pill.coins', { onclick: () => { FB.audio.play('click'); FB.shopUI.open('gear'); } });
+        els.pearls = UI.el('button.pill.pearls', { onclick: () => { FB.audio.play('click'); FB.shopUI.open('pearls'); } });
+        const pills = UI.el('div.pills', {}, [els.coins, els.pearls]);
+        const right = UI.el('div.hud-right', {}, [UI.el('button.round', { html: FB.ic('gear'), onclick: () => { FB.audio.play('click'); FB.panels.settings(); } })]);
+        top.append(els.lvl, pills, right);
+
+        els.chip = UI.el('button.tourney-chip', { onclick: () => { FB.audio.play('click'); FB.top.open('week'); } });
+
+        els.nav = UI.el('div.nav');
+        const nav = [
+            ['places', 'map', () => FB.panels.places()],
+            ['album', 'album', () => FB.panels.album()],
+            ['top', 'trophy', () => FB.top.open()],
+            ['shop', 'shop', () => FB.shopUI.open()],
+            ['tasks', 'tasks', () => FB.tasks.open()]
+        ];
+        els.navBtn = {};
+        nav.forEach(([id, icon, fn]) => {
+            const b = UI.el('button.nb-' + id, { title: FB.t('nav_' + id), html: FB.ic(icon) + '<span>' + FB.t('nav_' + id) + '</span>', onclick: () => { FB.audio.play('click'); fn(); } });
+            els.navBtn[id] = b;
+            els.nav.appendChild(b);
+        });
+
+        els.bait = UI.el('button.bait-chip', { onclick: () => { FB.audio.play('click'); H.baitPicker(); } });
+        els.hint = UI.el('div.hint.soft');
+        els.fight = buildFight();
+        els.hand = UI.el('div.tap-hand.hidden', { html: handSvg() });
+
+        root.append(top, els.chip, els.nav, els.bait, els.hint, els.fight, els.hand);
+        H.update();
+    };
+
+    function handSvg() {
+        return '<svg viewBox="0 0 64 64" width="64" height="64"><path d="M26 30V10a5 5 0 0110 0v16l12 3c4 1 6 4 5 8l-3 14c-1 5-5 8-10 8H31c-4 0-7-2-9-5l-9-14c-2-3 0-7 4-7 2 0 4 1 5 3l4 5z" fill="#fff" stroke="#2a3550" stroke-width="3" stroke-linejoin="round"/><path d="M36 30v8M42 31v7" stroke="#2a3550" stroke-width="2.5" stroke-linecap="round"/></svg>';
+    }
+
+    function buildFight() {
+        const f = UI.el('div.fight.away');
+        f.innerHTML =
+            '<div class="row"><div class="lab">' + FB.t('tension') + '</div><div class="meter"><i class="zone z-slack"></i><i class="zone z-good"></i><i class="zone z-bad"></i><i class="needle"></i></div></div>' +
+            '<div class="gap"></div>' +
+            '<div class="row"><div class="lab">' + FB.t('distance') + '</div><div class="track"><i class="fill"></i><span class="fishmark">' + FB.ic('fish') + '</span><span class="goal">' + FB.ic('hook') + '</span></div></div>' +
+            '<div class="tip"></div>';
+        const T = FB.fishing.TUNE;
+        f.querySelector('.z-slack').style.width = (T.greenLo * 100) + '%';
+        const g = f.querySelector('.z-good');
+        g.style.left = (T.greenLo * 100) + '%';
+        g.style.width = ((T.greenHi - T.greenLo) * 100) + '%';
+        f.querySelector('.z-bad').style.width = ((1 - T.greenHi) * 100) + '%';
+        return f;
+    }
+
+    // Обновить цифры и плашки (зовётся при изменениях)
+    H.update = () => {
+        if (!els.lvl) return;
+        const S = FB.S;
+        els.lvl.style.setProperty('--p', Math.round(FB.state.levelProgress() * 100));
+        els.lvl.innerHTML = '<b>' + S.level + '</b><small>' + FB.t('lvl') + '</small>';
+        els.coins.innerHTML = FB.ic('coin') + U.fmt(S.coins);
+        els.pearls.innerHTML = FB.ic('pearl') + U.fmt(S.pearls) + '<span class="plus">+</span>';
+        const bait = FB.baitById[S.bait];
+        els.bait.innerHTML = FB.ic(bait.icon) + '<span>' + U.esc(FB.name(bait)) + '</span>';
+        H.updateChip();
+        const n = FB.quests.badge();
+        setBadge(els.navBtn.tasks, n);
+        setBadge(els.navBtn.shop, FB.S.buy.starter ? 0 : (FB.S.stats.catches >= 5 && !H.seenStarter ? 1 : 0));
+    };
+    function setBadge(btn, n) {
+        let b = btn.querySelector('.badge');
+        if (n > 0) {
+            if (!b) { b = UI.el('span.badge'); btn.appendChild(b); }
+            b.textContent = n;
+        } else if (b) b.remove();
+    }
+
+    H.updateChip = () => {
+        if (!els.chip) return;
+        const cfg = FB.state.weekCfg();
+        const fish = FB.fishById[cfg.fish];
+        const here = FB.S.pond === cfg.pond;
+        els.chip.classList.toggle('here', here);
+        const left = U.duration(FB.week.end(cfg.idx) - FB.sdk.now());
+        els.chip.innerHTML = FB.ic('trophy') + '<span><span class="t1">' + (here ? FB.t('you_in_tourney') : FB.t('week_tourney')) + ' · ' + left + '</span>' +
+            '<span class="t2">' + (here
+                ? FB.t('my_score') + ': <b>' + U.fmt(FB.state.weekScore()) + '</b> · ' + FB.t('best_n', { n: FB.S.week.best.length })
+                : U.esc(FB.name(FB.pondById[cfg.pond])) + ' · ' + U.esc(FB.name(fish)) + ' ×2') + '</span></span>' +
+            '<img src="' + FB.fishArt.url(fish.id, 60) + '" alt="">';
+    };
+
+    // ---------- Подсказки ----------
+    let hintKey = null;
+    H.hint = (key) => {
+        hintKey = key;
+        if (!els.hint) return;
+        const tut = FB.S.tut < 99;
+        const show = key && (key === 'tap_now' || key === 'hold_reel' || tut || key === 'wait_bite');
+        els.hint.className = 'hint' + (key === 'tap_now' ? ' big' : '') + (show ? '' : ' soft');
+        if (key) els.hint.textContent = FB.t('hint_' + key);
+        if (key === 'hold_reel') els.hint.className = 'hint soft';
+    };
+
+    // ---------- Каждый кадр ----------
+    H.frame = () => {
+        if (!els.nav) return;
+        const F = FB.fishing;
+        const calm = F.phase === 'idle' || F.phase === 'lost';
+        els.nav.classList.toggle('away', !calm);
+        els.bait.classList.toggle('away', !calm);
+        els.chip.classList.toggle('away', !calm && F.phase !== 'wait');
+        const info = F.fightInfo();
+        els.fight.classList.toggle('away', !info);
+        if (info) {
+            const T = F.TUNE;
+            els.fight.querySelector('.needle').style.left = (U.clamp(info.tension, 0, 1) * 100) + '%';
+            els.fight.querySelector('.meter').classList.toggle('shake', info.tension > T.greenHi);
+            const p = U.clamp(info.progress, 0, 1);
+            els.fight.querySelector('.fishmark').style.left = 'calc(' + (p * 100) + '% - ' + (p * 30) + 'px)';
+            els.fight.querySelector('.fill').style.width = 'calc(' + (p * 100) + '% - ' + (p * 30) + 'px)';
+            const tip = els.fight.querySelector('.tip');
+            let key = 'fight_hold', warn = false;
+            if (info.tension > T.greenHi) { key = 'fight_release'; warn = true; }
+            else if (info.slack > 0.35) { key = 'fight_pull'; warn = true; }
+            else if (info.surge) key = 'fight_surge';
+            tip.textContent = FB.t(key);
+            tip.classList.toggle('warn', warn);
+        }
+        // Рука-подсказка в обучении: показывает, куда нажать
+        const tut = FB.S.tut < 99 && F.phase === 'idle' && !UI.isOpen();
+        els.hand.classList.toggle('hidden', !tut);
+        if (tut) {
+            const p = FB.scene.project(0.12, 0.35);
+            els.hand.style.left = (p.x - 20) + 'px';
+            els.hand.style.top = (p.y - 6) + 'px';
+        }
+    };
+
+    // ---------- Выбор наживки ----------
+    H.baitPicker = () => {
+        const render = () => {
+            const box = UI.el('div');
+            box.appendChild(UI.el('p.muted.center', { text: FB.t('bait_hint') }));
+            const grid = UI.el('div.grid.small');
+            FB.BAITS.forEach(b => {
+                const owned = FB.S.baits.includes(b.id);
+                const on = FB.S.bait === b.id;
+                const likes = FB.FISH.filter(f => f.bait === b.id && FB.S.album[f.id]).length;
+                const card = UI.el('div.card.item' + (on ? '.on' : ''), { html:
+                    '<div class="prev">' + FB.ic(b.icon) + '</div><div class="nm">' + U.esc(FB.name(b)) + '</div>' +
+                    '<div class="src">' + FB.t('bait_likes', { n: likes }) + '</div>' });
+                if (owned) card.appendChild(UI.btn(on ? 'small grey' : 'small', on ? FB.t('equipped') : FB.t('take'), () => { FB.S.bait = b.id; FB.state.save(); H.update(); UI.close(); }));
+                else if (FB.S.level < b.level) card.appendChild(UI.btn('small grey off', FB.ic('lock') + FB.t('lvl_n', { n: b.level }), null));
+                else card.appendChild(UI.btn('small yellow', UI.price({ coins: b.price }), () => {
+                    if (FB.shop.buyBait(b.id)) { FB.audio.play('coin'); H.update(); UI.refresh(); }
+                    else UI.toast(FB.t('not_enough'), 'coin');
+                }));
+                grid.appendChild(card);
+            });
+            box.appendChild(grid);
+            return box;
+        };
+        UI.open({ title: FB.t('bait'), body: render(), render, width: 'min(96vw, 520px)' });
+    };
+})(window.FB);

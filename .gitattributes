@@ -1,0 +1,5 @@
+# Все текстовые файлы храним с переносами строк LF — без предупреждений на Windows
+* text=auto eol=lf
+*.woff2 binary
+*.png binary
+*.zip binary

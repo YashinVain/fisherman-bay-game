@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1d8fc4">
+<title>Рыбацкая бухта</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<!-- Заставка, пока грузится -->
+<div id="loading">
+    <div class="load-logo"><span class="logo-top">Рыбацкая</span><span class="logo-big" data-t="бухта">бухта</span></div>
+    <div class="load-bar"><i></i></div>
+</div>
+
+<div id="ui"></div>
+
+<!-- Порядок важен: каждый файл дописывает своё в window.FB -->
+<script src="js/core/util.js"></script>
+<script src="js/core/i18n.js"></script>
+<script src="js/data/fish.js"></script>
+<script src="js/data/gear.js"></script>
+<script src="js/core/sdk.js"></script>
+<script src="js/core/audio.js"></script>
+<script src="js/game/week.js"></script>
+<script src="js/game/catch.js"></script>
+<script src="js/game/state.js"></script>
+<script src="js/game/quests.js"></script>
+<script src="js/game/tourney.js"></script>
+<script src="js/game/shop.js"></script>
+<script src="js/view/fishart.js"></script>
+<script src="js/view/scene.js"></script>
+<script src="js/view/softhero.js"></script>
+<script src="js/view/person.js"></script>
+<script src="js/game/fishing.js"></script>
+<script src="js/ui/icons.js"></script>
+<script src="js/ui/ui.js"></script>
+<script src="js/ui/hud.js"></script>
+<script src="js/ui/catchcard.js"></script>
+<script src="js/ui/panels.js"></script>
+<script src="js/ui/top.js"></script>
+<script src="js/ui/shopui.js"></script>
+<script src="js/ui/tasks.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

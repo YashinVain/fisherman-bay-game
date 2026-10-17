@@ -1,0 +1,10 @@
+{
+    "out": "out",
+    "steps": [
+        { "size": [1600, 860, 1] },
+        { "open": "http://127.0.0.1:8940/tools/sketches/styles3.html", "wait": 2500 },
+        { "shot": "styles3.png" },
+        { "shot": "night-boy.png", "clip": [720, 143, 280, 210, 3] },
+        { "shot": "night-grandpa.png", "clip": [720, 584, 280, 210, 3] }
+    ]
+}

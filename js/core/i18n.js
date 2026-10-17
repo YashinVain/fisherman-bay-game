@@ -1,0 +1,156 @@
+// i18n.js — все тексты игры на русском и английском.
+// FB.t('ключ', { n: 5 }) → строка, {n} подставляется.
+
+(function (root) {
+    const FB = root.FB = root.FB || {};
+
+    const RU = {
+        title: 'Рыбацкая бухта',
+        logo_top: 'Рыбацкая', logo_big: 'бухта',
+        play: 'Играть',
+        unit_g: 'г', unit_kg: 'кг', unit_d: 'д', unit_h: 'ч', unit_min: 'мин',
+        mock_ad: 'Тестовая реклама', you: 'Ты', loading: 'Загрузка…',
+        lvl: 'уровень', lvl_n: 'Ур. {n}',
+        nav_places: 'Места', nav_album: 'Альбом', nav_top: 'Топ', nav_shop: 'Магазин', nav_tasks: 'Задания',
+        week_tourney: 'Турнир недели', you_in_tourney: 'Ты на турнире', fish_of_week: 'Рыба недели', pond_of_week: 'Место недели',
+        my_score: 'Мои очки', best_n: 'уловов в зачёте: {n}/10', tourney: 'Турнир', you_here: 'Ты здесь',
+        tension: 'Леска', distance: 'Рыба',
+        hint_tap_water: 'Нажми на воду, чтобы забросить', hint_wait_bite: 'Ждём поклёвку…', hint_tap_now: 'Клюёт! Жми!', hint_hold_reel: 'Держи — тяни!',
+        fight_hold: 'Держи — тянешь. Отпусти — леска отдыхает', fight_release: 'Отпусти! Леска сейчас лопнет!', fight_pull: 'Тяни! Рыба уходит!', fight_surge: 'Рыба рванула!',
+        too_far: 'Удочка не достаёт дальше — купи получше',
+        bait: 'Наживка', bait_hint: 'У каждой рыбы любимая наживка — с ней клюёт втрое чаще. Узнать, кто что любит, можно в альбоме.',
+        bait_likes: 'Любят известные тебе: {n}', equipped: 'Выбрано', take: 'Взять', wear: 'Надеть',
+        not_enough: 'Не хватает монет', not_enough_pearls: 'Не хватает жемчуга',
+        r_common: 'Обычная', r_uncommon: 'Необычная', r_rare: 'Редкая', r_epic: 'Эпическая', r_legendary: 'Легендарная',
+        new_species: 'Новый вид!', new_record: 'Новый рекорд!', week_fish_x2: 'Рыба недели ×2', tourney_plus: 'Турнир +{n}',
+        weight: 'вес', points: 'очки', xp: 'опыта', coins_short: 'мон.',
+        keep: 'Забрать', release: 'Отпустить', keep_x2: 'Забрать ×2 монеты ({n})', ok: 'Ну ладно',
+        released_toast: 'Рыбка уплыла домой и благодарит тебя', album_added: 'Записано в альбом', ad_failed: 'Видео не досмотрено',
+        junk_boot: 'Кто-то тут явно рыбачил без сапога…', junk_can: 'Мусор — в урну! Пруд скажет спасибо.', junk_weed: 'Зато красиво. И пахнет рекой.',
+        junk_tire: 'Как она тут оказалась?!', junk_bottle: 'В записке: «Ищи клад у большого камня». Внутри было немного монет!',
+        junk_duck: 'Пи-пи! Кто-то потерял игрушку.', junk_hat: 'Тебе не мала? Хотя бы примерь.', junk_chest: 'Настоящий клад! Сундучок полон монет!',
+        lost_snap: 'Леска лопнула!', lost_slack: 'Леска провисла — рыба ушла', lost_early: 'Рано! Дождись, когда поплавок нырнёт', lost_missed: 'Не успел подсечь — рыба ушла',
+        lost_rescue: '{name} ушла. Можно вернуть её за короткое видео.', rescue: 'Вернуть рыбу', no_thanks: 'Не надо', oh_no: 'Ох!',
+        new_level: 'Новый уровень', level_up: 'Ты стал опытнее!', unlocked: 'Открылось:', hooray: 'Ура!',
+        tourney_results: 'Итоги турнира', place_n: '{n} место', thanks_member: 'Спасибо за участие!', week_points: 'Твои очки: {n}', your_reward: 'Твоя награда:', great: 'Отлично!',
+        caught_of: 'поймано {a} из {b}', pond_locked: 'Откроется на {n} уровне', tourney_open_hint: 'Место турнира открыто для всех на эту неделю — даже если ещё рано по уровню.',
+        album_progress: 'Собрано видов: {a} из {b}', junk_collection: 'Находки со дна: {a} из {b}',
+        depth_near: 'у берега', depth_mid: 'на середине', depth_far: 'вдали, на глубине',
+        where: 'Где', bites: 'Клюёт', weight_range: 'Вес', likes_bait: 'Любит', likes_weather: 'Погода', any_weather: 'любая',
+        wx_sun: 'солнце', wx_evening: 'вечер', wx_rain: 'дождь', wx_fog: 'туман', wx_night: 'ночь',
+        record: 'Рекорд', caught_times: 'Поймано раз', catch_to_learn: 'Поймай эту рыбу, чтобы узнать её секреты',
+        angler: 'Рыбак', fame: 'Слава', to_next_level: 'До следующего уровня', profile: 'Профиль', stats: 'Статистика', trophies: 'Награды турниров',
+        st_catches: 'уловов', st_species: 'видов', st_biggest: 'самая большая', st_total: 'всего поймано', st_released: 'отпущено', st_casts: 'забросов',
+        week_n: 'неделя {n}', no_trophies: 'Пока пусто. Войди в топ-100 недельного турнира — и здесь появится медаль!',
+        settings: 'Настройки', set_sound: 'Звуки', set_music: 'Музыка', set_easy: 'Лёгкий режим', set_easy_sub: 'Больше времени на подсечку, леска рвётся реже',
+        set_lang: 'Язык', login: 'Войти в Яндекс', login_sub: 'Чтобы попасть в топы и не потерять улов', login_btn: 'Войти', version: 'Версия',
+        lb_week: 'Неделя', lb_anglers: 'Рыбаки', lb_record: 'Рекорд',
+        lb_desc_anglers: 'Слава рыбака: каждый новый вид и каждый улов', lb_desc_record: 'Самая тяжёлая рыба, которую поймал рыбак',
+        last_week: 'Прошлая неделя', ends_in: 'До конца', my_week: 'Мои очки: {n}', slots_left: 'ещё {n} в зачёт',
+        week_rules: 'Лови в месте недели — 10 лучших уловов идут в зачёт', go_tourney: 'Плыть на турнир',
+        login_for_top: 'Войди в Яндекс, чтобы твоё имя появилось в топе', top_unavailable: 'Топ сейчас недоступен. Попробуй позже.',
+        top_empty: 'Пока никого. Стань первым!', hidden_angler: 'Тайный рыбак',
+        shop_gear: 'Снасти', shop_look: 'Образ', shop_pearls: 'Жемчуг', rods: 'Удочки',
+        st_reach: 'Заброс', st_control: 'Контроль', st_luck: 'Удача',
+        cat_who: 'Рыбак', who_boy: 'Мальчик', who_girl: 'Девочка', who_grandpa: 'Дедушка', choose: 'Выбрать',
+        cat_hat: 'Шапки', cat_jacket: 'Одежда', cat_float: 'Поплавки', cat_boat: 'Лодки', cat_pet: 'Питомцы', cat_frame: 'Рамки', cat_effect: 'Эффекты',
+        src_default: 'Есть с начала', src_pass: 'Из сезонного пропуска', src_tourney: 'Награда турнира', src_starter: 'Из набора новичка', src_supporter: 'За поддержку игры', src_shop: '',
+        yan: 'ян', pay_unavailable: 'Покупки доступны в игре на Яндекс Играх', pearls_word: 'жемчуга', once: 'Один раз',
+        tag_popular: 'Хит', tag_best: 'Выгодно',
+        no_ads: 'Без рекламы', no_ads_desc: 'Убирает рекламу между уловами навсегда. Видео за награды остаются — по желанию.',
+        bought: 'Куплено', golden_pass: 'Золотой пропуск', golden_pass_desc: 'Открывает золотые награды сезона: белую яхту, пиратскую треуголку, золотую куртку, конфетти и много жемчуга.',
+        look_at: 'Смотреть', pearls_note: 'Жемчуг тратится только на красоту. Очков в турнире за него не купить — всё честно.',
+        thanks_buy: 'Спасибо, что поддерживаешь игру!', bought_x: 'Куплено: {name}',
+        tasks_daily: 'На сегодня', tasks_season: 'Сезон', daily_gift: 'Подарок за вход', day_n: 'День {n}',
+        take_gift: 'Забрать', take_x2: 'Забрать ×2', gift_tomorrow: 'Завтра будет новый подарок. Заходи каждый день — подарки растут!',
+        daily_quests: 'Задания дня', reward: 'Награда', claim: 'Забрать', swap_quest: 'Заменить задание', quests_reset: 'Новые задания — каждый день в полночь по Москве',
+        q_catch: 'Поймай {n} рыб', q_species: 'Поймай: {name} — {n} шт.', q_heavy: 'Поймай рыбу тяжелее {w}', q_rare: 'Поймай редкую рыбу или лучше',
+        q_release: 'Отпусти {n} рыб', q_tourney: 'Поймай {n} рыб в месте турнира', q_points: 'Набери {n} очков за уловы',
+        season_done: 'Сезон пройден!', season_how: 'Очки сезона дают все уловы', need_pass: 'Нужен золотой пропуск', tier_locked: 'Ещё не дошёл до этой ступени',
+        track_free: 'Бесплатно', track_gold: 'Золотой пропуск', buy_pass: 'Открыть',
+        quest_done: 'Задание выполнено!', bubble_cast: 'Точно в пузыри! Тут клюёт лучше', weather_changed: 'Погода сменилась: {w}'
+    };
+
+    const EN = {
+        title: 'Fisherman Bay',
+        logo_top: 'Fisherman', logo_big: 'Bay',
+        play: 'Play',
+        unit_g: 'g', unit_kg: 'kg', unit_d: 'd', unit_h: 'h', unit_min: 'min',
+        mock_ad: 'Test ad', you: 'You', loading: 'Loading…',
+        lvl: 'level', lvl_n: 'Lv. {n}',
+        nav_places: 'Places', nav_album: 'Album', nav_top: 'Top', nav_shop: 'Shop', nav_tasks: 'Tasks',
+        week_tourney: 'Weekly tournament', you_in_tourney: 'You are in the tournament', fish_of_week: 'Fish of the week', pond_of_week: 'Place of the week',
+        my_score: 'My score', best_n: 'catches counted: {n}/10', tourney: 'Tournament', you_here: 'You are here',
+        tension: 'Line', distance: 'Fish',
+        hint_tap_water: 'Tap the water to cast', hint_wait_bite: 'Waiting for a bite…', hint_tap_now: 'A bite! Tap!', hint_hold_reel: 'Hold to reel!',
+        fight_hold: 'Hold to reel. Let go to rest the line', fight_release: 'Let go! The line is about to snap!', fight_pull: 'Reel! The fish is escaping!', fight_surge: 'The fish is pulling!',
+        too_far: 'Your rod can\'t reach further — get a better one',
+        bait: 'Bait', bait_hint: 'Every fish has a favourite bait — it bites three times more often with it. Check the album to learn who likes what.',
+        bait_likes: 'Liked by known fish: {n}', equipped: 'Equipped', take: 'Use', wear: 'Wear',
+        not_enough: 'Not enough coins', not_enough_pearls: 'Not enough pearls',
+        r_common: 'Common', r_uncommon: 'Uncommon', r_rare: 'Rare', r_epic: 'Epic', r_legendary: 'Legendary',
+        new_species: 'New species!', new_record: 'New record!', week_fish_x2: 'Fish of the week ×2', tourney_plus: 'Tournament +{n}',
+        weight: 'weight', points: 'points', xp: 'XP', coins_short: 'coins',
+        keep: 'Keep', release: 'Release', keep_x2: 'Keep with ×2 coins ({n})', ok: 'Oh well',
+        released_toast: 'The fish swam home and thanks you', album_added: 'Added to the album', ad_failed: 'The video was not finished',
+        junk_boot: 'Someone was fishing without a boot here…', junk_can: 'Trash goes in the bin! The pond says thanks.', junk_weed: 'Pretty, though. And smells like a river.',
+        junk_tire: 'How did that get here?!', junk_bottle: 'The note says: "Look for treasure by the big rock". There were some coins inside!',
+        junk_duck: 'Squeak! Someone lost a toy.', junk_hat: 'Does it fit? Try it on.', junk_chest: 'Real treasure! The chest is full of coins!',
+        lost_snap: 'The line snapped!', lost_slack: 'The line went slack — the fish escaped', lost_early: 'Too early! Wait for the float to dive', lost_missed: 'Too late — the fish got away',
+        lost_rescue: '{name} got away. You can bring it back with a short video.', rescue: 'Bring it back', no_thanks: 'No thanks', oh_no: 'Oh no!',
+        new_level: 'New level', level_up: 'You got more experienced!', unlocked: 'Unlocked:', hooray: 'Hooray!',
+        tourney_results: 'Tournament results', place_n: 'Place {n}', thanks_member: 'Thanks for joining!', week_points: 'Your score: {n}', your_reward: 'Your reward:', great: 'Great!',
+        caught_of: '{a} of {b} caught', pond_locked: 'Opens at level {n}', tourney_open_hint: 'The tournament place is open to everyone this week — even if your level is too low.',
+        album_progress: 'Species collected: {a} of {b}', junk_collection: 'Finds from the bottom: {a} of {b}',
+        depth_near: 'near the shore', depth_mid: 'in the middle', depth_far: 'far out, in the deep',
+        where: 'Where', bites: 'Bites', weight_range: 'Weight', likes_bait: 'Likes', likes_weather: 'Weather', any_weather: 'any',
+        wx_sun: 'sunny', wx_evening: 'evening', wx_rain: 'rain', wx_fog: 'fog', wx_night: 'night',
+        record: 'Record', caught_times: 'Times caught', catch_to_learn: 'Catch this fish to learn its secrets',
+        angler: 'Angler', fame: 'Fame', to_next_level: 'To the next level', profile: 'Profile', stats: 'Stats', trophies: 'Tournament awards',
+        st_catches: 'catches', st_species: 'species', st_biggest: 'biggest', st_total: 'total caught', st_released: 'released', st_casts: 'casts',
+        week_n: 'week {n}', no_trophies: 'Nothing yet. Get into the top 100 of a weekly tournament to earn a medal!',
+        settings: 'Settings', set_sound: 'Sounds', set_music: 'Music', set_easy: 'Easy mode', set_easy_sub: 'More time to hook, the line snaps less',
+        set_lang: 'Language', login: 'Sign in to Yandex', login_sub: 'To get into the tops and keep your catch', login_btn: 'Sign in', version: 'Version',
+        lb_week: 'Week', lb_anglers: 'Anglers', lb_record: 'Record',
+        lb_desc_anglers: 'Angler fame: every new species and every catch', lb_desc_record: 'The heaviest fish an angler has caught',
+        last_week: 'Last week', ends_in: 'Ends in', my_week: 'My score: {n}', slots_left: '{n} more count',
+        week_rules: 'Fish at the place of the week — your 10 best catches count', go_tourney: 'Sail to the tournament',
+        login_for_top: 'Sign in to Yandex to see your name in the top', top_unavailable: 'The top is unavailable right now. Try later.',
+        top_empty: 'Nobody yet. Be the first!', hidden_angler: 'Secret angler',
+        shop_gear: 'Gear', shop_look: 'Look', shop_pearls: 'Pearls', rods: 'Rods',
+        st_reach: 'Reach', st_control: 'Control', st_luck: 'Luck',
+        cat_who: 'Angler', who_boy: 'Boy', who_girl: 'Girl', who_grandpa: 'Grandpa', choose: 'Choose',
+        cat_hat: 'Hats', cat_jacket: 'Clothes', cat_float: 'Floats', cat_boat: 'Boats', cat_pet: 'Pets', cat_frame: 'Frames', cat_effect: 'Effects',
+        src_default: 'From the start', src_pass: 'From the season pass', src_tourney: 'Tournament reward', src_starter: 'From the starter pack', src_supporter: 'For supporting the game', src_shop: '',
+        yan: 'yan', pay_unavailable: 'Purchases are available in the game on Yandex Games', pearls_word: 'pearls', once: 'One time',
+        tag_popular: 'Hit', tag_best: 'Best value',
+        no_ads: 'No ads', no_ads_desc: 'Removes ads between catches forever. Reward videos stay — only if you want.',
+        bought: 'Bought', golden_pass: 'Golden pass', golden_pass_desc: 'Unlocks golden season rewards: a white yacht, a pirate hat, a golden jacket, confetti and lots of pearls.',
+        look_at: 'Look', pearls_note: 'Pearls are only for looks. You can\'t buy tournament points — it\'s fair.',
+        thanks_buy: 'Thank you for supporting the game!', bought_x: 'Bought: {name}',
+        tasks_daily: 'Today', tasks_season: 'Season', daily_gift: 'Daily gift', day_n: 'Day {n}',
+        take_gift: 'Take', take_x2: 'Take ×2', gift_tomorrow: 'A new gift tomorrow. Come every day — gifts grow!',
+        daily_quests: 'Daily quests', reward: 'Reward', claim: 'Claim', swap_quest: 'Swap quest', quests_reset: 'New quests every day at midnight Moscow time',
+        q_catch: 'Catch {n} fish', q_species: 'Catch: {name} — {n}', q_heavy: 'Catch a fish heavier than {w}', q_rare: 'Catch a rare fish or better',
+        q_release: 'Release {n} fish', q_tourney: 'Catch {n} fish at the tournament place', q_points: 'Score {n} points from catches',
+        season_done: 'Season complete!', season_how: 'Every catch gives season points', need_pass: 'You need the golden pass', tier_locked: 'You haven\'t reached this tier yet',
+        track_free: 'Free', track_gold: 'Golden pass', buy_pass: 'Unlock',
+        quest_done: 'Quest complete!', bubble_cast: 'Right into the bubbles! Bites better here', weather_changed: 'The weather changed: {w}'
+    };
+
+    const DICT = { ru: RU, en: EN };
+    FB.lang = 'ru';
+    FB.DICT = DICT;
+    FB.pickLang = (l) => {
+        l = String(l || '').toLowerCase().slice(0, 2);
+        return ['ru', 'be', 'uk', 'kk', 'uz'].includes(l) ? 'ru' : 'en';
+    };
+    FB.setLang = (l) => { FB.lang = DICT[l] ? l : 'ru'; };
+    FB.t = (key, p) => {
+        let s = DICT[FB.lang][key];
+        if (s === undefined) s = RU[key];
+        if (s === undefined) return key;
+        if (p) s = s.replace(/\{(\w+)\}/g, (m, k) => (p[k] !== undefined ? p[k] : m));
+        return s;
+    };
+})(typeof window !== 'undefined' ? window : globalThis);

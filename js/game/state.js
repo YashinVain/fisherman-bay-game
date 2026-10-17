@@ -22,6 +22,7 @@
         baits: ['worm'],
         owned: Object.values(FB.DEFAULT_LOOK),
         look: Object.assign({}, FB.DEFAULT_LOOK),
+        who: 'boy',            // рыбак: boy | girl | grandpa — меняется бесплатно
         album: {},            // id рыбы → { n: сколько поймано, best: лучший вес, г }
         junk: {},             // id мусора → сколько
         stats: { casts: 0, catches: 0, released: 0, lost: 0, playMs: 0, totalG: 0, bestG: 0, bestId: null },
@@ -86,6 +87,7 @@
             const id = S.look[cat];
             if (!FB.cosById[id] || !S.owned.includes(id)) S.look[cat] = FB.DEFAULT_LOOK[cat];
         });
+        if (!['boy', 'girl', 'grandpa'].includes(S.who)) S.who = 'boy';
         S.level = ST.levelFromXp(S.xp);
         if (S.season.id !== FB.SEASON.id) S.season = { id: FB.SEASON.id, pts: 0, free: [], gold: [], pass: false };
     };

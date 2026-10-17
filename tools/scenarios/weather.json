@@ -1,0 +1,23 @@
+{
+    "out": "out",
+    "steps": [
+        { "size": [1100, 680, 1] },
+        { "open": "http://127.0.0.1:8940/", "wait": 2500 },
+        { "js": "document.querySelector('.title .btn').click();", "sleep": 900 },
+        { "js": "FB.ui.closeAll(); FB.S.tut = 99; FB.hud.hint(null); FB.S.owned.push('pet_cat'); FB.S.look.pet = 'pet_cat';", "sleep": 400 },
+        { "js": "FB.scene.setPlace(FB.S.pond, 'sun');", "sleep": 700 },
+        { "shot": "w1-sun.png" },
+        { "js": "FB.scene.setPlace(FB.S.pond, 'evening');", "sleep": 700 },
+        { "shot": "w2-evening.png" },
+        { "js": "FB.scene.setPlace(FB.S.pond, 'night');", "sleep": 700 },
+        { "shot": "w3-night.png" },
+        { "js": "FB.scene.setPlace(FB.S.pond, 'rain');", "sleep": 700 },
+        { "shot": "w4-rain.png" },
+        { "js": "FB.scene.setPlace(FB.S.pond, 'fog');", "sleep": 700 },
+        { "shot": "w5-fog.png" },
+        { "js": "FB.S.who = 'girl'; FB.S.owned.push('hat_beanie','jk_yellow'); FB.S.look.hat = 'hat_beanie'; FB.S.look.jacket = 'jk_yellow'; FB.scene.setPlace('mountain', 'night');", "sleep": 700 },
+        { "shot": "w6-girl-night.png" },
+        { "js": "FB.S.who = 'grandpa'; FB.S.owned.push('hat_straw','jk_plaid','bt_rowboat'); FB.S.look.hat = 'hat_straw'; FB.S.look.jacket = 'jk_plaid'; FB.S.look.boat = 'bt_rowboat'; FB.scene.setPlace('pier', 'evening');", "sleep": 700 },
+        { "shot": "w7-grandpa-evening.png" }
+    ]
+}
