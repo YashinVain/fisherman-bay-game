@@ -506,6 +506,19 @@
         }
     };
 
+    // Портрет рыбака для кружков (подсказки обучения, выбор рыбака):
+    // голова с шапкой крупно и по центру
+    P.portrait = (canvas, who, face) => {
+        const w = canvas.width, ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, w, canvas.height);
+        const h = w * 1.3;
+        const o = Object.assign(P.heroOpts(), {
+            x: w * 0.44 - h * 0.07, y: w * 0.62 + h * 0.765, h,
+            who: who || FB.S.who, face: face || 'happy', lean: 0, legs: false, t: 0.6
+        });
+        FB.soft.draw(ctx, o);
+    };
+
     function drawBoatIcon(ctx, item, w, h) {
         const t = item.c.type || 'pier', a = item.c.a, b = item.c.b;
         ctx.lineJoin = 'round';
@@ -545,11 +558,57 @@
     }
 
     // ---------- Поплавок ----------
-    // sub — насколько утонул (0..1), s — масштаб перспективы
-    P.drawFloat = (ctx, x, y, s, sub, wob) => {
+    // sub — насколько утонул (0..1), s — масштаб перспективы,
+    // air — поплавок в воздухе: рисуем целиком, с грузиком, крючком и наживкой
+    const FLOAT_TOP = { duck: 1.85, star: 2.7, heart: 2.3 };     // от точки поплавка до верхушки, в r
+    P.floatRadius = (s) => FB.scene.unit() * 1.5 * Math.max(0.35, s);
+    P.floatTop = (s) => P.floatRadius(s) * (FLOAT_TOP[cos('float').c.shape] || 2.6);
+
+    // Наживка на крючке — та, что сейчас выбрана
+    function bait(ctx, r) {
+        const id = FB.S.bait;
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        if (id === 'spinner') {
+            ctx.fillStyle = tint('#dfe4ea'); ctx.strokeStyle = 'rgba(30,25,40,0.6)'; ctx.lineWidth = Math.max(1, r * 0.1);
+            ctx.beginPath(); ctx.ellipse(0, r * 0.55, r * 0.32, r * 0.6, 0, 0, TAU); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#e8402a'; ctx.beginPath(); ctx.arc(-r * 0.05, r * 0.5, r * 0.12, 0, TAU); ctx.fill();
+            return;
+        }
+        if (id === 'shrimp') {
+            ctx.strokeStyle = tint('#ff8a6a'); ctx.lineWidth = r * 0.42;
+            ctx.beginPath(); ctx.arc(r * 0.05, r * 0.55, r * 0.42, -0.6, 2.6); ctx.stroke();
+            return;
+        }
+        if (id === 'maggot') {
+            ctx.fillStyle = tint('#f6ead0'); ctx.strokeStyle = 'rgba(160,140,100,0.8)'; ctx.lineWidth = Math.max(1, r * 0.08);
+            ctx.beginPath(); ctx.ellipse(r * 0.18, r * 0.5, r * 0.18, r * 0.42, 0.3, 0, TAU); ctx.fill(); ctx.stroke();
+            return;
+        }
+        // Червяк чуть шевелится
+        const w = Math.sin(FB.scene.t * 5) * r * 0.15;
+        ctx.strokeStyle = tint('#e8869a'); ctx.lineWidth = r * 0.26;
+        ctx.beginPath(); ctx.moveTo(-r * 0.05, r * 0.15); ctx.quadraticCurveTo(r * 0.45 + w, r * 0.45, -r * 0.1, r * 0.75); ctx.quadraticCurveTo(-r * 0.4 - w, r * 0.95, r * 0.05, r * 1.15); ctx.stroke();
+    }
+
+    // Поплавок висит на леске под кончиком удочки (ax, ay), angle — отклонение лески
+    P.drawHangingFloat = (ctx, ax, ay, angle, len, s) => {
+        const top = P.floatTop(s);
+        ctx.save();
+        ctx.translate(ax, ay);
+        ctx.rotate(-angle);
+        ctx.strokeStyle = FB.scene.weather === 'night' ? 'rgba(220,230,255,0.6)' : 'rgba(255,255,255,0.8)';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, len); ctx.stroke();
+        ctx.restore();
+        // Точка поплавка — ниже верхушки антенны
+        const fx = ax + Math.sin(angle) * (len + top), fy = ay + Math.cos(angle) * (len + top);
+        P.drawFloat(ctx, fx, fy, s, 0, -angle, true);
+        return { x: fx, y: fy };
+    };
+
+    P.drawFloat = (ctx, x, y, s, sub, wob, air) => {
         const fl = cos('float');
-        const u = FB.scene.unit();
-        const r = u * 1.5 * Math.max(0.35, s);
+        const r = P.floatRadius(s);
         const shape = fl.c.shape;
         ctx.save();
         ctx.translate(x, y);
@@ -559,8 +618,25 @@
             g.addColorStop(0, U.rgba(fl.c.a, 0.45)); g.addColorStop(1, U.rgba(fl.c.a, 0));
             ctx.fillStyle = g; ctx.fillRect(-r * 5, -r * 6, r * 10, r * 10);
         }
-        // Всё, что ниже воды, обрезаем — видна только верхушка
-        ctx.beginPath(); ctx.rect(-r * 6, -r * 8, r * 12, r * 8 + r * 0.15); ctx.clip();
+        if (air) {
+            // Под поплавком: киль, поводок, грузик-дробинка, крючок и наживка
+            const k0 = r * 0.4;
+            ctx.strokeStyle = 'rgba(30,25,40,0.7)'; ctx.lineWidth = Math.max(1, r * 0.16); ctx.lineCap = 'round';
+            ctx.beginPath(); ctx.moveTo(0, k0); ctx.lineTo(0, k0 + r * 0.9); ctx.stroke();
+            ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(0, k0 + r * 0.9); ctx.lineTo(0, k0 + r * 3.4); ctx.stroke();
+            ctx.fillStyle = tint('#7a8490');
+            ctx.beginPath(); ctx.arc(0, k0 + r * 2.0, r * 0.22, 0, TAU); ctx.fill();
+            ctx.save();
+            ctx.translate(0, k0 + r * 3.4);
+            ctx.strokeStyle = tint('#c8d0d8'); ctx.lineWidth = Math.max(1, r * 0.12);
+            ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, r * 0.7); ctx.arc(-r * 0.28, r * 0.7, r * 0.28, 0, Math.PI * 0.95); ctx.stroke();
+            bait(ctx, r);
+            ctx.restore();
+        } else {
+            // На воде всё, что ниже поверхности, обрезаем — видна только верхушка
+            ctx.beginPath(); ctx.rect(-r * 6, -r * 8, r * 12, r * 8 + r * 0.15); ctx.clip();
+        }
         const dy = sub * r * 2.6;
         ctx.translate(0, dy);
         ctx.lineWidth = Math.max(1, r * 0.18);

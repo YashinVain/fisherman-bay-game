@@ -4,15 +4,23 @@
 (function (FB) {
     const T = FB.tourney = {};
 
-    // Что видят другие игроки рядом с моим именем в топе: рамка и значок поддержки.
-    // Яндекс хранит это в extraData записи лидерборда
-    T.extra = () => 'f:' + FB.S.look.frame + (FB.S.buy.supporter ? ';s:1' : '');
+    // Что видят другие игроки рядом с моим именем в топе: рамка, значок поддержки
+    // и главный улов недели (рыба.вес.очки). Яндекс хранит это в extraData записи
+    T.extra = (withBig) => {
+        const S = FB.S, b = S.week.big;
+        return 'f:' + S.look.frame + (S.buy.supporter ? ';s:1' : '') +
+            (withBig && b && S.week.idx === FB.state.weekIdx() ? ';b:' + b.f + '.' + b.g + '.' + b.pts : '');
+    };
     T.parseExtra = (s) => {
-        const out = { frame: 'fr_none', supporter: false };
+        const out = { frame: 'fr_none', supporter: false, big: null };
         String(s || '').split(';').forEach(part => {
             const [k, v] = part.split(':');
             if (k === 'f' && FB.cosById[v]) out.frame = v;
             if (k === 's') out.supporter = v === '1';
+            if (k === 'b' && v) {
+                const [f, g, pts] = v.split('.');
+                if (FB.fishById[f] && +g > 0) out.big = { f, g: +g, pts: +pts || 0 };
+            }
         });
         return out;
     };
@@ -22,7 +30,7 @@
         const idx = FB.state.weekIdx();
         const extra = T.extra();
         if (S.week.idx === idx && S.week.best.length) {
-            FB.sdk.setScore(FB.week.board(idx), FB.week.encode(idx, FB.state.weekScore()), extra);
+            FB.sdk.setScore(FB.week.board(idx), FB.week.encode(idx, FB.state.weekScore()), T.extra(true));
         }
         if (S.stats.catches > 0) FB.sdk.setScore('anglers', FB.state.fame(), extra);
         if (S.stats.bestG > 0) FB.sdk.setScore('record', S.stats.bestG, extra);

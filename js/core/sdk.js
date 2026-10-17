@@ -323,7 +323,15 @@
             const pts = Math.round(base * (1 - i * 0.03));
             const score = isWeek ? FB.week.encode(boardIdx, pts) : pts;
             const fr = MOCK_FRAMES[Math.floor(rnd() * MOCK_FRAMES.length)];
-            return { name, score, extra: 'f:' + fr + (rnd() < 0.2 ? ';s:1' : ''), avatar: '', me: false };
+            let extra = 'f:' + fr + (rnd() < 0.2 ? ';s:1' : '');
+            if (isWeek) {
+                // Главный улов у тестовых игроков — рыба места этой недели
+                const fish = FB.fishOfPond(FB.week.config(boardIdx).pond);
+                const fsh = fish[Math.floor(rnd() * fish.length)];
+                const g = Math.round(FB.U.lerp(fsh.w[0], fsh.w[1], rnd() * rnd()));
+                extra += ';b:' + fsh.id + '.' + g + '.' + FB.catcher.points(fsh, g, false);
+            }
+            return { name, score, extra, avatar: '', me: false };
         });
         const mine = mockMine()[board];
         if (mine) list.push({ name: FB.t('you'), score: mine.score, extra: mine.extra || '', avatar: '', me: true });

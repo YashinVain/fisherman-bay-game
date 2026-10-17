@@ -6,7 +6,7 @@
 (function (FB) {
     const ST = FB.state = {};
     const U = FB.U;
-    FB.VERSION = '0.9.0';
+    FB.VERSION = '0.11.0';
 
     ST.fresh = () => ({
         v: 1,
@@ -26,15 +26,16 @@
         album: {},            // id рыбы → { n: сколько поймано, best: лучший вес, г }
         junk: {},             // id мусора → сколько
         stats: { casts: 0, catches: 0, released: 0, lost: 0, playMs: 0, totalG: 0, bestG: 0, bestId: null },
-        week: { idx: -1, best: [], catches: 0 },
+        week: { idx: -1, best: [], catches: 0, big: null },   // big — главный улов недели { f, g, pts }
         lastWeekReward: -1,   // за какую неделю уже выдана награда
         lastResult: null,     // { idx, rank, pts } — показать «ты занял N место»
         trophies: [],         // { idx, rank, kind }
         daily: null,          // см. quests.js
         season: { id: FB.SEASON.id, pts: 0, free: [], gold: [], pass: false },
         buy: { noAds: false, starter: false, supporter: false },
-        settings: { sound: true, music: true, easy: false, lang: null },
-        tut: 0                // шаг обучения: 0 — не начато, 99 — пройдено
+        settings: { sound: true, music: true, lang: null },
+        tut: 0,               // шаг обучения (tutor.js): 0 — не начато, 99 — пройдено
+        tips: {}              // разовые подсказки, которые уже показаны
     });
 
     // Дополнить загруженное сохранение недостающими полями (после обновлений игры)
@@ -129,8 +130,27 @@
         S.level = ST.levelFromXp(S.xp);
         if (S.level > before) {
             const unlocked = FB.PONDS.filter(p => p.unlock > before && p.unlock <= S.level);
-            FB.emit('levelUp', { level: S.level, ponds: unlocked });
+            const reward = { coins: 0, pearls: 0 };
+            for (let l = before + 1; l <= S.level; l++) {
+                const r = ST.levelReward(l);
+                reward.coins += r.coins;
+                reward.pearls += r.pearls;
+            }
+            ST.giveReward(reward);
+            FB.emit('levelUp', { level: S.level, ponds: unlocked, reward });
         }
+    };
+    // Подарок за новый уровень: монеты всегда, каждый пятый — ещё и жемчуг
+    ST.levelReward = (l) => ({ coins: 20 + l * 10, pearls: l % 5 === 0 ? 10 : 0 });
+    // Что откроется дальше (для окна нового уровня, если сейчас ничего не открылось)
+    ST.nextUnlock = () => {
+        const L = FB.S.level;
+        const all = [].concat(
+            FB.PONDS.filter(p => p.unlock > L).map(p => ({ lvl: p.unlock, kind: 'pond', item: p })),
+            FB.RODS.filter(r => r.level > L).map(r => ({ lvl: r.level, kind: 'rod', item: r })),
+            FB.BAITS.filter(b => b.level > L).map(b => ({ lvl: b.level, kind: 'bait', item: b })));
+        all.sort((a, b) => a.lvl - b.lvl);
+        return all[0] || null;
     };
     ST.addCoins = (n) => { FB.S.coins = Math.max(0, FB.S.coins + Math.round(n)); FB.emit('money'); };
     ST.addPearls = (n) => { FB.S.pearls = Math.max(0, FB.S.pearls + Math.round(n)); FB.emit('money'); };
@@ -150,7 +170,7 @@
     // Новая неделя: старые очки уходят (награду за неё выдаёт tourney.js раньше этого)
     ST.syncWeek = () => {
         const idx = ST.weekIdx();
-        if (FB.S.week.idx !== idx) FB.S.week = { idx, best: [], catches: 0 };
+        if (FB.S.week.idx !== idx) FB.S.week = { idx, best: [], catches: 0, big: null };
     };
     ST.weekScore = () => FB.week.sum(FB.S.week.best);
 
@@ -216,6 +236,7 @@
             const before = ST.weekScore();
             S.week.best = FB.week.addCatch(S.week.best, out.pts);
             S.week.catches++;
+            if (!S.week.big || out.pts > S.week.big.pts) S.week.big = { f: f.id, g, pts: out.pts };
             out.tourney = true;
             out.weekPts = ST.weekScore() - before;   // насколько вырос турнирный счёт
         }

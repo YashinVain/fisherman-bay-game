@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Иконка и обложка</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>
+    html, body { margin: 0; padding: 0; overflow: hidden; height: auto; background: #000; }
+    canvas { display: block; }
+</style>
+</head>
+<body>
+<!-- Иконка и обложка для консоли Яндекс Игр. Открывать с ?what=icon или ?what=cover,
+     снимать через tools/scenarios/promo.json -->
+<canvas id="c"></canvas>
+<script>window.FB = { lang: 'ru', t: (k) => k };</script>
+<script src="../js/core/util.js"></script>
+<script src="../js/data/fish.js"></script>
+<script src="../js/data/gear.js"></script>
+<script src="../js/view/fishart.js"></script>
+<script src="../js/view/softhero.js"></script>
+<script>
+const U = FB.U, TAU = Math.PI * 2;
+const what = new URLSearchParams(location.search).get('what') || 'icon';
+const W = what === 'cover' ? 800 : 512, H = what === 'cover' ? 470 : 512;
+const cv = document.getElementById('c');
+cv.width = W; cv.height = H;
+const ctx = cv.getContext('2d');
+const off = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; };
+
+// Закатный фон: небо, солнце за спиной рыбака, лес, вода с солнечной дорожкой
+function background(hy, sunX) {
+    let g = ctx.createLinearGradient(0, 0, 0, hy);
+    g.addColorStop(0, '#3e2f72'); g.addColorStop(0.55, '#c8608a'); g.addColorStop(1, '#ffa070');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, hy);
+    const sg = ctx.createRadialGradient(sunX, hy - 6, 10, sunX, hy - 6, H * 0.9);
+    sg.addColorStop(0, 'rgba(255,240,180,1)'); sg.addColorStop(0.12, 'rgba(255,200,120,0.7)'); sg.addColorStop(1, 'rgba(255,150,100,0)');
+    ctx.fillStyle = sg; ctx.fillRect(0, 0, W, hy);
+    ctx.fillStyle = '#fff1c0'; ctx.beginPath(); ctx.arc(sunX, hy - 4, H * 0.08, Math.PI, 0); ctx.fill();
+    // Облака
+    ctx.fillStyle = 'rgba(255,190,170,0.9)';
+    [[W * 0.12, H * 0.14, 1], [W * 0.62, H * 0.08, 0.8], [W * 0.88, H * 0.2, 0.7]].forEach(([x, y, s]) => [[0, 8, 28], [32, -4, 36], [66, 6, 26]].forEach(([dx, dy, r]) => { ctx.beginPath(); ctx.arc(x + dx * s * H / 512, y + dy * s * H / 512, r * s * H / 512, 0, TAU); ctx.fill(); }));
+    // Ёлки на дальнем берегу
+    const r = U.seeded(5);
+    ctx.fillStyle = '#4a3a62';
+    ctx.beginPath(); ctx.moveTo(0, hy); for (let x = 0; x <= W; x += 6) ctx.lineTo(x, hy - H * 0.03 - Math.sin(x / 70) * H * 0.012); ctx.lineTo(W, hy); ctx.fill();
+    for (let x = -10; x < W + 10; x += H * 0.03 + r() * H * 0.02) {
+        const th = H * (0.05 + r() * 0.05);
+        ctx.fillStyle = r() < 0.5 ? '#3e2f56' : '#463664';
+        ctx.beginPath(); ctx.moveTo(x - th * 0.22, hy - H * 0.02); ctx.lineTo(x, hy - H * 0.02 - th); ctx.lineTo(x + th * 0.22, hy - H * 0.02); ctx.fill();
+    }
+    g = ctx.createLinearGradient(0, hy, 0, H);
+    g.addColorStop(0, '#ffb98a'); g.addColorStop(0.35, '#b4709a'); g.addColorStop(1, '#3a2a62');
+    ctx.fillStyle = g; ctx.fillRect(0, hy, W, H - hy);
+    const pg = ctx.createLinearGradient(0, hy, 0, H);
+    pg.addColorStop(0, 'rgba(255,210,140,0.85)'); pg.addColorStop(1, 'rgba(255,190,120,0)');
+    ctx.fillStyle = pg; ctx.beginPath(); ctx.moveTo(sunX - 14, hy); ctx.lineTo(sunX + 14, hy); ctx.lineTo(sunX + W * 0.12, H); ctx.lineTo(sunX - W * 0.08, H); ctx.fill();
+    ctx.fillStyle = 'rgba(255,225,180,0.55)';
+    for (let i = 0; i < 26; i++) { const y = hy + 6 + (i * 37) % (H - hy - 10), x = (i * 131) % W; ctx.fillRect(x, y, 10 + (y - hy) * 0.08, 2); }
+}
+
+// Мостки (тёмные, с тёплым бликом по краю)
+function pier(x, y, h) {
+    const end = x + h * 0.22, top = y - h * 0.035, faceY = y + h * 0.03, bottom = y + h * 0.11;
+    ctx.fillStyle = '#2e2238';
+    [end - h * 0.1, end - h * 0.92].forEach(px => ctx.fillRect(px - h * 0.037, bottom, h * 0.075, H));
+    ctx.fillStyle = '#40304a'; ctx.fillRect(-10, faceY, end + 10, bottom - faceY);
+    ctx.fillStyle = '#6a4660'; ctx.fillRect(-10, top, end + 10, faceY - top);
+    ctx.fillStyle = 'rgba(255,176,112,0.8)'; ctx.fillRect(-10, top, end + 10, Math.max(2, h * 0.01));
+}
+
+// Рыбак со светом заката: тень спереди, оранжевая кайма по краю, свечение
+function hero(x, y, h, face) {
+    const o = { x, y, h, who: 'boy', hat: FB.cosById.hat_cap, jacket: FB.cosById.jk_green, face, lean: -0.35, t: 0.5, legs: true };
+    const A = off(), S = off(), R = off();
+    const a = A.getContext('2d');
+    FB.soft.draw(a, o);
+    FB.soft.draw(S.getContext('2d'), Object.assign({}, o, { mono: '#000' }));
+    const over = (st) => { a.globalCompositeOperation = 'source-atop'; a.fillStyle = st; a.fillRect(0, 0, W, H); a.globalCompositeOperation = 'source-over'; };
+    over('rgba(150,60,110,0.18)');
+    const g = a.createLinearGradient(x - h * 0.3, 0, x + h * 0.5, 0); g.addColorStop(0, 'rgba(60,20,80,0.45)'); g.addColorStop(1, 'rgba(0,0,0,0)'); over(g);
+    const r = R.getContext('2d');
+    r.drawImage(S, 0, 0); r.globalCompositeOperation = 'source-in'; r.fillStyle = '#ffc078'; r.fillRect(0, 0, W, H);
+    r.globalCompositeOperation = 'destination-out'; r.drawImage(S, -h * 0.019, h * 0.011);
+    ctx.save(); ctx.globalAlpha = 0.5; ctx.shadowColor = 'rgba(255,170,100,0.8)'; ctx.shadowBlur = h * 0.12; ctx.drawImage(S, 0, 0); ctx.restore();
+    ctx.drawImage(A, 0, 0); ctx.drawImage(R, 0, 0);
+    return FB.soft.localHand(h, o.lean).map((v, i) => v + (i ? y : x));
+}
+
+// Удочка дугой: от рук к точке над рыбой, леска сверху вниз — ко рту рыбы
+function rodTo(hx, hy, h, fx, fy) {
+    const tx = fx - h * 0.02, ty = fy - h * 0.42;
+    const bx = hx - h * 0.1, by = hy + h * 0.08;
+    const cx = hx + (tx - hx) * 0.3, cy = ty - h * 0.03;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(255,240,210,0.85)'; ctx.lineWidth = Math.max(1.2, h * 0.006);
+    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(fx, fy); ctx.stroke();
+    ctx.strokeStyle = '#3a2440'; ctx.lineWidth = h * 0.032; ctx.beginPath(); ctx.moveTo(bx, by); ctx.quadraticCurveTo(cx, cy, tx, ty); ctx.stroke();
+    ctx.strokeStyle = '#b8864a'; ctx.lineWidth = h * 0.018; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,200,130,0.9)'; ctx.lineWidth = h * 0.006; ctx.stroke();
+}
+
+// Золотой карп выпрыгивает из воды: брызги и сияние
+function fish(x, y, size, rot) {
+    const glow = ctx.createRadialGradient(x, y, size * 0.1, x, y, size * 0.9);
+    glow.addColorStop(0, 'rgba(255,230,140,0.55)'); glow.addColorStop(1, 'rgba(255,230,140,0)');
+    ctx.fillStyle = glow; ctx.fillRect(x - size, y - size, size * 2, size * 2);
+    const img = FB.fishArt.canvas('goldcarp', 300);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(-1, 1);
+    ctx.drawImage(img, -size * 0.75, -size * 0.75 * img.height / img.width, size * 1.5, size * 1.5 * img.height / img.width);
+    ctx.restore();
+}
+function splash(x, y, s) {
+    ctx.fillStyle = 'rgba(255,240,225,0.9)';
+    const r = U.seeded(9);
+    for (let i = 0; i < 18; i++) { const a = -Math.PI / 2 + (r() - 0.5) * 2.2, d = s * (0.3 + r() * 0.8); ctx.beginPath(); ctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d * 0.9, s * (0.03 + r() * 0.05), 0, TAU); ctx.fill(); }
+    ctx.strokeStyle = 'rgba(255,240,225,0.7)'; ctx.lineWidth = 2;
+    [0.6, 1.0].forEach(k => { ctx.beginPath(); ctx.ellipse(x, y + s * 0.08, s * k, s * 0.12 * k, 0, 0, TAU); ctx.stroke(); });
+}
+
+function sparkle(x, y, r) {
+    ctx.fillStyle = '#fff6c8';
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU - Math.PI / 2, rr = i % 2 ? r * 0.3 : r; ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
+    ctx.closePath(); ctx.fill();
+}
+
+if (what === 'icon') {
+    // Иконка: рыбак крупно слева, золотой карп выпрыгивает справа
+    background(H * 0.5, W * 0.78);
+    const h = 300, x = 150, y = 400;
+    pier(x, y, h);
+    splash(W * 0.74, H * 0.62, 70);
+    const hand = hero(x, y, h, 'happy');
+    rodTo(hand[0], hand[1], h, W * 0.74 - 190 * 0.5, H * 0.37 + 190 * 0.08);
+    fish(W * 0.74, H * 0.37, 190, -0.45);
+    sparkle(W * 0.9, H * 0.25, 12); sparkle(W * 0.6, H * 0.2, 9); sparkle(W * 0.92, H * 0.48, 7);
+} else {
+    // Обложка: название справа сверху, рыбак слева, карп над водой
+    background(H * 0.52, W * 0.62);
+    const h = 240, x = 140, y = 360;
+    pier(x, y, h);
+    splash(W * 0.52, H * 0.66, 60);
+    const hand = hero(x, y, h, 'happy');
+    rodTo(hand[0], hand[1], h, W * 0.52 - 150 * 0.5, H * 0.42 + 150 * 0.08);
+    fish(W * 0.52, H * 0.42, 150, -0.45);
+    sparkle(W * 0.62, H * 0.3, 9); sparkle(W * 0.42, H * 0.24, 7);
+    document.fonts.ready.then(() => {
+        ctx.textAlign = 'center';
+        const tx = W * 0.79;
+        const word = (text, size, y, fillTop, fillBot, stroke) => {
+            ctx.font = '900 ' + size + 'px Nunito, sans-serif';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = size * 0.24; ctx.strokeStyle = stroke;
+            ctx.strokeText(text, tx, y + size * 0.08);
+            ctx.strokeText(text, tx, y);
+            const g = ctx.createLinearGradient(0, y - size * 0.8, 0, y);
+            g.addColorStop(0, fillTop); g.addColorStop(1, fillBot);
+            ctx.fillStyle = g; ctx.fillText(text, tx, y);
+        };
+        word('Рыбацкая', 46, 92, '#ffffff', '#ffe6d0', '#2a1e48');
+        word('БУХТА', 82, 170, '#fff6c0', '#ff9a1a', '#2a1e48');
+    });
+}
+</script>
+</body>
+</html>

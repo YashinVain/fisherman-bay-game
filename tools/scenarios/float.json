@@ -1,0 +1,18 @@
+{
+    "out": "out",
+    "steps": [
+        { "size": [1100, 680, 1] },
+        { "open": "http://127.0.0.1:8940/", "wait": 2500 },
+        { "js": "document.querySelector('.title .btn').click();", "sleep": 900 },
+        { "js": "FB.ui.closeAll(); FB.S.tut = 99; FB.hud.hint(null); const t = FB.person.rodTip(); return [Math.round(t.x), Math.round(t.y)];", "sleep": 1500 },
+        { "shot": "f1-hang.png", "clip": [400, 150, 260, 200, 3] },
+        { "js": "FB.S.bait = 'shrimp'; FB.S.baits.push('shrimp'); FB.scene.setPlace(FB.S.pond, 'night');", "sleep": 1200 },
+        { "shot": "f2-hang-night.png", "clip": [400, 150, 260, 200, 3] },
+        { "js": "FB.scene.setPlace(FB.S.pond, 'sun'); const p = FB.scene.project(0.4, 0.5); FB.fishing.press(p.x, p.y); FB.fishing.release();", "sleep": 120 },
+        { "shot": "f3-swing-back.png" },
+        { "sleep": 330 },
+        { "shot": "f4-flight.png" },
+        { "sleep": 900 },
+        { "shot": "f5-water.png" }
+    ]
+}

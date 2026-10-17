@@ -42,7 +42,7 @@
         const root = UI.root();
         const top = UI.el('div.hud-top');
         els.lvl = UI.el('button.lvl', { onclick: () => { FB.audio.play('click'); FB.panels.profile(); } });
-        els.coins = UI.el('button.pill.coins', { onclick: () => { FB.audio.play('click'); FB.shopUI.open('gear'); } });
+        els.coins = UI.el('div.pill.coins');
         els.pearls = UI.el('button.pill.pearls', { onclick: () => { FB.audio.play('click'); FB.shopUI.open('pearls'); } });
         const pills = UI.el('div.pills', {}, [els.coins, els.pearls]);
         const right = UI.el('div.hud-right', {}, [UI.el('button.round', { html: FB.ic('gear'), onclick: () => { FB.audio.play('click'); FB.panels.settings(); } })]);
@@ -68,30 +68,29 @@
         els.bait = UI.el('button.bait-chip', { onclick: () => { FB.audio.play('click'); H.baitPicker(); } });
         els.hint = UI.el('div.hint.soft');
         els.fight = buildFight();
-        els.hand = UI.el('div.tap-hand.hidden', { html: handSvg() });
 
-        root.append(top, els.chip, els.nav, els.bait, els.hint, els.fight, els.hand);
+        root.append(top, els.chip, els.nav, els.bait, els.hint, els.fight);
         H.update();
     };
 
-    function handSvg() {
-        return '<svg viewBox="0 0 64 64" width="64" height="64"><path d="M26 30V10a5 5 0 0110 0v16l12 3c4 1 6 4 5 8l-3 14c-1 5-5 8-10 8H31c-4 0-7-2-9-5l-9-14c-2-3 0-7 4-7 2 0 4 1 5 3l4 5z" fill="#fff" stroke="#2a3550" stroke-width="3" stroke-linejoin="round"/><path d="M36 30v8M42 31v7" stroke="#2a3550" stroke-width="2.5" stroke-linecap="round"/></svg>';
-    }
-
+    // Панель вываживания: шкала лески (красное — зелёное — красное) и путь рыбы к крючку.
+    // Ширина зелёной зоны своя у каждой рыбы — выставляется в начале вываживания
     function buildFight() {
         const f = UI.el('div.fight.away');
         f.innerHTML =
-            '<div class="row"><div class="lab">' + FB.t('tension') + '</div><div class="meter"><i class="zone z-slack"></i><i class="zone z-good"></i><i class="zone z-bad"></i><i class="needle"></i></div></div>' +
-            '<div class="gap"></div>' +
-            '<div class="row"><div class="lab">' + FB.t('distance') + '</div><div class="track"><i class="fill"></i><span class="fishmark">' + FB.ic('fish') + '</span><span class="goal">' + FB.ic('hook') + '</span></div></div>' +
-            '<div class="tip"></div>';
-        const T = FB.fishing.TUNE;
-        f.querySelector('.z-slack').style.width = (T.greenLo * 100) + '%';
-        const g = f.querySelector('.z-good');
-        g.style.left = (T.greenLo * 100) + '%';
-        g.style.width = ((T.greenHi - T.greenLo) * 100) + '%';
-        f.querySelector('.z-bad').style.width = ((1 - T.greenHi) * 100) + '%';
+            '<div class="row"><div class="lab">' + FB.t('tension') + '</div><div class="meter"><i class="zone z-left"></i><i class="zone z-good"></i><i class="zone z-right"></i><i class="needle"></i></div></div>' +
+            '<div class="row"><div class="lab">' + FB.t('distance') + '</div><div class="track"><i class="fill"></i><span class="fishmark">' + FB.ic('fish') + '</span><span class="goal">' + FB.ic('hook') + '</span></div></div>';
         return f;
+    }
+    function setZone(info) {
+        const m = els.fight.querySelector('.meter');
+        if (m.dataset.lo === String(info.lo)) return;
+        m.dataset.lo = info.lo;
+        m.querySelector('.z-left').style.width = (info.lo * 100) + '%';
+        const g = m.querySelector('.z-good');
+        g.style.left = (info.lo * 100) + '%';
+        g.style.width = ((info.hi - info.lo) * 100) + '%';
+        m.querySelector('.z-right').style.width = ((1 - info.hi) * 100) + '%';
     }
 
     // Обновить цифры и плашки (зовётся при изменениях)
@@ -117,18 +116,19 @@
         } else if (b) b.remove();
     }
 
+    // Плашка турнира: где и какая рыба недели, а в месте турнира — мои очки
     H.updateChip = () => {
         if (!els.chip) return;
         const cfg = FB.state.weekCfg();
         const fish = FB.fishById[cfg.fish];
         const here = FB.S.pond === cfg.pond;
         els.chip.classList.toggle('here', here);
-        const left = U.duration(FB.week.end(cfg.idx) - FB.sdk.now());
+        const left = FB.t('time_left', { t: U.duration(FB.week.end(cfg.idx) - FB.sdk.now()) });
         els.chip.innerHTML = FB.ic('trophy') + '<span><span class="t1">' + (here ? FB.t('you_in_tourney') : FB.t('week_tourney')) + ' · ' + left + '</span>' +
             '<span class="t2">' + (here
-                ? FB.t('my_score') + ': <b>' + U.fmt(FB.state.weekScore()) + '</b> · ' + FB.t('best_n', { n: FB.S.week.best.length })
+                ? FB.t('my_score') + ': <b>' + U.fmt(FB.state.weekScore()) + '</b> · ' + U.esc(FB.name(fish)) + ' ×2'
                 : U.esc(FB.name(FB.pondById[cfg.pond])) + ' · ' + U.esc(FB.name(fish)) + ' ×2') + '</span></span>' +
-            '<img src="' + FB.fishArt.url(fish.id, 60) + '" alt="">';
+            '<span class="fishw"><img src="' + FB.fishArt.url(fish.id, 60) + '" alt=""></span>';
     };
 
     // ---------- Подсказки ----------
@@ -136,8 +136,8 @@
     H.hint = (key) => {
         hintKey = key;
         if (!els.hint) return;
-        const tut = FB.S.tut < 99;
-        const show = key && (key === 'tap_now' || key === 'hold_reel' || tut || key === 'wait_bite');
+        // Во время обучения говорит подсказчик (tutor.js), а не эта строка
+        const show = key && !FB.tutor.active() && (key === 'tap_now' || key === 'wait_bite');
         els.hint.className = 'hint' + (key === 'tap_now' ? ' big' : '') + (show ? '' : ' soft');
         if (key) els.hint.textContent = FB.t('hint_' + key);
         if (key === 'hold_reel') els.hint.className = 'hint soft';
@@ -150,31 +150,24 @@
         const calm = F.phase === 'idle' || F.phase === 'lost';
         els.nav.classList.toggle('away', !calm);
         els.bait.classList.toggle('away', !calm);
-        els.chip.classList.toggle('away', !calm && F.phase !== 'wait');
+        // Плашка турнира не прыгает после каждого улова: во время вываживания только притухает
+        els.chip.classList.toggle('dim', !calm);
         const info = F.fightInfo();
         els.fight.classList.toggle('away', !info);
         if (info) {
-            const T = F.TUNE;
-            els.fight.querySelector('.needle').style.left = (U.clamp(info.tension, 0, 1) * 100) + '%';
-            els.fight.querySelector('.meter').classList.toggle('shake', info.tension > T.greenHi);
+            setZone(info);
+            const m = els.fight.querySelector('.meter');
+            m.querySelector('.needle').style.left = (U.clamp(info.tension, 0, 1) * 100) + '%';
+            // Стрелка в красной — эта сторона мигает тем чаще, чем ближе срыв
+            const hotL = info.tension < info.lo, hotR = info.tension > info.hi;
+            m.classList.toggle('hot-l', hotL);
+            m.classList.toggle('hot-r', hotR);
+            m.classList.toggle('good', !hotL && !hotR);
+            m.classList.toggle('shake', hotR && info.strain > 0.45);
+            m.style.setProperty('--danger', (hotR ? info.strain : hotL ? info.slack : 0).toFixed(2));
             const p = U.clamp(info.progress, 0, 1);
             els.fight.querySelector('.fishmark').style.left = 'calc(' + (p * 100) + '% - ' + (p * 30) + 'px)';
             els.fight.querySelector('.fill').style.width = 'calc(' + (p * 100) + '% - ' + (p * 30) + 'px)';
-            const tip = els.fight.querySelector('.tip');
-            let key = 'fight_hold', warn = false;
-            if (info.tension > T.greenHi) { key = 'fight_release'; warn = true; }
-            else if (info.slack > 0.35) { key = 'fight_pull'; warn = true; }
-            else if (info.surge) key = 'fight_surge';
-            tip.textContent = FB.t(key);
-            tip.classList.toggle('warn', warn);
-        }
-        // Рука-подсказка в обучении: показывает, куда нажать
-        const tut = FB.S.tut < 99 && F.phase === 'idle' && !UI.isOpen();
-        els.hand.classList.toggle('hidden', !tut);
-        if (tut) {
-            const p = FB.scene.project(0.12, 0.35);
-            els.hand.style.left = (p.x - 20) + 'px';
-            els.hand.style.top = (p.y - 6) + 'px';
         }
     };
 

@@ -225,24 +225,69 @@
         ctx.fillStyle = U.shade(roof, -0.3);
         ctx.fillRect(x + s * 0.24, y - s * 0.98, s * 0.1, s * 0.22);
     }
+    // Камыш растёт из воды: основания стеблей на разной глубине и растворяются
+    // в воде, под куртиной — тень от корней, у стеблей — отражения и круги
     function reeds(ctx, x0, x1, baseY, h, color, rnd, cattail) {
         ctx.lineCap = 'round';
+        const stems = [];
         for (let x = x0; x < x1; x += h * 0.05 * U.lerp(0.5, 1.5, rnd())) {
-            const hh = h * U.lerp(0.5, 1, rnd());
-            const lean = U.lerp(-0.25, 0.25, rnd()) * hh;
-            ctx.strokeStyle = rnd() < 0.5 ? color : U.shade(color, -0.2);
-            ctx.lineWidth = Math.max(1.5, h * 0.025);
+            // Куртина гуще в середине: по краям стебли ниже
+            const edge = Math.min(1, Math.min(x - x0, x1 - x) / ((x1 - x0) * 0.3 + 1));
+            const hh = h * U.lerp(0.5, 1, rnd()) * U.lerp(0.55, 1, edge);
+            stems.push({
+                x, hh, by: baseY + U.lerp(-0.05, 0.09, rnd()) * h,
+                lean: U.lerp(-0.25, 0.25, rnd()) * hh,
+                col: rnd() < 0.5 ? color : U.shade(color, -0.2),
+                tail: cattail && rnd() < 0.35
+            });
+        }
+        // Тень от корней под водой
+        const cx = (x0 + x1) / 2, rx = (x1 - x0) * 0.62 + h * 0.1, ry = h * 0.11;
+        ctx.save();
+        ctx.translate(cx, baseY + h * 0.03);
+        ctx.scale(1, ry / rx);
+        const sh = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
+        sh.addColorStop(0, 'rgba(18,60,48,0.3)');
+        sh.addColorStop(0.6, 'rgba(18,60,48,0.14)');
+        sh.addColorStop(1, 'rgba(18,60,48,0)');
+        ctx.fillStyle = sh;
+        ctx.beginPath(); ctx.arc(0, 0, rx, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+        const lw = Math.max(1.5, h * 0.025);
+        // Отражения — короткие, бледные, вниз
+        stems.forEach(s => {
+            const g = ctx.createLinearGradient(0, s.by, 0, s.by + s.hh * 0.3);
+            g.addColorStop(0, U.rgba(U.shade(s.col, -0.25), 0.3));
+            g.addColorStop(1, U.rgba(U.shade(s.col, -0.25), 0));
+            ctx.strokeStyle = g;
+            ctx.lineWidth = lw;
+            ctx.beginPath(); ctx.moveTo(s.x, s.by); ctx.lineTo(s.x - s.lean * 0.15, s.by + s.hh * 0.3); ctx.stroke();
+        });
+        // Стебли: у воды прозрачные — будто уходят под воду
+        stems.forEach(s => {
+            const g = ctx.createLinearGradient(0, s.by, 0, s.by - s.hh * 0.22);
+            g.addColorStop(0, U.rgba(s.col, 0.1));
+            g.addColorStop(1, U.rgba(s.col, 1));
+            ctx.strokeStyle = g;
+            ctx.lineWidth = lw;
             ctx.beginPath();
-            ctx.moveTo(x, baseY);
-            ctx.quadraticCurveTo(x + lean * 0.2, baseY - hh * 0.6, x + lean, baseY - hh);
+            ctx.moveTo(s.x, s.by);
+            ctx.quadraticCurveTo(s.x + s.lean * 0.2, s.by - s.hh * 0.6, s.x + s.lean, s.by - s.hh);
             ctx.stroke();
-            if (cattail && rnd() < 0.35) {
+            if (s.tail) {
                 ctx.fillStyle = '#6a4226';
                 ctx.beginPath();
-                ctx.ellipse(x + lean * 0.86, baseY - hh * 0.86, h * 0.022, h * 0.075, lean / hh * 0.8, 0, Math.PI * 2);
+                ctx.ellipse(s.x + s.lean * 0.86, s.by - s.hh * 0.86, h * 0.022, h * 0.075, s.lean / s.hh * 0.8, 0, Math.PI * 2);
                 ctx.fill();
             }
-        }
+        });
+        // Круги на воде у некоторых стеблей
+        ctx.lineWidth = Math.max(1, h * 0.008);
+        stems.forEach((s, i) => {
+            if (i % 4) return;
+            ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+            ctx.beginPath(); ctx.ellipse(s.x, s.by + h * 0.004, h * 0.045, h * 0.012, 0, 0, Math.PI * 2); ctx.stroke();
+        });
     }
     function lily(ctx, x, y, rx, flower) {
         const ry = rx * 0.38;
@@ -462,44 +507,65 @@
             c.restore();
         }
         // Вода
-        const water = th.water.map((col, i) => wx === 'evening' ? U.mix(col, i ? '#3a2a6a' : '#ffb080', i ? 0.6 : 0.55) : night ? U.mix(col, '#0a1840', 0.55) : wx === 'rain' ? U.mix(col, '#6a7c8c', 0.35) : wx === 'fog' ? U.mix(col, '#c8d4da', 0.3) : col);
+        const water = th.water.map((col, i) => wx === 'evening' ? U.mix(col, i ? '#3a2a6a' : '#ffb080', i ? 0.62 : 0.72) : night ? U.mix(col, '#0a1840', 0.55) : wx === 'rain' ? U.mix(col, '#6a7c8c', 0.35) : wx === 'fog' ? U.mix(col, '#c8d4da', 0.3) : col);
+        // Плавный переход: у горизонта — отсвет неба, дальше — цвет воды, у берега — глубина.
+        // Много промежуточных точек со сглаживанием — иначе на стыке видна полоса
         const wg = c.createLinearGradient(0, hy, 0, H);
-        wg.addColorStop(0, U.mix(water[0], sky[1], 0.35));
-        wg.addColorStop(0.18, water[0]);
-        wg.addColorStop(1, water[1]);
+        const top = U.mix(water[0], sky[1], 0.35);
+        for (let i = 0; i <= 16; i++) {
+            const t = i / 16;
+            const col = t < 0.2 ? U.mix(top, water[0], U.smooth(t / 0.2)) : U.mix(water[0], water[1], U.smooth((t - 0.2) / 0.8));
+            wg.addColorStop(t, col);
+        }
         c.fillStyle = wg;
         c.fillRect(0, hy, W, H - hy);
 
         // Отражение неба и берега в воде (перевёрнутая полоска)
-        const refH = Math.min(hy, H * 0.22);
+        // Рисуем на отдельном холсте и плавно растворяем к низу — без резкой границы
+        const refH = Math.min(hy, H * 0.22), rh = refH * 0.55;
+        const [refC, rc] = mk();
+        rc.save();
+        rc.translate(0, hy * 2);
+        rc.scale(1, -1);
+        rc.drawImage(skyC, 0, (hy - refH) * dpr, W * dpr, refH * dpr, 0, hy - rh, W, rh);
+        rc.drawImage(landC, 0, (hy - refH) * dpr, W * dpr, refH * dpr, 0, hy - rh, W, rh);
+        rc.restore();
+        rc.globalCompositeOperation = 'destination-in';
+        const fade = rc.createLinearGradient(0, hy, 0, hy + rh);
+        fade.addColorStop(0, 'rgba(0,0,0,1)');
+        fade.addColorStop(0.6, 'rgba(0,0,0,0.55)');
+        fade.addColorStop(1, 'rgba(0,0,0,0)');
+        rc.fillStyle = fade;
+        rc.fillRect(0, 0, W, H);
         c.save();
         c.globalAlpha = 0.3;
-        c.translate(0, hy * 2);
-        c.scale(1, -1);
-        c.drawImage(skyC, 0, (hy - refH) * dpr, W * dpr, refH * dpr, 0, hy - refH * 0.55, W, refH * 0.55);
-        c.drawImage(landC, 0, (hy - refH) * dpr, W * dpr, refH * dpr, 0, hy - refH * 0.55, W, refH * 0.55);
+        c.drawImage(refC, 0, 0, W, H);
         c.restore();
-        // Отражение мягко растворяется вглубь
-        const fade = c.createLinearGradient(0, hy, 0, hy + refH * 0.6);
-        fade.addColorStop(0, U.rgba(water[0], 0));
-        fade.addColorStop(1, U.rgba(water[0], 0.6));
-        c.fillStyle = fade;
-        c.fillRect(0, hy, W, refH * 0.6);
-        // Солнечная (лунная) дорожка
-        if (wx === 'sun' || night || wx === 'evening') {
+        // Солнечная (лунная) дорожка — до самого низа. Её же потом кладём светом
+        // на камыш и камни, которые в неё попали: они стоят в солнечном свете
+        const hasPath = wx === 'sun' || night || wx === 'evening';
+        const sunPath = (ctx, k) => {
             const m = SC.sun;
-            const pg = c.createLinearGradient(0, hy, 0, H * 0.8);
-            pg.addColorStop(0, night ? 'rgba(255,250,210,0.35)' : wx === 'evening' ? 'rgba(255,190,110,0.7)' : 'rgba(255,250,220,0.45)');
-            pg.addColorStop(1, wx === 'evening' ? 'rgba(255,170,100,0)' : 'rgba(255,250,220,0)');
-            c.fillStyle = pg;
-            c.beginPath();
-            c.moveTo(m.x - u * 2, hy);
-            c.lineTo(m.x + u * 2, hy);
-            c.lineTo(m.x + u * 14 + (m.x - W / 2) * 0.4, H * 0.8);
-            c.lineTo(m.x - u * 10 + (m.x - W / 2) * 0.4, H * 0.8);
-            c.closePath();
-            c.fill();
-        }
+            const rgb = night ? '255,250,210' : wx === 'evening' ? '255,190,110' : '255,250,220';
+            const a0 = (night ? 0.35 : wx === 'evening' ? 0.7 : 0.45) * k;
+            const pg = ctx.createLinearGradient(0, hy, 0, H);
+            pg.addColorStop(0, 'rgba(' + rgb + ',' + a0 + ')');
+            pg.addColorStop(0.7, 'rgba(' + rgb + ',' + (a0 * 0.4) + ')');
+            pg.addColorStop(1, 'rgba(' + rgb + ',0)');
+            // Края дорожки расходятся к зрителю — продлеваем их до низа экрана
+            const ext = (H - hy) / (H * 0.8 - hy);
+            const l0 = m.x - u * 2, r0 = m.x + u * 2;
+            const l1 = m.x - u * 10 + (m.x - W / 2) * 0.4, r1 = m.x + u * 14 + (m.x - W / 2) * 0.4;
+            ctx.fillStyle = pg;
+            ctx.beginPath();
+            ctx.moveTo(l0, hy);
+            ctx.lineTo(r0, hy);
+            ctx.lineTo(r0 + (r1 - r0) * ext, H);
+            ctx.lineTo(l0 + (l1 - l0) * ext, H);
+            ctx.closePath();
+            ctx.fill();
+        };
+        if (hasPath) sunPath(c, 1);
         // Неподвижная рябь: светлые и тёмные чёрточки, реже у берега
         const rr = U.seeded(4242);
         for (let i = 0; i < 260; i++) {
@@ -520,10 +586,12 @@
                 c.stroke();
             }
         }
-        // Камни, кувшинки, камыши по краям — ближний план
+        // Камни, кувшинки, камыши по краям — ближний план. Камни и камыш рисуем
+        // на отдельном слое, чтобы солнечная дорожка легла на них светом
+        const [nearC, n] = mk();
         if (th.rocks) {
-            rock(c, W * 0.06, SC.project(-1, 0.5).y, u * 9, u * 4, night ? '#4a5470' : '#8a949a');
-            rock(c, W * 0.94, SC.project(1, 0.3).y, u * 12, u * 5, night ? '#4a5470' : '#7e888e');
+            rock(n, W * 0.06, SC.project(-1, 0.5).y, u * 9, u * 4, night ? '#4a5470' : '#8a949a');
+            rock(n, W * 0.94, SC.project(1, 0.3).y, u * 12, u * 5, night ? '#4a5470' : '#7e888e');
         }
         if (th.lily) {
             const lr = U.seeded(99);
@@ -535,9 +603,16 @@
         }
         if (th.reeds) {
             const rd = U.seeded(7);
-            reeds(c, -u * 2, W * 0.16, SC.project(-1, 0.15).y + u * 2, u * 22, th.reeds, rd, th.cattails);
-            reeds(c, W * 0.86, W + u * 2, SC.project(1, 0.12).y + u * 2, u * 24, th.reeds, rd, th.cattails);
+            reeds(n, -u * 2, W * 0.16, SC.project(-1, 0.15).y + u * 2, u * 22, th.reeds, rd, th.cattails);
+            reeds(n, W * 0.86, W + u * 2, SC.project(1, 0.12).y + u * 2, u * 24, th.reeds, rd, th.cattails);
         }
+        if (hasPath) {
+            n.save();
+            n.globalCompositeOperation = 'source-atop';
+            sunPath(n, 1.1);
+            n.restore();
+        }
+        c.drawImage(nearC, 0, 0, W, H);
 
         // Дымка у горизонта, туман, ночь, дождь
         const haze = c.createLinearGradient(0, hy - u * 6, 0, hy + u * 6);

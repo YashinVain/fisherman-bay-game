@@ -12,3 +12,6 @@ desktop.ini
 
 # Снимки из tools/shot.js
 tools/scenarios/out/
+
+# Журнал консоли, который пишет tools/shot.js рядом со снимками
+docs/promo/console.txt

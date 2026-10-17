@@ -1,0 +1,14 @@
+{
+    "out": "out",
+    "steps": [
+        { "size": [390, 844, 2, true] },
+        { "open": "http://127.0.0.1:8940/", "wait": 2500 },
+        { "js": "document.querySelector('.title .btn').click();", "sleep": 900 },
+        { "js": "FB.ui.closeAll(); FB.S.tut = 99;", "sleep": 300 },
+        { "cpu": 4 },
+        { "name": "кадр, мс (телефон, процессор ×4 медленнее), день", "js": "FB.scene.setPlace(FB.S.pond, 'sun'); FB.scene.render(0.016, FB.fishing.draw); const t0 = performance.now(); for (let i = 0; i < 60; i++) FB.scene.render(0.016, FB.fishing.draw); return +((performance.now() - t0) / 60).toFixed(2);" },
+        { "name": "кадр, мс, ночь", "js": "FB.scene.setPlace(FB.S.pond, 'night'); FB.scene.render(0.016, FB.fishing.draw); const t0 = performance.now(); for (let i = 0; i < 60; i++) FB.scene.render(0.016, FB.fishing.draw); return +((performance.now() - t0) / 60).toFixed(2);" },
+        { "name": "кадр, мс, вечер", "js": "FB.scene.setPlace(FB.S.pond, 'evening'); FB.scene.render(0.016, FB.fishing.draw); const t0 = performance.now(); for (let i = 0; i < 60; i++) FB.scene.render(0.016, FB.fishing.draw); return +((performance.now() - t0) / 60).toFixed(2);" },
+        { "name": "из них рыбак со светом, мс", "js": "const c = document.getElementById('game').getContext('2d'); const t0 = performance.now(); for (let i = 0; i < 60; i++) FB.person.drawPerson(c); return +((performance.now() - t0) / 60).toFixed(2);" }
+    ]
+}

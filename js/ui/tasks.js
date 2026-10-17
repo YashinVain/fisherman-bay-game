@@ -23,13 +23,17 @@
     function daily() {
         const box = UI.el('div');
         const Q = FB.quests, d = FB.S.daily;
-        box.appendChild(UI.el('div.sec-title', { html: FB.ic('gift') + FB.t('daily_gift') }));
+        // Сегодняшний день в круге: если подарок уже забран, серия ушла на шаг вперёд
+        const got = d.gift && d.streak > 0;
+        const step = got ? d.streak - 1 : d.streak;
+        const idx = step % 7, shownCycle = Math.floor(step / 7);
+        box.appendChild(UI.el('div.sec-title', { html: FB.ic('gift') + FB.t('daily_gift') + (shownCycle > 0 ? '<span class="round-n">' + FB.t('round_n', { n: shownCycle + 1 }) + '</span>' : '') }));
         const row = UI.el('div.gift-row');
-        const today = d.streak % 7;
-        Q.GIFTS.forEach((g, i) => {
-            const done = i < today || (i === today && d.gift);
-            const cls = done ? '.done' : (i === today && !d.gift ? '.today' : '');
-            row.appendChild(UI.el('div.gift-day' + cls, { html: '<div>' + FB.t('day_n', { n: i + 1 }) + '</div>' + FB.ic(g.pearls ? 'pearl' : 'coin') + '<b>' + (g.coins || g.pearls) + '</b>' }));
+        Q.GIFTS.forEach((g0, i) => {
+            const g = Q.giftAt(i, shownCycle);
+            const done = i < idx || (i === idx && got);
+            const cls = (done ? '.done' : (i === idx && !got ? '.today' : '')) + (i === 6 ? '.big' : '');
+            row.appendChild(UI.el('div.gift-day' + cls, { html: '<div class="dn">' + FB.t('day_n', { n: i + 1 }) + '</div>' + FB.ic(g.pearls ? 'pearl' : 'coin') + '<b>' + (g.coins || g.pearls) + '</b>' + (done ? '<span class="ok">✓</span>' : '') }));
         });
         box.appendChild(row);
         if (Q.giftReady()) {
@@ -101,10 +105,12 @@
             const item = FB.cosById[r.item];
             if (item.cat === 'frame') b.appendChild(UI.avatar('★', '', item.id));
             else { FB.person.preview(c, item); c.style.width = '48px'; c.style.height = '40px'; b.appendChild(c); }
-            b.appendChild(UI.el('div', { text: FB.name(item), style: 'font-size:10px;line-height:1;text-align:center;padding:0 4px' }));
+            b.appendChild(UI.el('div.rw-nm', { text: FB.name(item) }));
         } else {
-            b.innerHTML = FB.ic(r.pearls ? 'pearl' : 'coin') + '<div>' + U.fmt(r.coins || r.pearls) + '</div>';
+            b.innerHTML = FB.ic(r.pearls ? 'pearl' : 'coin') + '<div class="rw-n">' + U.fmt(r.coins || r.pearls) + '</div>';
         }
+        if (state === 'claim') b.appendChild(UI.el('span.rw-take', { text: FB.t('claim') }));
+        if (state === 'got') b.appendChild(UI.el('span.rw-ok', { text: '✓' }));
         if (gold && !FB.S.season.pass) b.appendChild(UI.el('span.lk', { html: FB.ic('lock') }));
         return b;
     }
@@ -114,11 +120,17 @@
         const S = FB.S, SE = FB.SEASON;
         const tier = FB.state.seasonTier();
         const inTier = S.season.pts % SE.perTier;
-        box.appendChild(UI.el('div.sec-title', { html: FB.ic('crown') + U.esc(FB.name(SE)) }));
-        box.appendChild(UI.el('div.season-top', { html: '<div class="lvl" style="--p:' + Math.round(inTier / SE.perTier * 100) + ';width:52px;height:52px"><b style="font-size:20px">' + tier + '</b></div>' +
-            '<div style="flex:1"><div class="progress gold"><i style="width:' + (tier >= SE.tiers.length ? 100 : Math.round(inTier / SE.perTier * 100)) + '%"></i><span>' +
-            (tier >= SE.tiers.length ? FB.t('season_done') : U.fmt(inTier) + ' / ' + SE.perTier) + '</span></div>' +
-            '<div class="muted" style="font-size:13px;margin-top:4px">' + FB.t('season_how') + '</div></div>' }));
+        const done = tier >= SE.tiers.length;
+        const pct = done ? 100 : Math.round(inTier / SE.perTier * 100);
+        // Карточка сезона: ступень, прогресс до следующей и как это работает
+        box.appendChild(UI.el('div.season-card', { html:
+            '<div class="sc-head">' + FB.ic('crown') + '<div><div class="sc-name">' + U.esc(FB.name(SE)) + '</div>' +
+            '<div class="sc-sub">' + (done ? FB.t('season_done') : FB.t('season_step', { n: tier, m: SE.tiers.length })) + '</div></div></div>' +
+            '<div class="progress gold"><i style="width:' + pct + '%"></i><span>' + (done ? '★' : FB.t('season_left', { a: U.fmt(inTier), b: U.fmt(SE.perTier) })) + '</span></div>' +
+            '<div class="sc-how">' +
+            '<div>' + FB.ic('fish') + '<span>' + FB.t('season_how1') + '</span></div>' +
+            '<div>' + FB.ic('star') + '<span>' + FB.t('season_how2', { n: SE.perTier }) + '</span></div>' +
+            '<div>' + FB.ic('gift') + '<span>' + FB.t('season_how3') + '</span></div></div>' }));
         const strip = UI.el('div.tiers');
         SE.tiers.forEach((t, i) => {
             const reached = i < tier;
@@ -146,14 +158,22 @@
                 return b;
             };
             col.appendChild(make('free'));
-            col.appendChild(UI.el('div.num', { text: i + 1 }));
+            col.appendChild(UI.el('div.num', { html: '<i></i><span>' + (i + 1) + '</span>' }));
             col.appendChild(make('gold'));
             strip.appendChild(col);
         });
-        box.appendChild(UI.el('div', { html: '<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--ink-soft);margin:6px 4px 0"><span>' + FB.t('track_free') + ' ↑</span><span>↓ ' + FB.t('track_gold') + '</span></div>' }));
-        box.appendChild(strip);
+        const wrap = UI.el('div.tiers-wrap', { html: '<div class="track-lab free">' + FB.t('track_free') + '</div>' });
+        wrap.appendChild(strip);
+        wrap.appendChild(UI.el('div.track-lab.gold', { html: FB.ic('crown') + FB.t('track_gold') }));
+        box.appendChild(wrap);
+        // Колёсико мыши листает ступени вбок
+        strip.addEventListener('wheel', (e) => {
+            if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+            e.preventDefault();
+            strip.scrollLeft += e.deltaY;
+        }, { passive: false });
         // Прокрутить к текущей ступени
-        setTimeout(() => { strip.scrollLeft = Math.max(0, (tier - 1) * 96); }, 30);
+        setTimeout(() => { strip.style.scrollBehavior = 'auto'; strip.scrollLeft = Math.max(0, Math.min(tier, SE.tiers.length - 1) * 104 + 53 - strip.clientWidth / 2); strip.style.scrollBehavior = ''; }, 30);
         if (!S.season.pass) {
             const card = UI.el('div.card.product.wide', { html: '<div class="big-ic" style="width:64px;height:64px">' + FB.ic('crown') + '</div><div class="txt"><div class="nm">' + FB.t('golden_pass') + '</div><div class="muted">' + FB.t('golden_pass_desc') + '</div></div>' });
             card.appendChild(UI.btn('yellow', FB.t('buy_pass'), async () => {

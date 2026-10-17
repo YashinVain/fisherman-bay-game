@@ -5,24 +5,37 @@
 // Управление одним пальцем:
 //   • нажал на воду — заброс туда;
 //   • поплавок нырнул — нажми (подсечка);
-//   • вываживание — держи палец, чтобы подматывать, отпускай, если леска
-//     натянулась до красной зоны.
+//   • вываживание — держи палец, чтобы подматывать. Стрелку натяжения надо
+//     держать в зелёной зоне: слева красное — леска провисла, справа — вот-вот
+//     лопнет. Чем сильнее рыба, тем уже зелёная зона (но не уже zoneMin).
 //   • нажал во время ожидания — смотал удочку (если не было поклёвки).
 
 (function (FB) {
     const F = FB.fishing = {};
     const U = FB.U;
 
-    // Настройки вываживания — подобраны симуляцией (tools/sim.js)
+    // Настройки вываживания — подобраны симуляцией (бот в tools/test.js)
     F.TUNE = {
-        greenLo: 0.14, greenHi: 0.8,
+        zoneMax: 0.64, zoneMin: 0.3,      // ширина зелёной зоны: мелочь — широкая, сильная рыба — узкая
         riseBase: 0.4, riseStr: 0.75,     // рост натяжения, когда тянешь
         fall: 0.9,                        // ослабление, когда отпустил
         reel: 0.34,                       // скорость подмотки
-        slackMax: 2.4,                    // сколько можно держать леску провисшей, с
-        snapGrace: 0.35,                  // столько леска выдерживает на пределе, с
+        heavy: 0.55,                      // насколько сильная рыба замедляет подмотку
+        slip: 0.025,                      // рыба отвоёвывает леску, пока не тянешь (× сила)
+        slackMax: 2.0,                    // сколько стрелка может быть в левой красной зоне, с
+        strainMax: 1.0,                   // ...и в правой красной, с
+        snapGrace: 0.35,                  // столько леска выдерживает в упоре, с
         surgeEvery: [1.4, 3.2],
-        surgeLen: 0.5, surgePower: 3.2      // рывок: сила × сила рыбы², хорошая удочка гасит
+        surgeLen: 0.5, surgePower: 3.2,   // рывок: сила × сила рыбы², хорошая удочка гасит
+        surgeCap: 1.6                     // ...но не сильнее этого — чтобы любую рыбу можно было вытащить
+    };
+
+    // Зелёная зона для этой рыбы: чем сильнее рыба, тем уже. Хорошая удочка её расширяет
+    F.zoneFor = (s, r) => {
+        const T = F.TUNE;
+        let w = U.lerp(T.zoneMax, T.zoneMin, U.clamp((s - 0.14) / 0.66, 0, 1));
+        w = U.clamp(w * (1 + (1 - r.ctrl) * 0.6), T.zoneMin, T.zoneMax + 0.06);
+        return { lo: 0.5 - w / 2, hi: 0.5 + w / 2 };
     };
 
     F.phase = 'idle';
@@ -41,7 +54,6 @@
     };
 
     const rod = () => FB.state.rodObj();
-    const easy = () => FB.S.settings.easy;
 
     // ---------- Расстояние от рыбака ----------
     // Рыбак сидит слева на мостках. «Дальность» заброса — расстояние по воде
@@ -103,6 +115,8 @@
         switch (F.phase) {
             case 'idle': return tryCast(x, y);
             case 'wait':
+                // На уроке рано нажатое не наказываем — просто подскажем
+                if (F.ctx.tut) { FB.emit('tutEarly'); return; }
                 if (F.nibbleT > 0) return lose('early');
                 // Смотать без поклёвки — можно забросить в другое место
                 F.phase = 'idle';
@@ -114,6 +128,17 @@
         }
     };
     F.release = () => { F.holding = false; };
+
+    // Случайная точка, куда удочка точно достанет (заброс пробелом)
+    F.randomTarget = () => {
+        const o = F.origin(), reach = rod().reach;
+        for (let i = 0; i < 30; i++) {
+            const tx = U.rand(o.tx + 0.3, 0.9), dist = U.rand(0.08, 0.95);
+            const e = F.reachOf(tx, dist, o);
+            if (e > reach * 0.45 && e < reach * 0.85) return FB.scene.project(tx, dist);
+        }
+        return FB.scene.project(o.tx + 0.4, o.dist + reach * 0.4);
+    };
 
     function tryCast(x, y) {
         const SC = FB.scene;
@@ -129,29 +154,27 @@
         tx = U.clamp(tx + U.gauss() * 0.02 * (1 + e), o.tx + 0.1, 0.97);
         dist = Math.max(0.02, dist + U.gauss() * 0.012 * (1 + e));
         e = F.reachOf(tx, dist, o);
-        // Дальше удочки не долетит — поплавок упадёт на границе её дальности
+        // Дальше удочки не долетит — не забрасываем вовсе, а показываем, докуда она достаёт
         if (e > r.reach) {
-            const k = r.reach / e;
-            tx = o.tx + (tx - o.tx) * k;
-            dist = o.dist + (dist - o.dist) * k;
-            e = r.reach;
+            F.holding = false;
+            F.reachFlash = 1.6;
+            FB.audio.play('click');
             FB.emit('toast', { key: 'too_far' });
+            return;
         }
         if (e < 0.07) { const k = 0.07 / Math.max(0.001, e); tx = o.tx + (tx - o.tx) * k; dist = o.dist + (dist - o.dist) * k; e = 0.07; }
         const bubble = takeSpot(tx, dist);
 
         const cfg = FB.state.weekCfg();
+        const tut = !!(FB.tutor && FB.tutor.inLesson());
         F.ctx = {
             pond: FB.S.pond, dist: e, bait: FB.S.bait, rod: r,
-            weather: FB.scene.weather, bubble,
+            weather: FB.scene.weather, bubble, tut,
             weekFish: FB.S.pond === cfg.pond ? cfg.fish : null
         };
         F.res = FB.catcher.roll(F.ctx);
-        // Первый заброс в жизни — гарантированный карась и быстрая поклёвка (обучение)
-        if (FB.S.tut < 99 && FB.S.stats.catches === 0) {
-            const f = FB.fishById.crucian;
-            F.res = { kind: 'fish', fish: f, g: 420 };
-        }
+        // Урок: гарантированный карась — первый улов должен получиться
+        if (tut) F.res = { kind: 'fish', fish: FB.fishById.crucian, g: 420 };
         F.target = { tx, dist };
         F.phase = 'cast';
         T = 0;
@@ -171,12 +194,17 @@
         let wait = U.rand(1.8, 5.2);
         if (F.ctx.bubble) wait *= 0.55;
         if (res.kind === 'fish' && res.fish.bait === F.ctx.bait) wait *= 0.8;
-        if (FB.S.stats.catches === 0) wait = 1.6;
-        F.biteAt = wait;
         // 0–2 «пробы» до настоящей поклёвки
         F.nibbles = [];
-        const n = FB.S.stats.catches === 0 ? 1 : U.randInt(0, 2);
-        for (let i = 0; i < n; i++) F.nibbles.push(U.rand(0.5, Math.max(0.6, wait - 0.6)));
+        if (F.ctx.tut) {
+            // На уроке — одна проба посередине, чтобы успеть прочитать подсказки
+            wait = 4.2;
+            F.nibbles.push(2.1);
+        } else {
+            const n = U.randInt(0, 2);
+            for (let i = 0; i < n; i++) F.nibbles.push(U.rand(0.5, Math.max(0.6, wait - 0.6)));
+        }
+        F.biteAt = wait;
         F.nibbleT = 0;
         FB.emit('hint', 'wait_bite');
     }
@@ -185,8 +213,7 @@
         F.phase = 'bite';
         T = 0;
         const order = F.res.kind === 'fish' ? FB.RARITY[F.res.fish.r].order : 0;
-        F.window = (easy() ? 1.3 : 0.85) - order * 0.04;
-        if (FB.S.stats.catches === 0) F.window = 2.5;
+        F.window = F.ctx.tut ? Infinity : 0.85 - order * 0.04;
         FB.audio.play('bite');
         const p = floatPos();
         FB.scene.ripple(p.x, p.y, 0.6 * p.s * 1.6);
@@ -199,12 +226,16 @@
         T = 0;
         const res = F.res;
         F.str = res.kind === 'fish' ? FB.catcher.strength(res.fish, res.g) : FB.catcher.junkStrength(res.junk);
-        F.tension = 0.35;
+        F.zone = F.zoneFor(F.str, rod());
+        F.tension = 0.5;
         F.progress = 0.1;
         F.slack = 0;
+        F.strain = 0;
         F.over = 0;
+        F.vx = 0;
+        F.face = 1;
         F.surge = 0;
-        F.surgeIn = U.rand(F.TUNE.surgeEvery[0], F.TUNE.surgeEvery[1]) / (0.6 + F.str);
+        F.surgeIn = U.rand(F.TUNE.surgeEvery[0], F.TUNE.surgeEvery[1]) / (0.75 + F.str * 0.6);
         F.fishTx = F.target.tx;
         F.fishDist = F.target.dist;
         F.dart = 0;
@@ -259,6 +290,7 @@
     // ---------- Обновление ----------
     F.update = (dt) => {
         T += dt;
+        if (F.reachFlash > 0) F.reachFlash -= dt;
         updateSpots(dt);
         const tune = F.TUNE;
         switch (F.phase) {
@@ -271,6 +303,7 @@
                     F.nibbles.shift();
                     F.nibbleT = 0.32;
                     FB.audio.play('nibble');
+                    FB.emit('nibble');
                     const p = floatPos();
                     FB.scene.ripple(p.x, p.y, 0.25 * p.s * 1.6);
                 }
@@ -281,11 +314,10 @@
                 break;
             case 'fight': {
                 const s = F.str, r = rod();
-                const ease = easy() ? 0.72 : 1;
                 F.surgeIn -= dt;
                 if (F.surgeIn <= 0 && F.res.kind === 'fish') {
                     F.surge = tune.surgeLen;
-                    F.surgeIn = U.rand(tune.surgeEvery[0], tune.surgeEvery[1]) / (0.6 + s);
+                    F.surgeIn = U.rand(tune.surgeEvery[0], tune.surgeEvery[1]) / (0.75 + s * 0.6);
                     F.dart = (Math.random() < 0.5 ? -1 : 1) * U.rand(0.15, 0.35);
                     FB.audio.play('strain');
                     if (s > 0.45) {
@@ -293,37 +325,41 @@
                         FB.scene.splash(p.x, p.y, 0.6 * p.s * 1.6);
                     }
                 }
+                const z = F.zone;
                 if (F.holding) {
-                    F.tension += (tune.riseBase + s * tune.riseStr) * r.ctrl * ease * dt;
-                    F.progress += tune.reel * Math.pow(r.reel, 0.6) * (1 - s * 0.62) * dt * (F.tension < tune.greenHi ? 1 : 0.55);
+                    F.tension += (tune.riseBase + s * tune.riseStr) * r.ctrl * dt;
+                    // В зелёной зоне подматываем в полную силу, в красной — с трудом
+                    const k = F.tension > z.hi ? 0.4 : F.tension < z.lo ? 0.8 : 1;
+                    F.progress += tune.reel * Math.pow(r.reel, 0.6) * (1 - s * tune.heavy) * dt * k;
                     if (Math.random() < dt * 14) FB.audio.play('reel');
                 } else {
                     F.tension -= tune.fall * dt;
-                    F.progress -= 0.04 * s * dt;
+                    F.progress -= tune.slip * s * dt;
                 }
                 if (F.surge > 0) {
                     F.surge -= dt;
-                    F.tension += s * s * tune.surgePower * r.ctrl * ease * dt;
-                    F.progress -= 0.06 * s * dt;
+                    F.tension += Math.min(s * s * tune.surgePower, tune.surgeCap) * r.ctrl * dt;
+                    F.progress -= tune.slip * 2 * s * dt;
                 }
                 F.tension = U.clamp(F.tension, 0, 1);
                 F.progress = U.clamp(F.progress, 0, 1);
-                // Рыба ходит из стороны в сторону и тянется к мосткам
-                F.dart *= Math.pow(0.4, dt);
-                const wander = Math.sin(T * (1.3 + s)) * 0.12 * (1 - F.progress) + F.dart;
-                // Рыба ходит из стороны в сторону и тянется к мосткам
-                const o = F.origin();
-                F.fishTx = U.clamp(U.lerp(F.target.tx, o.tx + 0.15, F.progress) + wander, o.tx + 0.06, 0.97);
-                F.fishDist = Math.max(0.02, U.lerp(F.target.dist, o.dist + 0.04, F.progress));
-                // На пределе леска «звенит» чуть-чуть — успеешь отпустить, если не зевать
+                swim(dt, s);
+                // Красные зоны: слева леска провисла — рыба уйдёт, справа звенит — лопнет.
+                // В упоре (стрелка до конца) леска держится совсем недолго
+                const tut = F.ctx.tut;
                 if (F.tension >= 1) {
                     F.over += dt;
-                    if (F.over > tune.snapGrace) { lose('snap'); break; }
+                    if (F.over > tune.snapGrace && !tut) { lose('snap'); break; }
                 } else F.over = 0;
-                if (F.tension < tune.greenLo) {
+                if (F.tension > z.hi) {
+                    F.strain += dt;
+                    if (F.strain > tune.strainMax && !tut) { lose('snap'); break; }
+                } else F.strain = Math.max(0, F.strain - dt * 2);
+                if (F.tension < z.lo) {
                     F.slack += dt;
-                    if (F.slack > tune.slackMax) { lose('slack'); break; }
+                    if (F.slack > tune.slackMax && !tut) { lose('slack'); break; }
                 } else F.slack = Math.max(0, F.slack - dt * 2);
+                if (tut) { F.strain = Math.min(F.strain, tune.strainMax * 0.9); F.slack = Math.min(F.slack, tune.slackMax * 0.9); F.over = 0; }
                 if (F.progress >= 1) land();
                 break;
             }
@@ -340,6 +376,24 @@
         if (F.phase !== 'land') F.landed = false;
         setPose(dt);
     };
+
+    // Рыба плывёт к мосткам по мере подмотки и ходит из стороны в сторону.
+    // Позицию не ставим сразу, а догоняем плавно — так она никогда не «прыгает»
+    function swim(dt, s) {
+        F.dart *= Math.pow(0.4, dt);
+        const wander = Math.sin(T * (1.3 + s)) * 0.12 * (1 - F.progress) + F.dart;
+        const o = F.origin();
+        const gx = U.clamp(U.lerp(F.target.tx, o.tx + 0.15, F.progress) + wander, o.tx + 0.06, 0.97);
+        const gd = Math.max(0.02, U.lerp(F.target.dist, o.dist + 0.04, F.progress));
+        const k = 1 - Math.exp(-dt * 3);
+        const before = F.fishTx;
+        F.fishTx += (gx - F.fishTx) * k;
+        F.fishDist += (gd - F.fishDist) * k;
+        // Куда смотрит: по тому, куда плывёт, и разворачивается не мгновенно
+        if (dt > 0) F.vx = U.lerp(F.vx, (F.fishTx - before) / dt, 1 - Math.exp(-dt * 5));
+        const want = Math.abs(F.vx) > 0.02 ? Math.sign(F.vx) : Math.sign(F.face) || 1;
+        F.face += (want - F.face) * (1 - Math.exp(-dt * 6));
+    }
 
     // Поза и лицо рыбака от фазы. Угол удочки: -0.8 — вверх-вправо над водой
     function setPose(dt) {
@@ -387,7 +441,49 @@
         return SC.project(F.target.tx, F.target.dist);
     }
 
+    // Маятник поплавка: угол a, скорость v. Толкают его ветерок и рывки кончика удочки
+    F.pend = { a: 0, v: 0, lx: null, ly: 0, vx: 0, lt: 0 };
+    function pendulum(tip, u) {
+        const p = F.pend, t = FB.scene.t;
+        const dt = U.clamp(t - p.lt, 0, 0.05);
+        p.lt = t;
+        if (p.lx === null || dt === 0) { p.lx = tip.x; p.ly = tip.y; return p; }
+        const vx = (tip.x - p.lx) / dt;
+        const ax = U.clamp((vx - p.vx) / dt, -6000, 6000);
+        p.vx = vx; p.lx = tip.x; p.ly = tip.y;
+        const len = u * 9;
+        const wind = Math.sin(t * 0.9) * 0.25 + Math.sin(t * 2.3) * 0.08;
+        const acc = -20 * Math.sin(p.a) - 1.8 * p.v - (ax / len) * Math.cos(p.a) * 0.4 + wind;
+        p.v += acc * dt;
+        p.a = U.clamp(p.a + p.v * dt, -1.2, 1.2);
+        return p;
+    }
+
     // ---------- Рисование ----------
+    // Граница, докуда достаёт удочка: пунктир по воде (после «слишком далеко»)
+    F.reachFlash = 0;
+    function drawReach(ctx, a) {
+        const SC = FB.scene, o = F.origin(), reach = rod().reach, u = SC.unit();
+        ctx.save();
+        ctx.setLineDash([u * 1.6, u * 1.2]);
+        ctx.lineCap = 'round';
+        ctx.lineWidth = Math.max(2, u * 0.5);
+        ctx.strokeStyle = 'rgba(255,255,255,' + (0.85 * a) + ')';
+        ctx.shadowColor = 'rgba(0,40,80,' + (0.35 * a) + ')';
+        ctx.shadowBlur = u;
+        ctx.beginPath();
+        let started = false;
+        for (let i = 0; i <= 48; i++) {
+            const ang = -Math.PI / 2 + Math.PI * i / 48;   // от «к нам» до «вглубь»
+            const tx = o.tx + Math.cos(ang) * reach / SIDE, dist = o.dist + Math.sin(ang) * reach;
+            if (dist < 0.01 || tx < o.tx + 0.05) continue;
+            const p = SC.project(tx, dist);
+            if (!started) { ctx.moveTo(p.x, p.y); started = true; } else ctx.lineTo(p.x, p.y);
+        }
+        ctx.stroke();
+        ctx.restore();
+    }
+
     function line(ctx, x0, y0, x1, y1, sag) {
         ctx.strokeStyle = FB.scene.weather === 'night' ? 'rgba(220,230,255,0.55)' : 'rgba(255,255,255,0.75)';
         ctx.lineWidth = 1;
@@ -401,6 +497,7 @@
         const SC = FB.scene, P = FB.person, u = SC.unit();
         if (layer === 'water') {
             drawSpots(ctx);
+            if (F.reachFlash > 0) drawReach(ctx, Math.min(1, F.reachFlash / 0.5));
             const tip = P.rodTip();
             if (F.phase === 'wait' || F.phase === 'bite') {
                 const p = floatPos();
@@ -419,10 +516,9 @@
                 // Тень рыбы под водой
                 const big = F.res.kind === 'fish' ? U.clamp(Math.log10(F.res.g) / 4, 0.4, 1.4) : 0.6;
                 const sw = u * 6 * big * p.s * 1.6;
-                const dir = Math.sign(F.dart || Math.cos(T * 1.3)) || 1;
                 ctx.save();
                 ctx.translate(p.x, p.y + u * 0.6 * p.s);
-                ctx.scale(dir, 1);
+                ctx.scale(Math.abs(F.face) < 0.15 ? 0.15 * (Math.sign(F.face) || 1) : F.face, 1);
                 ctx.fillStyle = 'rgba(10,30,50,0.35)';
                 ctx.beginPath(); ctx.ellipse(0, 0, sw, sw * 0.28, 0, 0, Math.PI * 2); ctx.fill();
                 const tw = Math.sin(SC.t * 14) * sw * 0.15;
@@ -442,22 +538,21 @@
             P.drawPerson(ctx);
             P.drawBoatFront(ctx);
             const tip = P.rodTip();
-            if (F.phase === 'idle' || F.phase === 'lost') {
-                // Поплавок висит на кончике удочки и чуть качается
-                const sw = Math.sin(SC.t * 1.8) * u * 0.8;
-                const fx = tip.x + sw, fy = tip.y + u * 7;
-                line(ctx, tip.x, tip.y, fx, fy - u * 2, 0);
-                P.drawFloat(ctx, fx, fy, 1.1, 0, sw * 0.03);
+            const castK = F.phase === 'cast' ? T / 0.75 : 0;
+            if (F.phase === 'idle' || F.phase === 'lost' || (F.phase === 'cast' && castK <= 0.35)) {
+                // Поплавок висит на леске под кончиком удочки — маятник:
+                // раскачивается от ветерка и пружинит, когда удочка двигается
+                F.hang = pendulum(tip, u);
+                F.hangPos = P.drawHangingFloat(ctx, tip.x, tip.y, F.pend.a, u * 5, 1.1);
             } else if (F.phase === 'cast') {
-                const k = T / 0.75;
-                if (k > 0.35) {
-                    const q = U.smooth((k - 0.35) / 0.65);
-                    const end = SC.project(F.target.tx, F.target.dist);
-                    const x = U.lerp(tip.x, end.x, q);
-                    const y = U.lerp(tip.y, end.y, q) - Math.sin(q * Math.PI) * SC.H * 0.18;
-                    line(ctx, tip.x, tip.y, x, y, u * 2);
-                    P.drawFloat(ctx, x, y + u * 2, U.lerp(1.1, end.s, q), 0, q * 6);
-                }
+                const q = U.smooth((castK - 0.35) / 0.65);
+                const end = SC.project(F.target.tx, F.target.dist);
+                const from = F.hangPos || tip;
+                const x = U.lerp(from.x, end.x, q);
+                const y = U.lerp(from.y, end.y, q) - Math.sin(q * Math.PI) * SC.H * 0.18;
+                line(ctx, tip.x, tip.y, x, y - P.floatTop(U.lerp(1.1, end.s, q)), u * 2);
+                P.drawFloat(ctx, x, y, U.lerp(1.1, end.s, q), 0, q * 6, true);
+                F.pend.a = 0; F.pend.v = 0;
             } else if (F.phase === 'bite') {
                 // Восклицательный знак над поплавком
                 const p = floatPos();
@@ -496,5 +591,9 @@
     };
 
     // Для интерфейса: состояние вываживания
-    F.fightInfo = () => F.phase === 'fight' ? { tension: F.tension, progress: F.progress, slack: F.slack / F.TUNE.slackMax, surge: F.surge > 0 } : null;
+    F.fightInfo = () => F.phase === 'fight' ? {
+        tension: F.tension, progress: F.progress, lo: F.zone.lo, hi: F.zone.hi, surge: F.surge > 0,
+        slack: F.slack / F.TUNE.slackMax,
+        strain: Math.max(F.strain / F.TUNE.strainMax, F.over / F.TUNE.snapGrace)
+    } : null;
 })(window.FB);

@@ -1,0 +1,29 @@
+{
+    "out": "../../docs/promo",
+    "steps": [
+        { "size": [1920, 1080, 1] },
+        { "open": "http://127.0.0.1:8940/", "wait": 2500 },
+        { "js": "document.querySelector('.title .btn').click();", "sleep": 900 },
+        { "name": "подготовка", "js": "FB.ui.closeAll(); const S = FB.S; S.tut = 99; S.xp = 9000; S.level = FB.state.levelFromXp(9000); S.coins = 3480; S.pearls = 120; S.stats.catches = 140; ['hat_straw','hat_beanie','hat_panama','jk_yellow','jk_plaid','pet_cat','pet_dog','bt_rowboat'].forEach(id => S.owned.push(id)); S.rods.push('carbon'); S.rod = 'carbon'; FB.FISH.slice(0, 20).forEach(f => { S.album[f.id] = { n: 3, best: Math.round(f.avg * 1.4) }; }); FB.hud.update(); FB.hud.hint(null); return S.level;", "sleep": 400 },
+
+        { "name": "1: день, мальчик ждёт поклёвку", "js": "FB.S.who = 'boy'; FB.S.look.pet = 'pet_cat'; FB.panels.goTo('village'); FB.ui.closeAll(); FB.scene.setPlace('village', 'sun'); const F = FB.fishing; const p = FB.scene.project(0.35, 0.45); F.press(p.x, p.y); F.release(); await new Promise(r => { const t = setInterval(() => { if (F.phase === 'bite') { clearInterval(t); r(); } }, 15); setTimeout(r, 9000); });", "sleep": 120 },
+        { "shot": "desktop-1.png" },
+
+        { "name": "2: вечер, девочка тянет рыбу", "js": "const F = FB.fishing; F.press(0, 0); F.release(); FB.S.who = 'girl'; FB.S.look.hat = 'hat_beanie'; FB.S.look.jacket = 'jk_yellow'; FB.S.look.pet = 'pet_dog'; FB.scene.setPlace('river', 'evening'); window.__ap = setInterval(() => { if (F.phase !== 'fight') return; if (F.tension < 0.62) F.holding = true; else if (F.tension > 0.78) F.holding = false; }, 30);", "sleep": 1500 },
+        { "shot": "desktop-2.png" },
+
+        { "name": "3: ночь, дедушка с фонарём", "js": "clearInterval(window.__ap); const F = FB.fishing; await new Promise(r => { const t = setInterval(() => { if (FB.ui.isOpen() || F.phase === 'idle') { clearInterval(t); r(); } }, 50); setTimeout(r, 20000); }); FB.ui.closeAll(); F.reset(); FB.S.who = 'grandpa'; FB.S.look.hat = 'hat_straw'; FB.S.look.jacket = 'jk_plaid'; FB.S.look.pet = 'pet_cat'; FB.scene.setPlace('mountain', 'night'); const p = FB.scene.project(0.45, 0.5); F.press(p.x, p.y); F.release();", "sleep": 1600 },
+        { "shot": "desktop-3.png" },
+
+        { "name": "4: улов — золотой карп", "js": "FB.fishing.reset(); FB.S.who = 'boy'; FB.S.look.hat = 'hat_cap'; FB.S.look.jacket = 'jk_green'; FB.scene.setPlace('village', 'evening'); FB.hud.hint(null); FB.catchCard.show({ kind: 'fish', fish: FB.fishById.goldcarp, g: 11240 }, { pond: 'village', dist: 0.9, bait: 'maggot', rod: FB.rodById.bamboo, weather: 'evening', bubble: false });", "sleep": 1400 },
+        { "shot": "desktop-4.png" },
+
+        { "size": [540, 960, 2, true] },
+        { "js": "FB.ui.closeAll(); FB.fishing.reset(); FB.scene.resize(); FB.S.who = 'boy'; FB.scene.setPlace('lagoon', 'evening');", "sleep": 900 },
+        { "shot": "phone-1.png" },
+        { "js": "FB.S.who = 'girl'; FB.S.look.hat = 'hat_beanie'; FB.S.look.jacket = 'jk_yellow'; FB.scene.setPlace('pier', 'night'); const F = FB.fishing; const p = FB.scene.project(0.4, 0.4); F.press(p.x, p.y); F.release(); window.__ap = setInterval(() => { if (F.phase === 'bite') { F.press(0, 0); F.release(); } if (F.phase !== 'fight') return; if (F.tension < 0.62) F.holding = true; else if (F.tension > 0.78) F.holding = false; }, 30); await new Promise(r => { const t = setInterval(() => { if (F.phase === 'fight') { clearInterval(t); r(); } }, 15); setTimeout(r, 12000); });", "sleep": 1200 },
+        { "shot": "phone-2.png" },
+        { "js": "clearInterval(window.__ap); FB.fishing.reset(); FB.ui.closeAll(); FB.S.who = 'grandpa'; FB.S.look.hat = 'hat_straw'; FB.S.look.jacket = 'jk_plaid'; FB.scene.setPlace('swamp', 'fog'); FB.hud.hint(null); FB.catchCard.show({ kind: 'fish', fish: FB.fishById.pike, g: 7350 }, { pond: 'swamp', dist: 0.7, bait: 'spinner', rod: FB.rodById.bamboo, weather: 'fog', bubble: false });", "sleep": 1400 },
+        { "shot": "phone-3.png" }
+    ]
+}

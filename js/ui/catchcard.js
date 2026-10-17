@@ -27,13 +27,14 @@
         const a = FB.S.album[f.id];
         const coins = Math.round(base * 0.8 + 2), xp = Math.round(base * 0.6 + 4);
         const isNew = !a || a.n === 0;
-        let weekGain = 0;
+        let weekGain = 0, weekMin = 0;
         if (inTourney) {
             FB.state.syncWeek();
             weekGain = FB.week.sum(FB.week.addCatch(FB.S.week.best, pts)) - FB.state.weekScore();
+            weekMin = FB.S.week.best.length ? Math.min.apply(null, FB.S.week.best) : 0;
         }
         return {
-            pts, isWeekFish, inTourney, weekGain, isNew,
+            pts, isWeekFish, inTourney, weekGain, weekMin, isNew,
             record: !isNew && g > a.best,
             keep: { coins, xp: xp + (isNew ? 20 : 0) },
             release: { coins: Math.round(coins * 0.5), xp: Math.round(xp * 1.6) + (isNew ? 20 : 0) }
@@ -58,6 +59,7 @@
             (pv.record ? '<span class="flag rec" style="animation-delay:.4s">' + FB.t('new_record') + '</span>' : '') +
             (pv.isWeekFish ? '<span class="flag week" style="animation-delay:.5s">' + FB.t('week_fish_x2') + '</span>' : '') +
             (pv.inTourney && pv.weekGain > 0 ? '<span class="flag tour" style="animation-delay:.6s">' + FB.t('tourney_plus', { n: pv.weekGain }) + '</span>' : '') +
+            (pv.inTourney && pv.weekGain <= 0 ? '<span class="flag miss" style="animation-delay:.6s">' + FB.t('tourney_miss', { n: U.fmt(pv.weekMin) }) + '</span>' : '') +
             '</div>' +
             '<div class="stats">' +
             '<div class="stat"><b>' + U.weight(res.g) + '</b><small>' + FB.t('weight') + '</small></div>' +
@@ -85,6 +87,8 @@
         };
         choice.appendChild(UI.btn('', FB.t('keep') + '<span class="sub">+' + pv.keep.coins + ' ' + FB.t('coins_short') + ' · +' + pv.keep.xp + ' ' + FB.t('xp') + '</span>', () => finish(true)));
         choice.appendChild(UI.btn('blue', FB.t('release') + '<span class="sub">+' + pv.release.coins + ' ' + FB.t('coins_short') + ' · +' + pv.release.xp + ' ' + FB.t('xp') + '</span>', () => finish(false)));
+        // Первый улов на уроке: объясняем выбор прямо в карточке
+        if (FB.tutor.inLesson()) body.appendChild(UI.el('div.coach-note', { html: FB.ic('info') + '<span>' + FB.tutor.nb(FB.t('tut_card')) + '</span>' }));
         body.appendChild(choice);
         if (FB.sdk.adsAvailable()) {
             const ad = UI.el('button.adlink', { html: FB.ic('video') + FB.t('keep_x2', { n: pv.keep.coins * 2 }), onclick: async () => {
@@ -124,7 +128,7 @@
     function afterCard() {
         FB.fishing.done();
         catchesSinceAd++;
-        if (FB.S.tut < 99) { FB.S.tut = 99; FB.state.save(); }
+        FB.tutor.afterCatch();
         // Межстраничная реклама — только здесь, в спокойной паузе между уловами
         if (catchesSinceAd >= 5) {
             FB.sdk.showInterstitial().then(shown => { if (shown) catchesSinceAd = 0; });
@@ -156,21 +160,37 @@
     };
 
     // ---------- Новый уровень ----------
-    CC.levelUp = ({ level, ponds }) => {
+    // Окно небольшое: звезда с номером, подарок за уровень, что открылось
+    // (или что откроется дальше, если сейчас ничего)
+    CC.levelUp = ({ level, ponds, reward }) => {
         CC.later(() => {
             FB.audio.play('level');
-            const body = UI.el('div.congrats');
-            let html = FB.ic('star').replace('class="ic"', 'class="ic hero"') +
-                '<div class="big outline">' + level + '</div><p>' + FB.t('level_up') + '</p>';
-            const unlocks = [];
-            ponds.forEach(p => unlocks.push(FB.ic('map') + ' ' + U.esc(FB.name(p))));
-            FB.RODS.filter(r => r.level === level).forEach(r => unlocks.push(U.esc(FB.name(r))));
-            FB.BAITS.filter(b => b.level === level).forEach(b => unlocks.push(U.esc(FB.name(b))));
-            if (unlocks.length) html += '<p class="muted">' + FB.t('unlocked') + '</p><div class="unlock-list">' + unlocks.map(u => '<div>' + u + '</div>').join('') + '</div>';
+            const body = UI.el('div.congrats.lvlup');
+            const opened = [];
+            ponds.forEach(p => opened.push(['map', FB.name(p), FB.t('kind_pond')]));
+            FB.RODS.filter(r => r.level === level).forEach(r => opened.push(['rod', FB.name(r), FB.t('kind_rod')]));
+            FB.BAITS.filter(b => b.level === level).forEach(b => opened.push([b.icon, FB.name(b), FB.t('kind_bait')]));
+            const item = ([ic, name, kind]) => '<div class="lv-item">' + FB.ic(ic) + '<div><b>' + U.esc(name) + '</b><small>' + kind + '</small></div></div>';
+            let html = '<div class="lv-star">' + FB.ic('star') + '<span class="outline">' + level + '</span></div>' +
+                '<p class="lv-title">' + FB.t('level_up') + '</p>';
+            const gift = [];
+            if (reward && reward.coins) gift.push(UI.price({ coins: reward.coins }));
+            if (reward && reward.pearls) gift.push(UI.price({ pearls: reward.pearls }));
+            if (gift.length) html += '<div class="lv-sec">' + FB.t('level_reward') + '</div><div class="lv-gift">' + gift.join('') + '</div>';
+            if (opened.length) {
+                html += '<div class="lv-sec">' + FB.t('unlocked') + '</div><div class="lv-items">' + opened.map(item).join('') + '</div>';
+            } else {
+                const nx = FB.state.nextUnlock();
+                if (nx) html += '<div class="lv-next">' + FB.t('next_unlock', { name: U.esc(FB.name(nx.item)), n: nx.lvl }) + '</div>';
+            }
             body.innerHTML = html;
-            body.querySelectorAll('.unlock-list .ic').forEach(i => { i.style.width = '22px'; i.style.height = '22px'; i.style.verticalAlign = '-5px'; });
-            body.appendChild(UI.btn('big', FB.t('hooray'), () => UI.close()));
-            UI.open({ body, noClose: true, title: FB.t('new_level'), gold: true });
+            body.appendChild(UI.btn('', FB.t('hooray'), () => UI.close()));
+            const entry = UI.open({ body, noClose: true, title: FB.t('new_level'), gold: true, width: 'min(92vw, 380px)' });
+            if (reward && reward.coins) {
+                const r = entry.sheet.getBoundingClientRect();
+                setTimeout(() => UI.fly('coin', r.left + r.width / 2, r.top + r.height * 0.45, 6), 450);
+            }
+            FB.hud.update();
             FB.scene.burst(FB.scene.W / 2, FB.scene.H * 0.35, 'fx_confetti');
         });
     };
@@ -190,7 +210,7 @@
                 (rw.pearls ? '<div>' + UI.price({ pearls: rw.pearls }) + '</div>' : '') +
                 rw.items.map(id => '<div>' + U.esc(FB.name(FB.cosById[id])) + '</div>').join('') + '</div>';
             body.appendChild(UI.btn('big yellow', FB.t('great'), () => { UI.close(); FB.hud.update(); }));
-            UI.open({ body, noClose: true, title: FB.t('tourney_results'), gold: true });
+            UI.open({ body, noClose: true, title: FB.t('tourney_results'), gold: true, width: 'min(92vw, 420px)' });
             if (r.rank && r.rank <= 10) FB.scene.burst(FB.scene.W / 2, FB.scene.H * 0.35, 'fx_confetti');
         });
     };

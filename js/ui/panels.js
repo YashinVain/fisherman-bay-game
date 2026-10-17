@@ -168,7 +168,6 @@
             };
             box.appendChild(toggle('sound', 'sound', FB.t('set_sound')));
             box.appendChild(toggle('music', 'music', FB.t('set_music')));
-            box.appendChild(toggle('hook', 'easy', FB.t('set_easy'), FB.t('set_easy_sub')));
             const seg = UI.el('div.seg');
             [['ru', 'Русский'], ['en', 'English']].forEach(([l, n]) => {
                 seg.appendChild(UI.el('button' + (FB.lang === l ? '.on' : ''), { text: n, onclick: () => {
@@ -180,6 +179,10 @@
                 } }));
             });
             box.appendChild(UI.el('div.card.set-row', {}, [UI.el('div.l', { html: FB.ic('info') + FB.t('set_lang') }), seg]));
+            box.appendChild(UI.el('div.card.set-row', {}, [
+                UI.el('div.l', { html: FB.ic('hook') + '<div>' + FB.t('set_tut') + '<small>' + FB.t('set_tut_sub') + '</small></div>' }),
+                UI.btn('small blue', FB.t('set_tut_btn'), () => FB.tutor.restart())
+            ]));
             if (FB.sdk.ready && !FB.sdk.isAuthorized()) {
                 box.appendChild(UI.el('div.card.set-row', {}, [
                     UI.el('div.l', { html: FB.ic('user') + '<div>' + FB.t('login') + '<small>' + FB.t('login_sub') + '</small></div>' }),

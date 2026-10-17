@@ -40,6 +40,7 @@
         FB.audio.unlock();
         playing = true;
         FB.hud.build();
+        FB.tutor.init();
         FB.sdk.setGameplay(true);
         FB.hud.hint(FB.fishing.phase === 'idle' ? 'tap_water' : null);
         if (weekRes) FB.catchCard.weekResult(weekRes);
@@ -75,7 +76,7 @@
         const ignore = (t) => t.closest && t.closest('button, .shade, .nav, .hud-top, .title');
         window.addEventListener('pointerdown', (e) => {
             FB.audio.unlock();
-            if (!playing || paused || UI.isOpen() || ignore(e.target)) return;
+            if (!playing || paused || UI.isOpen() || FB.tutor.blocking() || ignore(e.target)) return;
             FB.fishing.press(e.clientX, e.clientY);
         });
         const up = () => FB.fishing.release();
@@ -85,11 +86,11 @@
         window.addEventListener('contextmenu', (e) => e.preventDefault());
         // Пробел — то же, что нажатие (удобно на компьютере)
         window.addEventListener('keydown', (e) => {
-            if (e.code !== 'Space' || e.repeat || !playing || UI.isOpen()) return;
+            if (e.code !== 'Space' || e.repeat || !playing || UI.isOpen() || FB.tutor.blocking()) return;
             e.preventDefault();
             const F = FB.fishing;
             if (F.phase === 'idle') {
-                const p = FB.scene.project(FB.U.rand(-0.3, 0.3), FB.state.rodObj().reach * 0.8);
+                const p = F.randomTarget();
                 F.press(p.x, p.y);
             } else F.press(0, 0);
         });
@@ -120,9 +121,9 @@
         last = now;
         if (paused) return;
         if (FB.S) FB.S.stats.playMs += dt * 1000;
-        if (playing && !UI.isOpen()) FB.fishing.update(dt);
+        if (playing && !UI.isOpen() && !FB.tutor.blocking()) FB.fishing.update(dt);
         FB.scene.render(dt, FB.fishing.draw);
-        if (playing) FB.hud.frame();
+        if (playing) { FB.hud.frame(); FB.tutor.frame(dt); }
     }
 
     boot().catch(e => {

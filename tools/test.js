@@ -185,6 +185,16 @@ FB.quests.claimGift(false);
 FB.sdk.mockShift += 3 * 86400000;
 FB.quests.sync();
 ok(FB.S.daily.streak === 0, 'пропуск дня — серия сначала');
+{
+    const Q = FB.quests;
+    ok(Q.giftAt(6, 0).pearls === 10 && Q.giftAt(6, 1).pearls === 15 && Q.giftAt(6, 2).pearls === 20, 'жемчуг за 7-й день растёт с каждым кругом');
+    ok(Q.giftAt(0, 1).coins > Q.giftAt(0, 0).coins, 'на новом круге монет больше');
+    ok(Q.giftAt(6, 99).pearls === Q.giftAt(6, Q.MAX_CYCLE).pearls, 'рост подарков ограничен');
+    const keepD = FB.S.daily;
+    FB.S.daily = Object.assign({}, keepD, { streak: 7, gift: false });
+    ok(Q.cycle() === 1 && Q.giftToday().coins === Q.giftAt(0, 1).coins, 'после 7-го дня — второй круг с первого дня');
+    FB.S.daily = keepD;
+}
 const q = FB.S.daily.quests[0];
 q.type = 'catch'; q.n = 2; q.p = 0; q.done = false;
 FB.quests.onCatch({ kind: 'fish', fish: FB.fishById.crucian, g: 100 }, {}, { pts: 10 });
@@ -206,18 +216,20 @@ FB.tourney.checkWeek().then(r => {
     ok(r2 === null, 'награда не выдаётся дважды');
     ok(FB.tourney.rewardFor(1).items.includes('hat_crown') && FB.tourney.rewardFor(250).kind === 'member', 'награды по местам');
     fightSim();
+    lessonSim();
+    newChecks();
     finish();
 });
 
 // ---------- Баланс вываживания ----------
-// Бот: держит, пока натяжение < 0.55, отпускает выше 0.7, реагирует с задержкой
+// Бот держит палец, пока стрелка в нижней части зелёной зоны, отпускает в верхней
+// и реагирует с задержкой. Сильная рыба должна быть труднее, но не невозможной
 function fightSim() {
-    section('Баланс вываживания (бот с реакцией 0,15 с)');
+    section('Баланс вываживания (бот с реакцией 0,25 с — как обычный игрок)');
     const F = FB.fishing;
-    const runOne = (fish, g, rod, easy) => {
+    const runOne = (fish, g, rod, react) => {
         FB.S = FB.state.fresh();
         FB.S.rod = rod.id; FB.S.rods = [rod.id];
-        FB.S.settings.easy = easy;
         FB.S.stats.catches = 5;
         F.reset();
         F.res = { kind: 'fish', fish, g };
@@ -229,11 +241,11 @@ function fightSim() {
         F.release();
         let want = false, delay = 0, t = 0, result = 'timeout';
         const dt = 1 / 60;
-        FB.on('lost', () => {});
-        while (t < 60) {
+        while (t < 90) {
             t += dt;
-            const target = F.tension < 0.55 ? true : F.tension > 0.7 ? false : want;
-            if (target !== want) { delay += dt; if (delay >= 0.15) { want = target; delay = 0; } } else delay = 0;
+            const z = F.zone, w = z.hi - z.lo;
+            const target = F.tension < z.lo + w * 0.35 ? true : F.tension > z.hi - w * 0.3 ? false : want;
+            if (target !== want) { delay += dt; if (delay >= react) { want = target; delay = 0; } } else delay = 0;
             F.holding = want;
             F.update(dt);
             if (F.phase === 'land') { result = 'caught'; break; }
@@ -242,7 +254,8 @@ function fightSim() {
         return { result, t };
     };
     const lines = [];
-    let fails = [];
+    const fails = [];
+    const rate = {};
     FB.RARITY_ORDER.forEach(r => {
         [FB.rodById.bamboo, FB.rodById.carbon, FB.rodById.star].forEach(rod => {
             const list = FB.FISH.filter(f => f.r === r);
@@ -251,21 +264,120 @@ function fightSim() {
             list.forEach(f => {
                 for (let i = 0; i < 6; i++) {
                     const g = FB.catcher.rollWeight(f, { rod, bubble: false });
-                    const res = runOne(f, g, rod, false);
+                    const res = runOne(f, g, rod, 0.25);
                     total++;
                     if (res.result === 'caught') { caught++; time += res.t; } else why[res.result] = (why[res.result] || 0) + 1;
                 }
             });
-            const rate = caught / total;
-            lines.push('    ' + r.padEnd(10) + rod.id.padEnd(7) + ' поймано ' + (rate * 100).toFixed(0).padStart(3) + '%, в среднем ' + (caught ? (time / caught).toFixed(1) : '-') + ' с' + (Object.keys(why).length ? '  срывы: ' + JSON.stringify(why) : ''));
-            if (r === 'common' && rate < 0.9) fails.push('обычную рыбу ловить слишком трудно: ' + rod.id + ' ' + rate);
-            if (r === 'legendary' && rod.id === 'star' && rate < 0.5) fails.push('легендарную даже со звёздной удочкой почти не поймать: ' + rate);
-            if (r === 'legendary' && rod.id === 'bamboo' && rate > 0.95) fails.push('легендарная с бамбуковой — слишком легко');
+            const k = caught / total;
+            rate[r + '/' + rod.id] = k;
+            const z = F.zoneFor(FB.catcher.strength(list[0], list[0].avg), rod);
+            lines.push('    ' + r.padEnd(10) + rod.id.padEnd(7) + ' зелёная ' + Math.round((z.hi - z.lo) * 100) + '%, поймано ' + (k * 100).toFixed(0).padStart(3) + '%, в среднем ' + (caught ? (time / caught).toFixed(1) : '-') + ' с' + (Object.keys(why).length ? '  срывы: ' + JSON.stringify(why) : ''));
         });
     });
+    // Самые тяжёлые легендарные рыбы на бамбуковой удочке
+    let hc = 0, ht = 0;
+    FB.FISH.filter(f => f.r === 'legendary').forEach(f => {
+        for (let i = 0; i < 10; i++) { ht++; if (runOne(f, f.w[1], FB.rodById.bamboo, 0.15).result === 'caught') hc++; }
+    });
+    lines.push('    самые тяжёлые легендарные на бамбуковой: поймано ' + Math.round(hc / ht * 100) + '%');
     lines.forEach(l => console.log(l));
+    ['bamboo', 'carbon', 'star'].forEach(rod => {
+        if (rate['common/' + rod] < 0.95) fails.push('обычную рыбу ловить слишком трудно: ' + rod);
+        if (rate['uncommon/' + rod] < 0.85) fails.push('необычную рыбу ловить слишком трудно: ' + rod);
+    });
+    if (rate['legendary/star'] < 0.7) fails.push('легендарную даже со звёздной удочкой почти не поймать');
+    if (rate['legendary/bamboo'] > 0.7) fails.push('легендарная с бамбуковой — слишком легко');
+    if (rate['legendary/bamboo'] >= rate['epic/bamboo'] || rate['epic/bamboo'] > rate['rare/bamboo'] + 0.05) fails.push('чем реже рыба, тем должно быть труднее');
+    if (hc / ht < 0.1) fails.push('самую сильную рыбу на бамбуковую не поймать вовсе');
     fails.forEach(f => ok(false, f));
     if (!fails.length) passed++;
+}
+
+// ---------- Урок рыбалки ----------
+// На уроке рыбу нельзя упустить: рано нажал — не беда, поклёвка ждёт, леска не рвётся
+function lessonSim() {
+    section('Урок рыбалки');
+    const F = FB.fishing;
+    let lessonOn = true;
+    FB.tutor = { inLesson: () => lessonOn };
+    FB.S = FB.state.fresh();
+    F.reset();
+    let lost = 0;
+    FB.on('lost', () => { lost++; });
+    const run = (sec, fn) => { for (let t = 0; t < sec; t += 1 / 60) { if (fn) fn(); F.update(1 / 60); } };
+    F.press(100, 100); F.release();
+    ok(F.phase === 'cast' && F.ctx.tut, 'урок: заброс помечен как учебный');
+    ok(F.res.kind === 'fish' && F.res.fish.id === 'crucian', 'урок: на крючке карась');
+    run(1);
+    ok(F.phase === 'wait', 'урок: ждём поклёвку');
+    F.press(0, 0); F.release();
+    ok(F.phase === 'wait', 'урок: раннее нажатие не сматывает удочку');
+    run(4);
+    ok(F.phase === 'bite', 'урок: поклёвка через ~4 с');
+    run(10);
+    ok(F.phase === 'bite', 'урок: поклёвка ждёт сколько нужно');
+    F.press(0, 0);
+    ok(F.phase === 'fight', 'урок: подсекли');
+    run(5, () => { F.holding = false; });
+    ok(F.phase === 'fight' && lost === 0, 'урок: провисшая леска не упускает рыбу');
+    run(2.5, () => { F.holding = true; });
+    ok((F.phase === 'fight' || F.phase === 'land') && lost === 0, 'урок: леска на пределе не рвётся');
+    run(30, () => { F.holding = F.tension < 0.6; });
+    ok(F.phase === 'land' || F.phase === 'idle', 'урок: рыба поймана');
+    ok(lost === 0, 'урок: ни одного срыва');
+    lessonOn = false;
+    FB.S.stats.catches = 1;
+    F.reset();
+    F.press(100, 100); F.release();
+    ok(!F.ctx.tut, 'после урока заброс обычный');
+}
+
+// ---------- Заброс, уровни, главный улов, зелёная зона ----------
+function newChecks() {
+    section('Дальность, уровни, главный улов');
+    const F = FB.fishing;
+    FB.tutor = { inLesson: () => false };
+    FB.S = FB.state.fresh();
+    FB.S.stats.catches = 3;
+    F.reset();
+    // Сцена-заглушка: всё, что нажато, — далеко-далеко
+    const keep = FB.scene.unproject;
+    FB.scene.unproject = (x, y) => (x === 0 && y === 0 ? { tx: 0.9, dist: 0.95 } : keep(x, y));
+    F.press(0, 0); F.release();
+    ok(F.phase === 'idle' && F.reachFlash > 0, 'слишком далеко — заброса нет, показана граница');
+    FB.scene.unproject = keep;
+    ok(FB.RODS.every((r, i) => i === 0 || r.reach > FB.RODS[i - 1].reach), 'каждая следующая удочка достаёт дальше');
+    ok(FB.rodById.bamboo.reach <= 0.45, 'бамбуковая не достаёт далеко');
+
+    const bamboo = FB.rodById.bamboo, star = FB.rodById.star;
+    const zw = (s, r) => { const z = F.zoneFor(s, r); return z.hi - z.lo; };
+    ok(zw(0.14, bamboo) > zw(0.5, bamboo) && zw(0.5, bamboo) > zw(0.8, bamboo), 'чем сильнее рыба, тем уже зелёная зона');
+    ok(zw(0.95, bamboo) >= F.TUNE.zoneMin - 1e-9, 'зелёная зона не уже предела');
+    ok(zw(0.8, star) > zw(0.8, bamboo), 'хорошая удочка расширяет зелёную зону');
+
+    FB.S = FB.state.fresh();
+    let lv = null;
+    FB.on('levelUp', (e) => { lv = e; });
+    const coins = FB.S.coins;
+    FB.state.addXp(FB.state.need(1));
+    ok(lv && lv.level === 2 && lv.reward.coins === FB.state.levelReward(2).coins, 'подарок за уровень');
+    ok(lv && FB.S.coins === coins + lv.reward.coins, 'монеты за уровень начислены');
+    ok(FB.state.levelReward(5).pearls > 0 && FB.state.levelReward(4).pearls === 0, 'жемчуг — каждый пятый уровень');
+    ok(FB.state.nextUnlock() && FB.state.nextUnlock().lvl > FB.S.level, 'известно, что откроется дальше');
+
+    FB.S = FB.state.fresh();
+    FB.state.syncWeek();
+    const cfg = FB.state.weekCfg();
+    const fish = FB.fishOfPond(cfg.pond);
+    const small = fish[0], large = fish[fish.length - 1];
+    FB.state.applyCatch({ kind: 'fish', fish: small, g: small.w[0] }, { pond: cfg.pond }, true);
+    FB.state.applyCatch({ kind: 'fish', fish: large, g: large.w[1] }, { pond: cfg.pond }, true);
+    const big = FB.S.week.big;
+    ok(big && big.f === large.id, 'главный улов недели — самый ценный');
+    const ex = FB.tourney.parseExtra(FB.tourney.extra(true));
+    ok(ex.big && big && ex.big.f === big.f && ex.big.g === big.g && ex.big.pts === big.pts, 'главный улов уходит в топ и читается обратно');
+    ok(!FB.tourney.parseExtra('f:fr_none;b:nofish.10.5').big, 'чужой мусор в extraData не ломает топ');
 }
 
 function finish() {

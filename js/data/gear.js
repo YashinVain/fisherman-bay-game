@@ -7,10 +7,10 @@
     // reach — как далеко достаёт заброс (0..1), ctrl — рост натяжения (меньше = легче),
     // reel — скорость подмотки, luck — множитель шанса редкой рыбы
     FB.RODS = [
-        { id: 'bamboo', price: 0, level: 1, reach: 0.58, ctrl: 1.0, reel: 1.0, luck: 1.0, color: '#c9a25a', n: { ru: 'Бамбуковая', en: 'Bamboo Rod' } },
-        { id: 'light', price: 400, level: 3, reach: 0.72, ctrl: 0.92, reel: 1.1, luck: 1.1, color: '#4a8ad0', n: { ru: 'Лёгкий спиннинг', en: 'Light Spinner' } },
-        { id: 'carbon', price: 1600, level: 6, reach: 0.84, ctrl: 0.84, reel: 1.2, luck: 1.2, color: '#3a3a44', n: { ru: 'Карбоновая', en: 'Carbon Rod' } },
-        { id: 'sea', price: 5000, level: 11, reach: 0.94, ctrl: 0.76, reel: 1.32, luck: 1.3, color: '#d0503a', n: { ru: 'Морская', en: 'Sea Rod' } },
+        { id: 'bamboo', price: 0, level: 1, reach: 0.42, ctrl: 1.0, reel: 1.0, luck: 1.0, color: '#c9a25a', n: { ru: 'Бамбуковая', en: 'Bamboo Rod' } },
+        { id: 'light', price: 400, level: 3, reach: 0.56, ctrl: 0.92, reel: 1.1, luck: 1.1, color: '#4a8ad0', n: { ru: 'Лёгкий спиннинг', en: 'Light Spinner' } },
+        { id: 'carbon', price: 1600, level: 6, reach: 0.7, ctrl: 0.84, reel: 1.2, luck: 1.2, color: '#3a3a44', n: { ru: 'Карбоновая', en: 'Carbon Rod' } },
+        { id: 'sea', price: 5000, level: 11, reach: 0.85, ctrl: 0.76, reel: 1.32, luck: 1.3, color: '#d0503a', n: { ru: 'Морская', en: 'Sea Rod' } },
         { id: 'star', price: 15000, level: 16, reach: 1.0, ctrl: 0.68, reel: 1.45, luck: 1.42, color: '#f2c43a', n: { ru: 'Звёздная', en: 'Star Rod' } }
     ];
 

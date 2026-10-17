@@ -6,7 +6,8 @@
 //
 // Сценарий — список шагов: size [ширина, высота, масштаб, телефон?], open (адрес),
 // js (выполнить код в игре), click [x, y], sleep (мс), shot (имя файла снимка),
-// clip [x, y, ширина, высота, увеличение] — снять только часть экрана крупно.
+// clip [x, y, ширина, высота, увеличение] — снять только часть экрана крупно,
+// cpu — замедлить процессор во столько раз (проверка на слабых телефонах).
 // Снимки и ошибки консоли кладутся в папку out рядом со сценарием.
 
 const { spawn } = require('child_process');
@@ -84,6 +85,7 @@ async function run(scenarioPath) {
                 await page.send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: dpr, mobile });
                 if (mobile) await page.send('Emulation.setTouchEmulationEnabled', { enabled: true });
             }
+            if (step.cpu) await page.send('Emulation.setCPUThrottlingRate', { rate: step.cpu });
             if (step.open) { await page.send('Page.navigate', { url: step.open }); await sleep(step.wait || 1500); }
             if (step.js) {
                 try {

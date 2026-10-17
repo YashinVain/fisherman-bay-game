@@ -11,8 +11,16 @@
     };
     Q.dayNum = (t) => Math.floor((t + 3 * 3600000) / 86400000);
 
-    // Подарки за дни подряд (7-й — жемчуг), потом круг заново
+    // Подарки за дни подряд (7-й — жемчуг). После 7-го дня — новый круг: монет
+    // больше, жемчуга на 5 больше (10 → 15 → 20…). Пропустил день — круг
+    // начинается с первого дня, но сам круг не теряется
     Q.GIFTS = [{ coins: 60 }, { coins: 90 }, { coins: 130 }, { coins: 170 }, { coins: 220 }, { coins: 280 }, { pearls: 10 }];
+    Q.MAX_CYCLE = 8;
+    Q.giftAt = (i, cycle) => {
+        const g = Q.GIFTS[i], c = Math.min(cycle || 0, Q.MAX_CYCLE);
+        return g.pearls ? { pearls: g.pearls + 5 * c } : { coins: Math.round(g.coins * (1 + 0.25 * c) / 10) * 10 };
+    };
+    Q.cycle = () => Math.floor(((FB.S.daily && FB.S.daily.streak) || 0) / 7);
 
     // Типы заданий. make(level, rnd) → { type, n, arg, rw }
     const TYPES = {
@@ -54,15 +62,16 @@
         const rnd = U.seeded(today * 31 + S.level);
         const quests = [];
         for (let i = 0; i < 3; i++) quests.push(Q.make(S.level, rnd, quests.map(q => q.type)));
-        // Серия продолжается, только если вчера подарок был забран
+        // Серия продолжается, только если вчера подарок был забран. Иначе — первый день того же круга
         const gotYesterday = d && d.day === today - 1 && d.gift;
-        S.daily = { day: today, streak: gotYesterday ? d.streak : 0, gift: false, quests, swapped: false };
+        const streak = gotYesterday ? d.streak : d ? Math.floor(d.streak / 7) * 7 : 0;
+        S.daily = { day: today, streak, gift: false, quests, swapped: false };
         FB.state.save();
         return true;
     };
 
     Q.giftReady = () => FB.S.daily && !FB.S.daily.gift;
-    Q.giftToday = () => Q.GIFTS[FB.S.daily.streak % 7];
+    Q.giftToday = () => Q.giftAt(FB.S.daily.streak % 7, Q.cycle());
     Q.claimGift = (double) => {
         const d = FB.S.daily;
         if (!d || d.gift) return null;
