@@ -27,7 +27,7 @@
             fill(list, mine, big);
             return box;
         };
-        UI.open({ title: FB.t('nav_top'), body: render(), render, width: 'min(96vw, 560px)' });
+        UI.open({ title: FB.t('nav_top'), body: render(), render, width: 'min(96vw, 560px)', tip: 'top' });
     };
 
     function weekHead() {

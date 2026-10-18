@@ -2,7 +2,8 @@
 // поэтому их проверяют тесты (tools/test.js) и симуляция баланса.
 //
 // ctx = { pond, dist (0..1), bait, rod (объект удочки), weather, bubble (bool),
-//         weekFish (id рыбы недели или null) }
+//         weekFish (id рыбы недели или null),
+//         luckMul (огонёк на болоте), tide (прилив: ближний заброс — как дальний) }
 
 (function (FB) {
     const C = FB.catcher = {};
@@ -18,9 +19,9 @@
         const R = FB.RARITY[f.r];
         let w = R.weight / counts[f.r];
         const order = R.order;
-        if (order >= 2) w *= ctx.rod.luck * (ctx.bubble ? 2.6 : 1);
+        if (order >= 2) w *= ctx.rod.luck * (ctx.bubble ? 2.6 : 1) * (ctx.luckMul || 1);
         else if (order === 1 && ctx.bubble) w *= 1.5;
-        w *= C.depthFactor(f, ctx.dist);
+        w *= C.depthFactor(f, Math.min(1, ctx.dist + (ctx.tide || 0)));
         if (f.bait === ctx.bait) w *= 3;
         w *= f.wx[ctx.weather] || 1;
         if (ctx.weekFish === f.id) w *= 1.5;

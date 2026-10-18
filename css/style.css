@@ -218,6 +218,19 @@ div.pill { cursor: default; }
 .bait-chip.away, .tourney-chip.away { opacity: 0; pointer-events: none; transform: translateY(10px); }
 .tourney-chip.away { transform: translate(-50%, -10px); }
 
+/* Особенность места — над наживкой */
+.place-chip {
+    position: absolute; right: 12px; bottom: calc(150px + var(--safe-b));
+    display: flex; align-items: center; gap: 6px; padding: 4px 12px 4px 6px; border-radius: 18px; max-width: min(60vw, 280px);
+    background: rgba(25,55,95,.82); color: #fff; font-size: 13px; text-align: left; line-height: 1.15;
+    box-shadow: 0 3px 8px rgba(0,20,50,.25); transition: opacity .3s, transform .3s;
+}
+.place-chip .ic { width: 26px; height: 26px; flex: none; }
+.place-chip.hot { background: linear-gradient(rgba(29,143,196,.95), rgba(17,100,143,.95)); box-shadow: 0 0 0 2px rgba(255,255,255,.7), 0 3px 10px rgba(0,40,80,.35); }
+.place-chip.away { opacity: 0; pointer-events: none; transform: translateY(10px); }
+.place .feat { display: flex; align-items: center; gap: 4px; margin-top: 3px; font-size: 12px; color: var(--sea-d); line-height: 1.15; }
+.place .feat .ic { width: 16px; height: 16px; flex: none; }
+
 /* Подсказка по центру снизу */
 .hint {
     position: absolute; left: 50%; bottom: calc(108px + var(--safe-b)); transform: translateX(-50%);
@@ -303,7 +316,10 @@ div.pill { cursor: default; }
 .coach .tb b.zg { color: var(--leaf-d); }
 .coach .tb b.zr { color: var(--coral-d); }
 .coach .row { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 12px; }
-.coach .step { margin-right: auto; font-size: 14px; color: var(--ink-soft); }
+.coach .step { font-size: 14px; color: var(--ink-soft); }
+.coach .tskip { padding: 4px 6px; font-size: 13px; font-weight: 800; color: var(--ink-soft); text-decoration: underline; text-underline-offset: 3px; }
+.coach .row .btn { margin-left: auto; }
+.coach.center .row .btn { margin: 0 auto; }
 .coach .skip { display: block; margin: 12px auto 0; font-size: 15px; font-weight: 800; color: var(--ink-soft); text-decoration: underline; text-underline-offset: 3px; }
 .coach.center { flex-direction: column; text-align: center; max-width: min(calc(100vw - 24px), 400px); padding: 22px 26px 16px; }
 .coach.center .tt { font-size: 28px; }
@@ -336,6 +352,9 @@ div.pill { cursor: default; }
     background: #fff4c8; box-shadow: inset 0 0 0 2px #f2d27a; font-size: 15px; line-height: 1.3;
 }
 .coach-note .ic { width: 28px; height: 28px; flex: none; }
+
+.card.item .perk { display: flex; align-items: center; gap: 4px; margin: -2px 0 6px; font-size: 11px; font-weight: 700; line-height: 1.2; color: var(--sea-d); text-align: left; }
+.card.item .perk .ic { width: 16px; height: 16px; flex: none; }
 
 /* ---------- Окна ---------- */
 .shade {
@@ -612,7 +631,19 @@ div.pill { cursor: default; }
 .sc-how .ic { width: 26px; height: 26px; flex: none; }
 .tiers-wrap { position: relative; margin: 0 -4px; }
 .track-lab { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); margin: 0 6px; display: flex; align-items: center; gap: 4px; }
-.track-lab.gold { color: var(--sun-d); margin-top: -6px; }
+.track-lab.gold { color: var(--sun-d); margin-top: 2px; }
+.tiers-view { position: relative; }
+.tiers-view .tiers { scrollbar-width: none; }
+.tiers-view .tiers::-webkit-scrollbar { display: none; }
+.tier-arrow {
+    position: absolute; top: 50%; width: 38px; height: 38px; margin-top: -26px; border-radius: 50%; z-index: 3;
+    background: linear-gradient(var(--sea-l), var(--sea)); color: #fff; font-size: 28px; font-weight: 900; line-height: 34px;
+    box-shadow: 0 3px 0 var(--sea-d), 0 4px 10px rgba(0,30,60,.3); transition: opacity .2s, transform .1s;
+}
+.tier-arrow.l { left: -2px; }
+.tier-arrow.r { right: -2px; }
+.tier-arrow:active { transform: translateY(2px); }
+.tier-arrow.off { opacity: 0; pointer-events: none; }
 .track-lab.gold .ic { width: 16px; height: 16px; }
 .tiers { display: flex; gap: 10px; overflow-x: auto; padding: 14px 6px 14px; touch-action: pan-x; scrollbar-width: thin; scroll-behavior: smooth; }
 .tier { position: relative; flex: none; width: 94px; display: flex; flex-direction: column; gap: 8px; align-items: center; }
@@ -739,4 +770,5 @@ div.pill { cursor: default; }
 }
 @media (orientation: landscape) and (min-width: 760px) {
     .bait-chip { bottom: calc(18px + var(--safe-b)); }
+    .place-chip { bottom: calc(70px + var(--safe-b)); }
 }

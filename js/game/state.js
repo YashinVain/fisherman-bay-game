@@ -6,7 +6,7 @@
 (function (FB) {
     const ST = FB.state = {};
     const U = FB.U;
-    FB.VERSION = '0.11.0';
+    FB.VERSION = '0.12.0';
 
     ST.fresh = () => ({
         v: 1,

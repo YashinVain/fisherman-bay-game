@@ -36,11 +36,14 @@
         if (S.stats.bestG > 0) FB.sdk.setScore('record', S.stats.bestG, extra);
     };
 
-    // Награды за место. Только монеты, жемчуг и косметика — никаких преимуществ
+    // Награды за место. Только монеты, жемчуг и косметика — никаких преимуществ.
+    // Медаль в профиль — только за топ-20
+    T.MEDAL_TOP = 20;
     T.rewardFor = (rank) => {
         if (rank === 1) return { pearls: 100, items: ['hat_crown', 'fr_gold'], kind: 'gold' };
         if (rank && rank <= 3) return { pearls: 60, items: ['fr_gold'], kind: 'silver' };
         if (rank && rank <= 10) return { pearls: 40, items: ['fl_gold'], kind: 'bronze' };
+        if (rank && rank <= T.MEDAL_TOP) return { pearls: 25, coins: 1200, items: [], kind: 'top20' };
         if (rank && rank <= 100) return { pearls: 15, coins: 1000, items: [], kind: 'top100' };
         return { coins: 300, items: [], kind: 'member' };
     };
@@ -63,7 +66,7 @@
             const reward = T.rewardFor(rank);
             FB.state.giveReward({ coins: reward.coins, pearls: reward.pearls });
             reward.items.forEach(id => FB.state.giveItem(id));
-            if (rank && rank <= 100) S.trophies.push({ idx: prev, rank, kind: reward.kind });
+            if (rank && rank <= T.MEDAL_TOP) S.trophies.push({ idx: prev, rank, kind: reward.kind });
             S.lastWeekReward = prev;
             S.lastResult = result = { idx: prev, rank, pts, reward };
         }

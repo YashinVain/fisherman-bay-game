@@ -1,58 +1,114 @@
 {
     "steps": [
-        { "size": [1100, 680, 1] },
-        { "open": "http://127.0.0.1:8940/", "wait": 2500 },
-        { "js": "window.__tap = (x, y) => { const o = { clientX: x, clientY: y, bubbles: true, pointerId: 1 }; document.getElementById('game').dispatchEvent(new PointerEvent('pointerdown', o)); window.dispatchEvent(new PointerEvent('pointerup', o)); }; window.__until = (fn, ms) => new Promise(r => { const t = setInterval(() => { if (fn()) { clearInterval(t); r(true); } }, 20); setTimeout(() => { clearInterval(t); r(false); }, ms || 15000); }); FB.scene.setPlace('village', 'sun'); document.querySelector('.title .btn').click();", "sleep": 1000 },
-        { "shot": "t01-hello.png" },
-        { "name": "выбрать девочку", "js": "document.querySelectorAll('.c-hero')[1].click(); return FB.S.who;", "sleep": 500 },
-        { "shot": "t01b-hello-girl.png" },
-        { "name": "поехали", "js": "document.querySelector('.coach .btn').click(); return FB.S.tut;", "sleep": 700 },
-        { "shot": "t02-cast.png" },
-        { "name": "заброс", "js": "const p = FB.tutor.castPoint(); __tap(p.x, p.y); await __until(() => FB.fishing.phase === 'wait'); return FB.fishing.ctx.tut;", "sleep": 500 },
-        { "shot": "t03-wait.png" },
-        { "name": "поклёвка", "js": "await __until(() => FB.fishing.phase === 'bite'); return FB.fishing.phase;", "sleep": 800 },
-        { "shot": "t06-bite.png" },
-        { "name": "подсечка", "js": "__tap(700, 400); return FB.fishing.phase;", "sleep": 900 },
-        { "shot": "t07-fight.png" },
-        { "name": "понятно", "js": "document.querySelector('.coach .btn').click(); return FB.tutor.blocking();", "sleep": 1800 },
-        { "shot": "t08-hold.png" },
-        { "name": "перетянуть", "js": "FB.fishing.holding = true; await __until(() => FB.fishing.tension > FB.fishing.zone.hi + 0.05, 5000); return FB.fishing.tension;", "sleep": 250 },
-        { "shot": "t08b-release.png" },
-        { "name": "тянем", "js": "const F = FB.fishing; const t = setInterval(() => { const z = F.zone; F.holding = F.tension < (z.lo + z.hi) / 2; }, 30); await new Promise(r => setTimeout(r, 1500)); return { tension: F.tension, zone: F.zone };", "sleep": 10 },
-        { "shot": "t08c-good.png" },
-        { "name": "дотянуть", "js": "await __until(() => FB.ui.isOpen(), 30000); FB.fishing.holding = false; return FB.fishing.phase;", "sleep": 1500 },
-        { "shot": "t09-card.png" },
-        { "name": "забрать", "js": "document.querySelector('.catch .choice .btn').click(); return FB.S.tut;", "sleep": 2000 },
-        { "name": "закрыть окна", "js": "const was = FB.ui.isOpen(); if (was) FB.ui.closeAll(); return was;", "sleep": 1400 },
-        { "shot": "t11-chip.png" },
-        { "js": "document.querySelector('.coach .btn').click(); return FB.S.tut;", "sleep": 700 },
-        { "shot": "t12-profile.png" },
-        { "js": "document.querySelector('.coach .btn').click(); return FB.S.tut;", "sleep": 700 },
-        { "shot": "t13-places.png" },
-        { "js": "document.querySelector('.coach .btn').click(); return FB.S.tut;", "sleep": 700 },
-        { "shot": "t14-album.png" },
-        { "js": "document.querySelector('.coach .btn').click(); return FB.S.tut;", "sleep": 700 },
-        { "shot": "t15-shop.png" },
-        { "js": "document.querySelector('.coach .btn').click(); return FB.S.tut;", "sleep": 700 },
-        { "shot": "t16-tasks.png" },
-        { "js": "document.querySelector('.coach .btn').click(); return FB.S.tut;", "sleep": 700 },
-        { "shot": "t17-season.png" },
-        { "js": "document.querySelector('.coach .btn').click(); return FB.S.tut;", "sleep": 700 },
-        { "shot": "t18-bait.png" },
-        { "js": "document.querySelector('.coach .btn').click(); return FB.S.tut;", "sleep": 500 },
-
-        { "size": [540, 960, 2, true] },
-        { "name": "заново на телефоне", "js": "FB.scene.resize(); FB.tutor.restart(); return FB.S.tut;", "sleep": 800 },
-        { "shot": "p01-hello.png" },
-        { "js": "document.querySelector('.coach .btn').click(); await new Promise(r => setTimeout(r, 300)); const p = FB.tutor.castPoint(); __tap(p.x, p.y); await __until(() => FB.fishing.phase === 'bite'); __tap(300, 500);", "sleep": 900 },
-        { "shot": "p04-fight.png" },
-        { "js": "document.querySelector('.coach .btn').click(); const F = FB.fishing; const t = setInterval(() => { const z = F.zone; F.holding = F.tension < (z.lo + z.hi) / 2; }, 30); await new Promise(r => setTimeout(r, 1500));", "sleep": 10 },
-        { "shot": "p05-fight-good.png" },
-        { "js": "await __until(() => FB.ui.isOpen(), 30000); document.querySelector('.catch .choice .btn').click(); await new Promise(r => setTimeout(r, 1500)); if (FB.ui.isOpen()) FB.ui.closeAll();", "sleep": 1400 },
-        { "shot": "p06-chip.png" },
-        { "js": "document.querySelector('.coach .btn').click();", "sleep": 700 },
-        { "shot": "p07-profile.png" },
-        { "js": "document.querySelector('.coach .btn').click(); document.querySelector('.coach .btn').click();", "sleep": 700 },
-        { "shot": "p08-album.png" }
+        {
+            "size": [
+                1100,
+                680,
+                1
+            ]
+        },
+        {
+            "open": "http://127.0.0.1:8940/",
+            "wait": 2500
+        },
+        {
+            "js": "window.__tap = (x, y) => { const o = { clientX: x, clientY: y, bubbles: true, pointerId: 1 }; document.getElementById('game').dispatchEvent(new PointerEvent('pointerdown', o)); window.dispatchEvent(new PointerEvent('pointerup', o)); }; window.__until = (fn, ms) => new Promise(r => { const t = setInterval(() => { if (fn()) { clearInterval(t); r(true); } }, 20); setTimeout(() => { clearInterval(t); r(false); }, ms || 15000); }); FB.scene.setPlace('village', 'sun'); document.querySelector('.title .btn').click();",
+            "sleep": 1000
+        },
+        {
+            "shot": "t01-hello.png"
+        },
+        {
+            "name": "выбрать девочку",
+            "js": "document.querySelectorAll('.c-hero')[1].click(); return FB.S.who;",
+            "sleep": 500
+        },
+        {
+            "shot": "t01b-hello-girl.png"
+        },
+        {
+            "name": "поехали",
+            "js": "document.querySelector('.coach .btn').click(); return FB.S.tut;",
+            "sleep": 700
+        },
+        {
+            "shot": "t02-cast.png"
+        },
+        {
+            "name": "заброс",
+            "js": "const p = FB.tutor.castPoint(); __tap(p.x, p.y); await __until(() => FB.fishing.phase === 'wait'); return FB.fishing.ctx.tut;",
+            "sleep": 500
+        },
+        {
+            "shot": "t03-wait.png"
+        },
+        {
+            "name": "поклёвка",
+            "js": "await __until(() => FB.fishing.phase === 'bite'); return FB.fishing.phase;",
+            "sleep": 800
+        },
+        {
+            "shot": "t06-bite.png"
+        },
+        {
+            "name": "подсечка",
+            "js": "__tap(700, 400); return FB.fishing.phase;",
+            "sleep": 900
+        },
+        {
+            "shot": "t07-fight.png"
+        },
+        {
+            "name": "понятно",
+            "js": "document.querySelector('.coach .btn').click(); return FB.tutor.blocking();",
+            "sleep": 1800
+        },
+        {
+            "shot": "t08-hold.png"
+        },
+        {
+            "name": "перетянуть",
+            "js": "FB.fishing.holding = true; await __until(() => FB.fishing.tension > FB.fishing.zone.hi + 0.05, 5000); return FB.fishing.tension;",
+            "sleep": 250
+        },
+        {
+            "shot": "t08b-release.png"
+        },
+        {
+            "name": "тянем",
+            "js": "const F = FB.fishing; const t = setInterval(() => { const z = F.zone; F.holding = F.tension < (z.lo + z.hi) / 2; }, 30); await new Promise(r => setTimeout(r, 1500)); return { tension: F.tension, zone: F.zone };",
+            "sleep": 10
+        },
+        {
+            "shot": "t08c-good.png"
+        },
+        {
+            "name": "дотянуть",
+            "js": "await __until(() => FB.ui.isOpen(), 30000); FB.fishing.holding = false; return FB.fishing.phase;",
+            "sleep": 1500
+        },
+        {
+            "shot": "t09-card.png"
+        },
+        {
+            "name": "забрать",
+            "js": "document.querySelector('.catch .choice .btn').click(); return FB.S.tut;",
+            "sleep": 2000
+        },
+        {
+            "sleep": 2000,
+            "js": "return [FB.S.tut, FB.ui.isOpen()];",
+            "name": "после урока"
+        },
+        {
+            "shot": "t10-after.png"
+        },
+        {
+            "js": "FB.ui.closeAll(); FB.top.open('week');",
+            "sleep": 1200
+        },
+        {
+            "shot": "t11-top-tip.png"
+        }
     ]
 }

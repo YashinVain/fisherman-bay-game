@@ -26,7 +26,8 @@
                 card.appendChild(pic);
                 card.appendChild(UI.el('div.info', { html:
                     '<div class="nm">' + U.esc(FB.name(p)) + '</div>' +
-                    '<div class="cnt">' + FB.ic('fish').replace('class="ic"', 'class="ic" style="width:18px;height:18px"') + FB.t('caught_of', { a: got, b: fish.length }) + '</div>' }));
+                    '<div class="cnt">' + FB.ic('fish').replace('class="ic"', 'class="ic" style="width:18px;height:18px"') + FB.t('caught_of', { a: got, b: fish.length }) + '</div>' +
+                    (FB.places.feature(p.id) ? '<div class="feat">' + FB.ic('sparkle') + '<span>' + FB.t('plf_' + FB.places.feature(p.id)) + '</span></div>' : '') }));
                 card.addEventListener('click', () => {
                     FB.audio.play('click');
                     if (!open) return UI.toast(FB.t('pond_locked', { n: p.unlock }), 'lock');
@@ -40,7 +41,7 @@
             box.appendChild(UI.el('p.muted.center', { html: FB.t('tourney_open_hint'), style: 'font-size:14px;margin:12px 0 0' }));
             return box;
         };
-        UI.open({ title: FB.t('nav_places'), body: render(), render });
+        UI.open({ title: FB.t('nav_places'), body: render(), render, tip: 'places' });
     };
 
     // Переезд на другое место — подходящая пауза для рекламы
@@ -88,7 +89,7 @@
             box.appendChild(jg);
             return box;
         };
-        entry = UI.open({ title: FB.t('nav_album'), body: render(), render });
+        entry = UI.open({ title: FB.t('nav_album'), body: render(), render, tip: 'album' });
     };
 
     const depthWord = (d) => {
@@ -144,11 +145,11 @@
         body.appendChild(UI.el('div.stats-grid', { html: st.map(([k, v]) => '<div class="stat"><b style="font-size:17px">' + v + '</b><small>' + k + '</small></div>').join('') }));
         body.appendChild(UI.el('div.sec-title', { html: FB.ic('trophy') + FB.t('trophies') }));
         if (S.trophies.length) {
-            const colors = { gold: '#ffd23a', silver: '#d6dee6', bronze: '#e8a46a', top100: '#9cd4f4' };
+            const colors = { gold: '#ffd23a', silver: '#d6dee6', bronze: '#e8a46a', top20: '#9cd4f4', top100: '#9cd4f4' };
             body.appendChild(UI.el('div.trophies', { html: S.trophies.slice(-24).reverse().map(t =>
                 '<div class="trophy">' + FB.ic('medal', colors[t.kind] || '#9cd4f4') + '<div>' + FB.t('place_n', { n: t.rank }) + '</div><div class="muted">' + FB.t('week_n', { n: t.idx - FB.week.index(Date.UTC(2026, 9, 19)) + 1 }) + '</div></div>').join('') }));
-        } else body.appendChild(UI.el('p.muted', { text: FB.t('no_trophies') }));
-        UI.open({ title: FB.t('profile'), body, width: 'min(96vw, 560px)' });
+        } else body.appendChild(UI.el('p.muted.trophies-empty', { text: FB.t('no_trophies') }));
+        UI.open({ title: FB.t('profile'), body, width: 'min(96vw, 560px)', tip: 'profile' });
     };
 
     // ---------- Настройки ----------

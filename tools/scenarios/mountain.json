@@ -1,0 +1,10 @@
+{
+    "steps": [
+        { "size": [1100, 680, 1] },
+        { "open": "http://127.0.0.1:8940/", "wait": 2500 },
+        { "js": "document.querySelector('.title .btn').click(); await new Promise(r => setTimeout(r, 600)); FB.ui.closeAll(); const S = FB.S; S.tut = 99; S.tips = { chip: 1, profile: 1, bait: 1, bubbles: 1, drift: 1, pl_shadows: 1, see_shadows: 1, pl_ducks: 1, see_ducks: 1 }; S.stats.catches = 30; S.xp = 30000; S.level = FB.state.levelFromXp(30000); S.rods.push('star'); S.rod = 'star'; FB.panels.goTo('mountain'); FB.ui.closeAll(); FB.scene.setPlace('mountain', 'sun'); FB.places.reset(); const st = FB.places.state(); st.shadows.push({ tx: 0.25, dist: 0.35, v: 0.03, lo: 0.05, hi: 0.45, t: 3, life: 60, ph: 0, res: { kind: 'fish', fish: FB.fishById.laketrout, g: 4000 } }); st.shadows.push({ tx: -0.1, dist: 0.55, v: -0.03, lo: -0.3, hi: 0.1, t: 3, life: 60, ph: 1, res: { kind: 'fish', fish: FB.fishById.vendace, g: 120 } });", "sleep": 1500 },
+        { "shot": "pl3b-mountain.png" },
+        { "js": "FB.panels.goTo('village'); FB.ui.closeAll(); FB.scene.setPlace('village', 'sun'); FB.places.reset(); FB.places.state().ducks.push({ tx: 0.2, dist: 0.35, goal: 0.6, v: 0.05, t: 1, state: 'swim' }, { tx: 0.0, dist: 0.25, goal: 0.0, v: 0.05, t: 1, state: 'dive', dt: 0.5 });", "sleep": 900 },
+        { "shot": "pl1c-village.png" }
+    ]
+}

@@ -106,7 +106,7 @@
 
     function showJunk(res, ctx) {
         const j = res.junk;
-        FB.audio.play('junk');
+        FB.audio.play('junk', j.id);
         const body = UI.el('div');
         body.style.position = 'relative';
         body.innerHTML =
@@ -200,7 +200,7 @@
         CC.later(() => {
             const rw = r.reward;
             const body = UI.el('div.congrats');
-            const medal = r.rank === 1 ? '#ffd23a' : r.rank && r.rank <= 3 ? '#d6dee6' : r.rank && r.rank <= 10 ? '#e8a46a' : '#9cd4f4';
+            const medal = r.rank === 1 ? '#ffd23a' : r.rank && r.rank <= 3 ? '#d6dee6' : r.rank && r.rank <= 10 ? '#e8a46a' : r.rank && r.rank <= 20 ? '#9cd4f4' : '#c8d4de';
             body.innerHTML = FB.ic('medal', medal).replace('class="ic"', 'class="ic hero"') +
                 (r.rank ? '<div class="big outline">' + FB.t('place_n', { n: r.rank }) + '</div>' : '<div class="big outline" style="font-size:40px">' + FB.t('thanks_member') + '</div>') +
                 '<p>' + FB.t('week_points', { n: U.fmt(r.pts) }) + '</p>' +

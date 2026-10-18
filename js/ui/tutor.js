@@ -1,9 +1,10 @@
-// tutor.js — обучение. Новичка ведём за руку: привет и выбор рыбака → заброс →
-// поплавок → подсечка → вываживание → улов. Потом коротко показываем турнир,
-// уровень, места, альбом, магазин, задания с сезоном и наживку. А дальше —
-// разовые подсказки, когда что-то встречается впервые (пузыри на воде).
+// tutor.js — обучение. Обязательный только урок рыбалки: привет и выбор рыбака →
+// заброс → поплавок → подсечка → вываживание → улов. Всё остальное подсказчик
+// объясняет тогда, когда игрок впервые до этого добирается: первый раз зашёл
+// в топ — рассказываем про топ, в задания — про задания, получил уровень —
+// про уровень. Каждая подсказка показывается один раз (S.tips).
 //
-// Шаг лежит в сохранении (S.tut). Внутри урока рыбалки шаг не храним — его
+// Шаг урока лежит в сохранении (S.tut). Внутри урока шаг не храним — его
 // видно по фазе рыбалки. Перезагрузил страницу посреди урока — начнём с заброса.
 // Во время урока рыбу нельзя упустить: поклёвка ждёт, леска не рвётся.
 
@@ -12,17 +13,33 @@
     const UI = FB.ui, U = FB.U;
 
     // Номера лежат в сохранениях — не менять
-    const STEP = TU.STEP = { hello: 0, lesson: 1, chip: 2, profile: 3, places: 4, album: 5, shop: 6, tasks: 7, bait: 8, season: 9, done: 99 };
-    const TOUR = [STEP.chip, STEP.profile, STEP.places, STEP.album, STEP.shop, STEP.tasks, STEP.season, STEP.bait];
-    // Шаги экскурсии: что подсветить и какие тексты (tut_<id>_t — заголовок, tut_<id> — текст)
-    const SPOT = {
-        [STEP.profile]: ['profile', '.lvl'],
-        [STEP.places]: ['places', '.nb-places'],
-        [STEP.album]: ['album', '.nb-album'],
-        [STEP.shop]: ['shop', '.nb-shop'],
-        [STEP.tasks]: ['tasks', '.nb-tasks'],
-        [STEP.bait]: ['bait', '.bait-chip']
-    };
+    const STEP = TU.STEP = { hello: 0, lesson: 1, done: 99 };
+
+    // Подсказки «при первой встрече». where: 'main' — на экране рыбалки (когда всё
+    // спокойно и выполнено cond), иначе — ключ окна (opt.tip у UI.open).
+    // Тексты: tut_<id>_t — заголовок, tut_<id> — текст
+    const TIPS = [
+        { id: 'chip', where: 'main', target: '.tourney-chip', wide: true, cond: (S) => S.stats.catches >= 1 },
+        { id: 'profile', where: 'main', target: '.lvl', cond: (S) => S.level >= 2 },
+        { id: 'bait', where: 'main', target: '.bait-chip', cond: (S) => S.stats.catches >= 4 },
+        { id: 'places', where: 'places', target: '.sheet .card.place.cur' },
+        { id: 'album', where: 'album', target: '.sheet .card.fishcard' },
+        { id: 'top', where: 'top', target: '.sheet .tabs' },
+        { id: 'shop', where: 'shop-gear', target: '.sheet .tabs' },
+        { id: 'rods', where: 'shop-gear', target: () => document.querySelectorAll('.sheet .rodcard')[1] },
+        { id: 'look', where: 'shop-look', target: '.sheet .grid' },
+        { id: 'gift', where: 'tasks-daily', target: '.sheet .gift-row' },
+        { id: 'quests', where: 'tasks-daily', target: '.sheet .card.quest' },
+        { id: 'season', where: 'tasks-season', target: '.sheet .season-card .sc-head' },
+        { id: 'tiers', where: 'tasks-season', target: '.sheet .tiers' },
+        { id: 'medals', where: 'profile', target: '.sheet .trophies, .sheet .trophies-empty' }
+    ];
+    // Особенность каждого места — когда игрок впервые там рыбачит
+    Object.keys({ village: 1, river: 1, mountain: 1, swamp: 1, pier: 1, lagoon: 1 }).forEach(pond => {
+        const f = FB.places.FEATURES[pond];
+        TIPS.push({ id: 'pl_' + f, where: 'main', target: '.place-chip', cond: (S) => S.pond === pond && S.stats.catches >= (pond === 'village' ? 3 : 0) });
+    });
+    TU.TIPS = TIPS;
 
     let layer, hole, hand, box, tail;
     let shown = null;          // ключ того, что сейчас на экране
@@ -32,9 +49,10 @@
     let nibbled = false;       // поплавок уже дёргался в этом забросе
     let earlyT = 0;            // сколько ещё висит «рано!»
     let freeT = 0;             // сколько игрок не держит палец во время вываживания
-    let tourIn = 0;            // экскурсия начнётся чуть позже карточки улова
-    let tip = null;            // разовая подсказка { spot, t }
+    let calmT = 0;             // сколько всё спокойно (подсказки на экране — не сразу)
+    let tip = null;            // подсказка про пузыри { spot, t }
     let shownV = null;         // то, что сейчас на экране (для «липких» подсказок)
+    let scrolledFor = null;    // к какой подсказке уже прокрутили окно
 
     TU.active = () => !!FB.S && FB.S.tut < STEP.done;
     TU.inLesson = () => !!FB.S && FB.S.tut === STEP.lesson;
@@ -51,8 +69,11 @@
         FB.on('cast', () => { nibbled = false; earlyT = 0; });
         FB.on('nibble', () => { nibbled = true; });
         FB.on('tutEarly', () => { earlyT = 1.8; });
-        // Сохранение от прошлой игры могло остановиться посреди урока
-        if (!Object.values(STEP).includes(FB.S.tut)) FB.S.tut = STEP.lesson;
+        // Старые сохранения (была экскурсия 2…13) — урок уже пройден
+        const t = FB.S.tut;
+        if (t > STEP.lesson && t < STEP.done) FB.S.tut = STEP.done;
+        else if (t !== STEP.hello && t !== STEP.lesson && t !== STEP.done) FB.S.tut = STEP.lesson;
+        FB.S.tips = FB.S.tips || {};
     };
 
     function go(step) {
@@ -63,25 +84,26 @@
             FB.hud.hint(null);
         }
     }
-    function next() {
-        const i = TOUR.indexOf(FB.S.tut);
-        go(i >= 0 && i < TOUR.length - 1 ? TOUR[i + 1] : STEP.done);
-    }
 
-    // После карточки первого улова — экскурсия по кнопкам
+    // После карточки первого улова урок закончен — дальше подсказки по ходу игры
     TU.afterCatch = () => {
         if (FB.S.tut !== STEP.lesson) return;
-        tourIn = 0.9;
-        go(STEP.chip);
+        go(STEP.done);
     };
 
-    // «Пройти обучение ещё раз» из настроек
+    // «Пройти обучение ещё раз» из настроек: урок и все подсказки заново
     TU.restart = () => {
         UI.closeAll();
         FB.fishing.reset();
         fightIntro = false;
+        FB.S.tips = {};
         go(STEP.hello);
     };
+
+    function seen(id) {
+        FB.S.tips[id] = 1;
+        FB.state.save();
+    }
 
     // Куда показывать первый заброс: правее рыбака и поближе к нам — чтобы
     // поплавок был крупным, а пузырь с подсказкой не закрывал удочку
@@ -101,7 +123,7 @@
     // ---------- Что показать сейчас ----------
     function view() {
         const S = FB.S, F = FB.fishing, SC = FB.scene;
-        if (S.tut >= STEP.done) return tipView();
+        if (S.tut >= STEP.done) return tipsView() || driftView() || placeView() || bubblesView();
         if (UI.isOpen()) return null;
 
         if (S.tut === STEP.hello) {
@@ -152,46 +174,74 @@
             return null;
         }
 
-        // Экскурсия по интерфейсу — когда всё спокойно
-        if (F.phase !== 'idle' || tourIn > 0) return null;
-        const step = (TOUR.indexOf(S.tut) + 1) + ' / ' + TOUR.length;
-        const btn = [[S.tut === STEP.bait ? FB.t('tut_got') : FB.t('tut_next'), 'small', next]];
-        if (S.tut === STEP.chip) {
-            const el = document.querySelector('.tourney-chip');
-            if (!visible(el)) { next(); return null; }
-            const cfg = FB.state.weekCfg();
-            const li = (ic, html) => '<li>' + FB.ic(ic) + '<span>' + html + '</span></li>';
-            return { key: 'chip', rect: el, block: true, dim: true, step, btns: btn, wide: true, title: FB.t('tut_chip_t'),
-                text: '<div class="c-lead">' + FB.t('tut_chip') + '</div><ul class="c-list">' +
-                    li('map', FB.t('tut_chip_pond', { pond: '<b>' + U.esc(FB.name(FB.pondById[cfg.pond])) + '</b>' })) +
-                    li('fish', FB.t('tut_chip_fish', { fish: '<b>' + U.esc(FB.name(FB.fishById[cfg.fish])) + '</b>' })) +
-                    li('star', FB.t('tut_chip_best')) +
-                    li('sparkle', FB.t('tut_chip_win')) +
-                    li('trophy', FB.t('tut_chip_prize')) + '</ul>' };
-        }
-        if (S.tut === STEP.season) {
-            const el = document.querySelector('.nb-tasks');
-            if (!visible(el)) { next(); return null; }
-            const li = (ic, html) => '<li>' + FB.ic(ic) + '<span>' + html + '</span></li>';
-            return { key: 'season', rect: el, block: true, dim: true, step, btns: btn, wide: true, title: FB.t('tut_season_t'),
-                text: '<div class="c-lead">' + FB.t('tut_season') + '</div><ul class="c-list">' +
-                    li('fish', FB.t('season_how1')) +
-                    li('star', FB.t('season_how2', { n: FB.SEASON.perTier })) +
-                    li('gift', FB.t('season_how3')) + '</ul>' };
-        }
-        const sp = SPOT[S.tut];
-        if (sp) {
-            const el = document.querySelector(sp[1]);
-            if (!visible(el)) { next(); return null; }
-            return { key: sp[0], rect: el, block: true, dim: true, step, btns: btn, title: FB.t('tut_' + sp[0] + '_t'), text: FB.t('tut_' + sp[0]) };
-        }
         return null;
     }
 
-    // Разовые подсказки после обучения
-    function tipView() {
-        const S = FB.S, F = FB.fishing, SC = FB.scene;
+    // Подсказка «при первой встрече»: на экране рыбалки или в открытом окне
+    function tipsView() {
+        const S = FB.S, F = FB.fishing;
         S.tips = S.tips || {};
+        let where = 'main';
+        if (UI.isOpen()) {
+            const top = UI.stack[UI.stack.length - 1];
+            const t = top.opt.tip;
+            where = typeof t === 'function' ? t() : t;
+            if (!where) return null;
+        } else if (F.phase !== 'idle' || calmT < 0.8) return null;
+        const list = TIPS.filter(t => t.where === where && !S.tips[t.id] && (!t.cond || t.cond(S)));
+        const st = list[0];
+        if (!st) return null;
+        const el = typeof st.target === 'function' ? st.target() : document.querySelector(st.target);
+        if (!el || (where === 'main' && !visible(el))) { seen(st.id); return null; }
+        if (where !== 'main' && scrolledFor !== st.id) {
+            scrolledFor = st.id;
+            try { el.scrollIntoView({ block: 'center' }); } catch (e) { /* старые браузеры */ }
+        }
+        const more = list.length > 1;
+        const v = { key: 'tip-' + st.id, rect: el, block: true, dim: true, wide: st.wide, delay: where === 'main' ? 0 : 0.4,
+            btns: [[more ? FB.t('tut_next') : FB.t('tut_got'), 'small', () => seen(st.id)]],
+            title: FB.t('tut_' + st.id + '_t'), text: FB.t('tut_' + st.id, { n: FB.SEASON.perTier }) };
+        if (st.id === 'chip') {
+            const cfg = FB.state.weekCfg();
+            const li = (ic, html) => '<li>' + FB.ic(ic) + '<span>' + html + '</span></li>';
+            v.text = '<div class="c-lead">' + FB.t('tut_chip') + '</div><ul class="c-list">' +
+                li('map', FB.t('tut_chip_pond', { pond: '<b>' + U.esc(FB.name(FB.pondById[cfg.pond])) + '</b>' })) +
+                li('fish', FB.t('tut_chip_fish', { fish: '<b>' + U.esc(FB.name(FB.fishById[cfg.fish])) + '</b>' })) +
+                li('star', FB.t('tut_chip_best')) +
+                li('sparkle', FB.t('tut_chip_win')) +
+                li('trophy', FB.t('tut_chip_prize')) + '</ul>';
+        }
+        return v;
+    }
+
+    // Первая встреча с уткой, тенью, огоньком или косяком: «смотри, вот оно»
+    let seeT = 0;
+    function placeView() {
+        const S = FB.S, f = FB.places.feature();
+        if (!f || S.tips['see_' + f] || !S.tips['pl_' + f] || UI.isOpen() || FB.fishing.phase !== 'idle') { seeT = 0; return null; }
+        const p = FB.places.focus();
+        if (!p) { seeT = 0; return null; }
+        seeT += 1 / 60;
+        if (seeT > 7) { seen('see_' + f); return null; }
+        const u = FB.scene.unit();
+        return { key: 'see-' + f, point: { x: p.x, y: p.y - u * (f === 'wisp' ? 10 : 5) }, hand: { x: p.x, y: p.y }, text: FB.t('see_' + f) };
+    }
+    FB.on('cast', () => { const f = FB.places.feature(); if (FB.S && f && FB.S.tips['pl_' + f] && !FB.S.tips['see_' + f] && FB.places.focus()) seen('see_' + f); });
+
+    // Первая находка на воде: показываем, что её можно забрать
+    function driftView() {
+        const S = FB.S, D = FB.drift;
+        if (S.tips.drift || UI.isOpen() || !D.item || D.item.got) return null;
+        const p = D.pos();
+        if (!p || D.item.t < 0.8) return null;
+        if (D.item.t > 12) { seen('drift'); return null; }
+        return { key: 'tip-drift', point: { x: p.x, y: p.y - p.r * 2 }, hand: { x: p.x, y: p.y }, text: FB.t('tip_drift') };
+    }
+    FB.on('driftFound', () => { if (FB.S && !FB.S.tips.drift) seen('drift'); });
+
+    // Разовая подсказка про пузыри на воде
+    function bubblesView() {
+        const S = FB.S, F = FB.fishing, SC = FB.scene;
         if (!tip && !S.tips.bubbles && F.phase === 'idle' && !UI.isOpen() && S.stats.catches >= 1) {
             const s = F.spots.find(s => s.t > 0.8 && s.life - s.t > 5);
             if (s) tip = { spot: s, t: 0 };
@@ -199,7 +249,7 @@
         if (!tip) return null;
         if (tip.t > 8 || F.phase !== 'idle' || UI.isOpen() || !F.spots.includes(tip.spot)) {
             // Засчитываем, только если игрок успел прочитать (или сразу забросил)
-            if (tip.t > 1.5 || F.phase === 'cast') { S.tips.bubbles = 1; FB.state.save(); }
+            if (tip.t > 1.5 || F.phase === 'cast') seen('bubbles');
             tip = null;
             return null;
         }
@@ -233,8 +283,8 @@
         if (!layer || !FB.S) return;
         const F = FB.fishing;
         if (earlyT > 0) earlyT -= dt;
-        if (tourIn > 0) tourIn -= dt;
         if (tip) tip.t += dt;
+        calmT = F.phase === 'idle' && !UI.isOpen() ? calmT + dt : 0;
         freeT = F.phase === 'fight' && !F.holding ? freeT + dt : 0;
         render(view(), dt);
     };

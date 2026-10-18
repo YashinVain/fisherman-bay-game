@@ -58,6 +58,13 @@
         FB.on('toast', (e) => UI.toast(FB.t(e.key), 'info'));
         FB.on('questDone', () => { UI.toast(FB.t('quest_done'), 'check'); FB.audio.play('coin'); FB.hud.update(); });
         FB.on('cast', (e) => { if (e.bubble) UI.toast(FB.t('bubble_cast'), 'sparkle', 1500); });
+        FB.on('driftFound', (e) => {
+            UI.toast(FB.t('find_' + e.kind), e.reward.pearls ? 'pearl' : 'gift', 2200);
+            UI.fly('coin', e.x, e.y, 5);
+            if (e.reward.pearls) setTimeout(() => UI.fly('pearl', e.x, e.y, 3), 300);
+            UI.floater(e.x, e.y - 30, '+' + e.reward.coins, 'var(--sun-d)');
+            FB.hud.update();
+        });
 
         const stop = () => { paused = true; FB.audio.pause(); FB.sdk.setGameplay(false); FB.fishing.release(); };
         const go = () => { paused = false; FB.audio.resume(); if (playing && !UI.isOpen()) FB.sdk.setGameplay(true); last = performance.now(); };
@@ -77,6 +84,8 @@
         window.addEventListener('pointerdown', (e) => {
             FB.audio.unlock();
             if (!playing || paused || UI.isOpen() || FB.tutor.blocking() || ignore(e.target)) return;
+            // Находка на воде важнее заброса
+            if (FB.fishing.phase !== 'fight' && FB.fishing.phase !== 'bite' && FB.drift.hit(e.clientX, e.clientY)) return;
             FB.fishing.press(e.clientX, e.clientY);
         });
         const up = () => FB.fishing.release();
@@ -109,7 +118,7 @@
             if (FB.quests.sync()) FB.hud.update();
             const wx = FB.week.weatherAt(FB.S.pond, FB.sdk.now());
             if (wx !== FB.scene.weather && FB.fishing.phase === 'idle' && !UI.isOpen()) {
-                FB.scene.setPlace(FB.S.pond, wx);
+                FB.scene.setPlace(FB.S.pond, wx, true);
                 UI.toast(FB.t('weather_changed', { w: FB.t('wx_' + wx) }), 'weather_' + wx);
             }
         }, 30000);

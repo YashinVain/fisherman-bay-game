@@ -24,6 +24,7 @@
     const cos = (cat) => FB.cosById[FB.S.look[cat]] || FB.cosById[FB.DEFAULT_LOOK[cat]];
     const OUT = 'rgba(30,25,40,0.6)';
     const boatType = () => cos('boat').c.type || 'pier';
+    P.boatType = boatType;
     const weather = () => FB.scene.weather || 'sun';
 
     // Цвет предметов под погоду: вечером сиреневее, ночью синее, в тумане бледнее

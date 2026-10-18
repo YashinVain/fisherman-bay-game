@@ -172,7 +172,9 @@
             weather: FB.scene.weather, bubble, tut,
             weekFish: FB.S.pond === cfg.pond ? cfg.fish : null
         };
-        F.res = FB.catcher.roll(F.ctx);
+        // Особенность места (тень, огонёк, косяк, прилив, течение) — до броска
+        const pre = FB.places ? FB.places.beforeRoll(F.ctx, tx, dist) : null;
+        F.res = pre || FB.catcher.roll(F.ctx);
         // Урок: гарантированный карась — первый улов должен получиться
         if (tut) F.res = { kind: 'fish', fish: FB.fishById.crucian, g: 420 };
         F.target = { tx, dist };
@@ -194,13 +196,14 @@
         let wait = U.rand(1.8, 5.2);
         if (F.ctx.bubble) wait *= 0.55;
         if (res.kind === 'fish' && res.fish.bait === F.ctx.bait) wait *= 0.8;
+        wait *= F.ctx.waitMul || 1;
         // 0–2 «пробы» до настоящей поклёвки
         F.nibbles = [];
         if (F.ctx.tut) {
             // На уроке — одна проба посередине, чтобы успеть прочитать подсказки
             wait = 4.2;
             F.nibbles.push(2.1);
-        } else {
+        } else if (!F.ctx.noNibble) {
             const n = U.randInt(0, 2);
             for (let i = 0; i < n; i++) F.nibbles.push(U.rand(0.5, Math.max(0.6, wait - 0.6)));
         }
@@ -239,7 +242,7 @@
         F.fishTx = F.target.tx;
         F.fishDist = F.target.dist;
         F.dart = 0;
-        FB.audio.play('hook');
+        FB.audio.play('hook', F.str);
         const p = floatPos();
         FB.scene.splash(p.x, p.y, 0.9 * p.s * 1.6);
         FB.emit('hint', 'hold_reel');
@@ -264,7 +267,7 @@
         const p = SC.project(F.fishTx, F.fishDist);
         F.landFrom = { x: p.x, y: p.y };
         SC.splash(p.x, p.y, 1.3);
-        FB.audio.play('splash');
+        FB.audio.play('splash', F.res && F.res.kind === 'fish' ? U.clamp(Math.log10(F.res.g) / 3, 0.3, 1.4) : 0.5);
         FB.emit('fightEnd');
     }
 
@@ -290,6 +293,8 @@
     // ---------- Обновление ----------
     F.update = (dt) => {
         T += dt;
+        if (FB.drift) FB.drift.update(dt);
+        if (FB.places) FB.places.update(dt);
         if (F.reachFlash > 0) F.reachFlash -= dt;
         updateSpots(dt);
         const tune = F.TUNE;
@@ -299,6 +304,8 @@
                 break;
             case 'wait':
                 if (F.nibbleT > 0) F.nibbleT -= dt;
+                // Речка: течение несёт поплавок вдоль берега
+                if (F.ctx.drift) F.target.tx = Math.min(0.97, F.target.tx + F.ctx.drift * dt);
                 if (F.nibbles.length && T >= F.nibbles[0]) {
                     F.nibbles.shift();
                     F.nibbleT = 0.32;
@@ -319,7 +326,7 @@
                     F.surge = tune.surgeLen;
                     F.surgeIn = U.rand(tune.surgeEvery[0], tune.surgeEvery[1]) / (0.75 + s * 0.6);
                     F.dart = (Math.random() < 0.5 ? -1 : 1) * U.rand(0.15, 0.35);
-                    FB.audio.play('strain');
+                    FB.audio.play('surge', s);
                     if (s > 0.45) {
                         const p = FB.scene.project(F.fishTx, F.fishDist);
                         FB.scene.splash(p.x, p.y, 0.6 * p.s * 1.6);
@@ -331,7 +338,8 @@
                     // В зелёной зоне подматываем в полную силу, в красной — с трудом
                     const k = F.tension > z.hi ? 0.4 : F.tension < z.lo ? 0.8 : 1;
                     F.progress += tune.reel * Math.pow(r.reel, 0.6) * (1 - s * tune.heavy) * dt * k;
-                    if (Math.random() < dt * 14) FB.audio.play('reel');
+                    if (Math.random() < dt * (10 + F.tension * 8)) FB.audio.play('reel', F.tension);
+                    if (F.tension > z.hi && Math.random() < dt * 4) FB.audio.play('strain', F.tension);
                 } else {
                     F.tension -= tune.fall * dt;
                     F.progress -= tune.slip * s * dt;
@@ -497,6 +505,8 @@
         const SC = FB.scene, P = FB.person, u = SC.unit();
         if (layer === 'water') {
             drawSpots(ctx);
+            if (FB.places) FB.places.draw(ctx);
+            if (FB.drift) FB.drift.draw(ctx);
             if (F.reachFlash > 0) drawReach(ctx, Math.min(1, F.reachFlash / 0.5));
             const tip = P.rodTip();
             if (F.phase === 'wait' || F.phase === 'bite') {

@@ -107,16 +107,49 @@
     SC.unit = () => Math.min(SC.W, SC.H) / 100;
 
     // ---------- Место и погода ----------
-    SC.setPlace = (pondId, weather) => {
+    // smooth — погода меняется в том же месте: старая картинка тает за пару секунд,
+    // а утки, брызги и всё живое остаются на месте
+    SC.setPlace = (pondId, weather, smooth) => {
         const pond = FB.pondById[pondId];
+        const same = SC.pond === pondId;
+        if (smooth && same && SC.weather && weather !== SC.weather && SC.skyLayer && !SC.dirty) startFade();
+        else SC.fade = null;
         SC.pond = pondId;
         SC.theme = pond.theme;
         SC.weather = weather;
         SC.dirty = true;
-        SC.life = [];
-        SC.fx = [];
+        if (!(smooth && same)) { SC.life = []; SC.fx = []; }
         initClouds();
+        if (!SC.fade) { SC.rainK = weather === 'rain' ? 1 : 0; SC.fogK = weather === 'fog' ? 1 : 0; }
+        if (FB.audio && FB.audio.setScene) FB.audio.setScene(pond.theme, weather);
     };
+
+    // Снимок старого неба, облаков и берега — он будет плавно растворяться поверх нового
+    SC.FADE_TIME = 3;
+    SC.rainK = 0; SC.fogK = 0;
+    function startFade() {
+        const W = SC.W, H = SC.H, dpr = SC.dpr;
+        const c = document.createElement('canvas');
+        c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
+        const x = c.getContext('2d');
+        x.setTransform(dpr, 0, 0, dpr, 0, 0);
+        x.drawImage(SC.skyLayer, 0, 0, W, H);
+        SC.clouds.forEach(cl => x.drawImage(cl.img, cl.x, cl.y));
+        x.drawImage(SC.landLayer, 0, 0, W, H);
+        SC.fade = { c, k: 0, prev: SC.weather };
+    }
+    // Запасной холст для «старого» переднего плана (рыбак, мостки, лодка) во время смены погоды
+    let frontBuf = null;
+    function frontCanvas() {
+        if (!frontBuf) frontBuf = document.createElement('canvas');
+        const w = SC.canvas.width, h = SC.canvas.height;
+        if (frontBuf.width !== w || frontBuf.height !== h) { frontBuf.width = w; frontBuf.height = h; }
+        const x = frontBuf.getContext('2d');
+        x.setTransform(1, 0, 0, 1, 0, 0);
+        x.clearRect(0, 0, w, h);
+        x.setTransform(SC.dpr, 0, 0, SC.dpr, 0, 0);
+        return x;
+    }
 
     // ---------- Рисовалки природы ----------
     function hills(ctx, W, baseY, amp, color, rnd, waves) {
@@ -939,26 +972,31 @@
 
     // Дождь: косые штрихи и кружки на воде
     const drops = [];
-    function drawRain(ctx, dt) {
+    function drawRain(ctx, dt, k) {
         const W = SC.W, H = SC.H, u = SC.unit();
+        k = k === undefined ? 1 : k;
         while (drops.length < 140) drops.push({ x: Math.random() * W * 1.2, y: Math.random() * H, v: U.rand(60, 90) * u, l: U.rand(1.5, 3) * u });
-        ctx.strokeStyle = 'rgba(220,235,250,0.45)';
+        ctx.strokeStyle = 'rgba(220,235,250,' + (0.45 * k) + ')';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        drops.forEach(d => {
+        const n = Math.round(drops.length * k);
+        drops.forEach((d, i) => {
+            if (i >= n) return;
             d.y += d.v * dt; d.x -= d.v * 0.15 * dt;
             if (d.y > H) { d.y = -10; d.x = Math.random() * W * 1.2; }
             ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + d.l * 0.15, d.y - d.l);
         });
         ctx.stroke();
-        if (Math.random() < dt * 14) {
+        if (Math.random() < dt * 14 * k) {
             const p = SC.project(U.rand(-1.4, 1.4), Math.random());
             SC.ripple(p.x, p.y, 0.25 * p.s * 2, '#e8f4ff');
         }
     }
     // Туман: медленно плывущие полосы
-    function drawFog(ctx) {
+    function drawFog(ctx, k) {
         const W = SC.W, L = SC.L, u = SC.unit();
+        ctx.save();
+        ctx.globalAlpha = k === undefined ? 1 : k;
         for (let i = 0; i < 4; i++) {
             const x = ((SC.t * (6 + i * 3) * u / 10 + i * W * 0.37) % (W * 1.6)) - W * 0.3;
             const y = L.hy + (i - 1) * u * 6;
@@ -969,6 +1007,7 @@
             ctx.fillStyle = g; ctx.fillRect(x - W * 0.4, y - W * 0.4, W * 0.8, W * 0.8);
             ctx.restore();
         }
+        ctx.restore();
     }
 
     // ---------- Кадр ----------
@@ -976,6 +1015,19 @@
     SC.render = (dt, drawWorld) => {
         SC.t += dt;
         if (SC.dirty) buildLayers();
+        // Дождь и туман набегают и уходят постепенно
+        const ease = Math.min(1, dt / (SC.FADE_TIME * 0.8));
+        SC.rainK += ((SC.weather === 'rain' ? 1 : 0) - SC.rainK) * ease * 3;
+        SC.fogK += ((SC.weather === 'fog' ? 1 : 0) - SC.fogK) * ease * 3;
+        const fade = SC.fade;
+        if (fade) { fade.k += dt / SC.FADE_TIME; if (fade.k >= 1) SC.fade = null; }
+        const fk = fade ? 1 - U.smooth(Math.min(1, fade.k)) : 0;
+        // Лодка качается на волнах вместе с рыбаком (мостки стоят), в дождь — сильнее
+        const L = SC.L;
+        if (L.py0 === undefined) L.py0 = L.py;
+        const bt = FB.person && FB.person.boatType ? FB.person.boatType() : 'pier';
+        const amp = { raft: 0.01, boat: 0.016, yacht: 0.009 }[bt] || 0;
+        L.py = L.py0 + amp * L.ph * (SC.weather === 'rain' ? 1.7 : 1) * (Math.sin(SC.t * 1.7) + 0.35 * Math.sin(SC.t * 3.1 + 1));
         const ctx = SC.ctx, dpr = SC.dpr;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.drawImage(SC.skyLayer, 0, 0, SC.W, SC.H);
@@ -986,14 +1038,28 @@
             ctx.drawImage(c.img, c.x, c.y);
         });
         ctx.drawImage(SC.landLayer, 0, 0, SC.W, SC.H);
+        if (fk > 0) { ctx.globalAlpha = fk; ctx.drawImage(fade.c, 0, 0, SC.W, SC.H); ctx.globalAlpha = 1; }
         drawSparkles(ctx);
         updateLife(dt);
         drawLife(ctx);
         updateFx(dt);
         if (drawWorld) drawWorld(ctx, 'water');
         drawFx(ctx);
-        if (drawWorld) drawWorld(ctx, 'front');
-        if (SC.weather === 'rain') drawRain(ctx, dt);
-        if (SC.weather === 'fog') drawFog(ctx);
+        if (drawWorld) {
+            drawWorld(ctx, 'front');
+            // Рыбак, мостки и лодка при старой погоде — поверх, тают вместе с фоном
+            if (fk > 0) {
+                const fx = frontCanvas(), now = SC.weather;
+                SC.weather = fade.prev;
+                try { drawWorld(fx, 'front'); } finally { SC.weather = now; }
+                ctx.save();
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.globalAlpha = fk;
+                ctx.drawImage(frontBuf, 0, 0);
+                ctx.restore();
+            }
+        }
+        if (SC.rainK > 0.01) drawRain(ctx, dt, SC.rainK);
+        if (SC.fogK > 0.01) drawFog(ctx, SC.fogK);
     };
 })(window.FB);

@@ -21,7 +21,7 @@
             else box.appendChild(pearls());
             return box;
         };
-        UI.open({ title: FB.t('nav_shop'), body: render(), render });
+        UI.open({ title: FB.t('nav_shop'), body: render(), render, tip: () => 'shop-' + tab });
     };
 
     const rodSvg = (r) => '<svg viewBox="0 0 70 70" width="70" height="70"><path d="M10 62L60 8" stroke="#2a3550" stroke-width="7" stroke-linecap="round"/><path d="M10 62L60 8" stroke="' + r.color + '" stroke-width="4" stroke-linecap="round"/><path d="M10 62l10-11" stroke="#3a2a22" stroke-width="7" stroke-linecap="round"/><circle cx="22" cy="52" r="7" fill="#5a6470" stroke="#2a3550" stroke-width="2.5"/><circle cx="22" cy="52" r="3" fill="#c8d0d8"/><path d="M60 8v34" stroke="#fff" stroke-width="1.5" stroke-dasharray="3 2"/><circle cx="60" cy="44" r="4" fill="#e8402a" stroke="#2a3550" stroke-width="2"/></svg>';
@@ -109,6 +109,7 @@
             }
             card.appendChild(prev);
             card.appendChild(UI.el('div.nm', { text: FB.name(item) }));
+            if (item.cat === 'boat') card.appendChild(UI.el('div.perk', { html: FB.ic(item.c.type ? 'gift' : 'info') + '<span>' + FB.t('perk_' + (item.c.type || 'pier')) + '</span>' }));
             if (on) card.appendChild(UI.el('span.owned', { html: FB.ic('check') + FB.t('equipped') }));
             else if (owned) card.appendChild(UI.btn('small', FB.t('wear'), () => { FB.shop.equip(item.id); UI.refresh(); }));
             else if (item.cost) card.appendChild(UI.btn('small ' + (item.cost.pearls ? 'violet' : 'yellow'), UI.price(item.cost), (e) => {

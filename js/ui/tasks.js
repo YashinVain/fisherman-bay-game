@@ -16,7 +16,7 @@
             box.appendChild(tab === 'daily' ? daily() : season());
             return box;
         };
-        UI.open({ title: FB.t('nav_tasks'), body: render(), render, width: 'min(96vw, 600px)', onClose: () => FB.hud.update() });
+        UI.open({ title: FB.t('nav_tasks'), body: render(), render, width: 'min(96vw, 600px)', onClose: () => FB.hud.update(), tip: () => 'tasks-' + tab });
     };
 
     // ---------- Подарок и задания ----------
@@ -162,8 +162,22 @@
             col.appendChild(make('gold'));
             strip.appendChild(col);
         });
+        // Полоса ступеней: своя прокрутка без системной полосы, стрелки по краям
         const wrap = UI.el('div.tiers-wrap', { html: '<div class="track-lab free">' + FB.t('track_free') + '</div>' });
-        wrap.appendChild(strip);
+        const view = UI.el('div.tiers-view');
+        const arrow = (dir) => UI.el('button.tier-arrow.' + (dir < 0 ? 'l' : 'r'), { html: dir < 0 ? '‹' : '›', onclick: (e) => {
+            e.stopPropagation();
+            FB.audio.play('click');
+            strip.scrollBy({ left: dir * strip.clientWidth * 0.8, behavior: 'smooth' });
+        } });
+        const al = arrow(-1), ar = arrow(1);
+        const syncArrows = () => {
+            al.classList.toggle('off', strip.scrollLeft < 4);
+            ar.classList.toggle('off', strip.scrollLeft + strip.clientWidth > strip.scrollWidth - 4);
+        };
+        strip.addEventListener('scroll', syncArrows, { passive: true });
+        view.append(strip, al, ar);
+        wrap.appendChild(view);
         wrap.appendChild(UI.el('div.track-lab.gold', { html: FB.ic('crown') + FB.t('track_gold') }));
         box.appendChild(wrap);
         // Колёсико мыши листает ступени вбок
@@ -173,7 +187,7 @@
             strip.scrollLeft += e.deltaY;
         }, { passive: false });
         // Прокрутить к текущей ступени
-        setTimeout(() => { strip.style.scrollBehavior = 'auto'; strip.scrollLeft = Math.max(0, Math.min(tier, SE.tiers.length - 1) * 104 + 53 - strip.clientWidth / 2); strip.style.scrollBehavior = ''; }, 30);
+        setTimeout(() => { strip.style.scrollBehavior = 'auto'; strip.scrollLeft = Math.max(0, Math.min(tier, SE.tiers.length - 1) * 104 + 53 - strip.clientWidth / 2); strip.style.scrollBehavior = ''; syncArrows(); }, 30);
         if (!S.season.pass) {
             const card = UI.el('div.card.product.wide', { html: '<div class="big-ic" style="width:64px;height:64px">' + FB.ic('crown') + '</div><div class="txt"><div class="nm">' + FB.t('golden_pass') + '</div><div class="muted">' + FB.t('golden_pass_desc') + '</div></div>' });
             card.appendChild(UI.btn('yellow', FB.t('buy_pass'), async () => {

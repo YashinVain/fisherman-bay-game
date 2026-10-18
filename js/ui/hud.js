@@ -66,10 +66,16 @@
         });
 
         els.bait = UI.el('button.bait-chip', { onclick: () => { FB.audio.play('click'); H.baitPicker(); } });
+        // Особенность места: короткая плашка, нажатие — объяснение
+        els.place = UI.el('button.place-chip', { onclick: () => {
+            FB.audio.play('click');
+            const f = FB.places.feature();
+            if (f) UI.toast(FB.t('pld_' + f), 'sparkle', 4500);
+        } });
         els.hint = UI.el('div.hint.soft');
         els.fight = buildFight();
 
-        root.append(top, els.chip, els.nav, els.bait, els.hint, els.fight);
+        root.append(top, els.chip, els.nav, els.bait, els.place, els.hint, els.fight);
         H.update();
     };
 
@@ -143,6 +149,8 @@
         if (key === 'hold_reel') els.hint.className = 'hint soft';
     };
 
+    const PLACE_IC = { ducks: 'sparkle', current: 'swap', shadows: 'fish', wisp: 'star', school: 'fish', tide: 'clock' };
+
     // ---------- Каждый кадр ----------
     H.frame = () => {
         if (!els.nav) return;
@@ -150,6 +158,13 @@
         const calm = F.phase === 'idle' || F.phase === 'lost';
         els.nav.classList.toggle('away', !calm);
         els.bait.classList.toggle('away', !calm);
+        const pc = FB.places.chip();
+        els.place.classList.toggle('away', !calm || !pc);
+        if (pc) {
+            const html = FB.ic(PLACE_IC[pc.f] || 'sparkle') + '<span>' + U.esc(pc.text) + '</span>';
+            if (els.place.dataset.h !== html) { els.place.innerHTML = html; els.place.dataset.h = html; }
+            els.place.classList.toggle('hot', !!pc.hot);
+        }
         // Плашка турнира не прыгает после каждого улова: во время вываживания только притухает
         els.chip.classList.toggle('dim', !calm);
         const info = F.fightInfo();

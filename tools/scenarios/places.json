@@ -1,0 +1,26 @@
+{
+    "steps": [
+        { "size": [1100, 680, 1] },
+        { "open": "http://127.0.0.1:8940/", "wait": 2500 },
+        { "name": "подготовка", "js": "document.querySelector('.title .btn').click(); await new Promise(r => setTimeout(r, 600)); FB.ui.closeAll(); const S = FB.S; S.tut = 99; S.tips = { chip: 1, profile: 1, bait: 1, bubbles: 1, drift: 1 }; S.stats.catches = 30; S.xp = 30000; S.level = FB.state.levelFromXp(30000); S.rods.push('star'); S.rod = 'star'; FB.hud.update(); return S.level;", "sleep": 500 },
+        { "name": "пруд: утка", "js": "FB.panels.goTo('village'); FB.ui.closeAll(); FB.scene.setPlace('village', 'sun'); FB.places.reset(); const st = FB.places.state(); st.ducks.push({ tx: 0.15, dist: 0.35, goal: 0.4, v: 0.05, t: 1, state: 'swim' });", "sleep": 1200 },
+        { "shot": "pl1-village.png" },
+        { "name": "подсказка про утку", "js": "document.querySelector('.coach .btn') && document.querySelector('.coach .btn').click();", "sleep": 900 },
+        { "shot": "pl1b-village-see.png" },
+        { "name": "речка", "js": "FB.S.tips.see_ducks = 1; FB.panels.goTo('river'); FB.ui.closeAll(); FB.scene.setPlace('river', 'sun');", "sleep": 1200 },
+        { "shot": "pl2-river.png" },
+        { "name": "горы: тени", "js": "document.querySelector('.coach .btn') && document.querySelector('.coach .btn').click(); FB.panels.goTo('mountain'); FB.ui.closeAll(); FB.scene.setPlace('mountain', 'sun'); FB.places.reset(); FB.places.update(0.01); await new Promise(r => setTimeout(r, 2500)); FB.places.update(9); return FB.places.state().shadows.length;", "sleep": 1800 },
+        { "shot": "pl3-mountain.png" },
+        { "name": "болото: огонёк", "js": "document.querySelector('.coach .btn') && document.querySelector('.coach .btn').click(); FB.S.tips.see_shadows = 1; FB.panels.goTo('swamp'); FB.ui.closeAll(); FB.scene.setPlace('swamp', 'night'); FB.places.reset(); FB.places.state().wisp = { tx: 0.35, dist: 0.4, t: 1, life: 30, ph: 0 };", "sleep": 1200 },
+        { "shot": "pl4-swamp.png" },
+        { "name": "пристань: косяк", "js": "document.querySelector('.coach .btn') && document.querySelector('.coach .btn').click(); FB.S.tips.see_wisp = 1; FB.panels.goTo('pier'); FB.ui.closeAll(); FB.scene.setPlace('pier', 'sun'); FB.places.reset(); FB.places.state().school = { tx: 0.35, dist: 0.45, t: 1, life: 60, left: 3 };", "sleep": 1200 },
+        { "shot": "pl5-pier.png" },
+        { "name": "лагуна: прилив", "js": "document.querySelector('.coach .btn') && document.querySelector('.coach .btn').click(); FB.S.tips.see_school = 1; const PL = FB.places; const now = FB.sdk.now(); const ph = now % PL.TIDE_PERIOD; FB.sdk.mockShift = (PL.TIDE_PERIOD - ph) + 30000; FB.panels.goTo('lagoon'); FB.ui.closeAll(); FB.scene.setPlace('lagoon', 'sun'); return PL.chip();", "sleep": 2500 },
+        { "shot": "pl6-lagoon.png" },
+        { "name": "окно мест", "js": "document.querySelector('.coach .btn') && document.querySelector('.coach .btn').click(); FB.S.tips.places = 1; FB.panels.places();", "sleep": 900 },
+        { "shot": "pl7-places.png" },
+        { "size": [540, 960, 2, true] },
+        { "js": "FB.ui.closeAll(); FB.scene.resize(); FB.panels.goTo('swamp'); FB.ui.closeAll(); FB.scene.setPlace('swamp', 'fog'); FB.places.reset(); FB.places.state().wisp = { tx: 0.3, dist: 0.35, t: 1, life: 30, ph: 0 };", "sleep": 1200 },
+        { "shot": "pl8-phone-swamp.png" }
+    ]
+}

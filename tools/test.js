@@ -25,12 +25,12 @@ vm.createContext(sandbox);
 const load = (f) => vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), sandbox, { filename: f });
 ['js/core/util.js', 'js/core/i18n.js', 'js/data/fish.js', 'js/data/gear.js', 'js/core/sdk.js',
     'js/game/week.js', 'js/game/catch.js', 'js/game/state.js', 'js/game/quests.js', 'js/game/tourney.js',
-    'js/game/shop.js', 'js/game/fishing.js'].forEach(load);
+    'js/game/shop.js', 'js/game/fishing.js', 'js/game/drift.js', 'js/game/places.js'].forEach(load);
 const FB = sandbox.FB;
 FB.sdk.mock = true;
 FB.audio = { play() {}, pause() {}, resume() {}, apply() {} };
 FB.scene = { project: () => ({ x: 0, y: 0, s: 1 }), unproject: () => ({ tx: -0.6, dist: 0.03 }), splash() {}, ripple() {}, weather: 'sun', unit: () => 1, L: { px: 200, py: 500, ph: 150, nearY: 540 } };
-FB.person = { pose: { rod: 0, bend: 0, reel: false, lean: 0, look: 0 }, rodTip: () => ({ x: 0, y: 0 }) };
+FB.person = { pose: { rod: 0, bend: 0, reel: false, lean: 0, look: 0 }, rodTip: () => ({ x: 0, y: 0 }), boatType: () => 'pier' };
 FB.S = FB.state.fresh();
 
 // ---------- Данные ----------
@@ -215,9 +215,12 @@ FB.tourney.checkWeek().then(r => {
 }).then(r2 => {
     ok(r2 === null, 'награда не выдаётся дважды');
     ok(FB.tourney.rewardFor(1).items.includes('hat_crown') && FB.tourney.rewardFor(250).kind === 'member', 'награды по местам');
+    ok(FB.tourney.rewardFor(20).kind === 'top20' && FB.tourney.rewardFor(21).kind === 'top100', 'медаль — за топ-20');
     fightSim();
     lessonSim();
     newChecks();
+    driftChecks();
+    placeChecks();
     finish();
 });
 
@@ -378,6 +381,51 @@ function newChecks() {
     const ex = FB.tourney.parseExtra(FB.tourney.extra(true));
     ok(ex.big && big && ex.big.f === big.f && ex.big.g === big.g && ex.big.pts === big.pts, 'главный улов уходит в топ и читается обратно');
     ok(!FB.tourney.parseExtra('f:fr_none;b:nofish.10.5').big, 'чужой мусор в extraData не ломает топ');
+}
+
+// ---------- Особенности мест ----------
+function placeChecks() {
+    section('Особенности мест');
+    const PL = FB.places;
+    FB.PONDS.forEach(p => ok(PL.FEATURES[p.id], 'у места нет особенности: ' + p.id));
+    ok(new Set(Object.values(PL.FEATURES)).size === FB.PONDS.length, 'особенности у мест разные');
+    const base = Date.UTC(2026, 9, 18, 0, 0, 0) - (Date.UTC(2026, 9, 18) % PL.TIDE_PERIOD);
+    ok(PL.tideAt(base + 60000).high && !PL.tideAt(base + PL.TIDE_HIGH + 60000).high, 'прилив и отлив по расписанию');
+    ok(PL.tideAt(base + 1000).left > 0 && PL.tideAt(base + PL.TIDE_HIGH + 1000).left > 0, 'видно, сколько ждать');
+    // Прилив: близкий заброс в лагуне чаще приносит глубинную рыбу
+    const rod = FB.rodById.bamboo;
+    const deep = (tide) => FB.catcher.chances({ pond: 'lagoon', dist: 0.15, bait: 'worm', rod, weather: 'sun', bubble: false, tide })
+        .filter(c => c.fish.d[0] >= 0.4).reduce((a, c) => a + c.p, 0);
+    ok(deep(PL.TIDE_SHIFT) > deep(0) * 1.5, 'в прилив глубинная рыба ближе к берегу');
+    // Огонёк: редкая рыба чаще
+    const rare = (luckMul) => FB.catcher.chances({ pond: 'swamp', dist: 0.5, bait: 'worm', rod, weather: 'night', bubble: false, luckMul })
+        .filter(c => FB.RARITY[c.fish.r].order >= 2).reduce((a, c) => a + c.p, 0);
+    ok(rare(3) > rare(1) * 1.8, 'под огоньком редкая рыба клюёт чаще');
+    // Горное озеро: заброс к тени — клюёт именно она
+    FB.S = FB.state.fresh(); FB.S.pond = 'mountain'; FB.S.stats.catches = 5;
+    PL.reset();
+    const shadowRes = { kind: 'fish', fish: FB.fishById.char, g: 900 };
+    PL.state().shadows.push({ tx: 0.2, dist: 0.4, v: 0, lo: 0, hi: 1, t: 3, life: 20, ph: 0, res: shadowRes });
+    const ctx = { pond: 'mountain', dist: 0.4, bait: 'worm', rod, weather: 'sun', bubble: false };
+    ok(PL.beforeRoll(ctx, 0.21, 0.41) === shadowRes && ctx.waitMul < 1, 'заброс к тени — клюёт эта рыба');
+    ok(PL.state().shadows.length === 0, 'тень уплывает после заброса');
+    ok(PL.beforeRoll({ pond: 'mountain', tut: true }, 0.2, 0.4) === null, 'на уроке особенности не работают');
+}
+
+// ---------- Находки на воде ----------
+function driftChecks() {
+    section('Находки на воде');
+    const D = FB.drift;
+    ok(!D.BOATS.pier, 'с мостков находок нет');
+    ok(D.BOATS.yacht.every[1] < D.BOATS.raft.every[0] + 1, 'с яхты находки чаще, чем с плота');
+    for (let i = 0; i < 200; i++) {
+        const k = FB.U.pick(Object.keys(D.FINDS));
+        const r = D.reward(k);
+        const f = D.FINDS[k];
+        if (!(r.coins >= f.coins[0] && r.coins <= f.coins[1])) { ok(false, 'монеты за находку вне диапазона: ' + k); break; }
+        if (r.pearls && !f.pearls) { ok(false, 'жемчуг там, где не положено: ' + k); break; }
+    }
+    ok(true, 'награды за находки в своих пределах');
 }
 
 function finish() {
