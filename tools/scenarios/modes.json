@@ -1,0 +1,19 @@
+{
+    "steps": [
+        { "size": [1100, 680, 1] },
+        { "open": "http://127.0.0.1:8940/", "wait": 2500 },
+        { "name": "подготовка", "js": "window.__tap = (x, y, up) => { const o = { clientX: x, clientY: y, bubbles: true, pointerId: 1 }; document.getElementById('game').dispatchEvent(new PointerEvent('pointerdown', o)); if (up !== false) window.dispatchEvent(new PointerEvent('pointerup', o)); }; window.__until = (fn, ms) => new Promise(r => { const t = setInterval(() => { if (fn()) { clearInterval(t); r(true); } }, 15); setTimeout(() => { clearInterval(t); r(false); }, ms || 15000); }); document.querySelector('.title .btn').click(); await new Promise(r => setTimeout(r, 600)); FB.ui.closeAll(); const S = FB.S; S.tut = 99; S.tips = { chip: 1, profile: 1, bait: 1, bubbles: 1, drift: 1, pl_ducks: 1, see_ducks: 1 }; S.stats.catches = 30; S.xp = 30000; S.level = FB.state.levelFromXp(30000); S.rods.push('carbon'); S.rod = 'carbon'; S.baits.push('spinner', 'shrimp'); S.bait = 'spinner'; FB.panels.goTo('village'); FB.ui.closeAll(); FB.scene.setPlace('village', 'sun'); FB.hud.update(); return S.level;", "sleep": 400 },
+        { "name": "заброс блесны", "js": "const p = FB.tutor.castPoint(); __tap(p.x, p.y); await __until(() => FB.fishing.phase === 'wait'); return FB.fishing.mode;", "sleep": 500 },
+        { "shot": "m01-spin-tip.png" },
+        { "name": "проводка", "js": "document.querySelector('.coach .btn').click(); const F = FB.fishing; for (let i = 0; i < 3; i++) { __tap(700, 400, false); await new Promise(r => setTimeout(r, 250)); window.dispatchEvent(new PointerEvent('pointerup', { clientX: 700, clientY: 400, bubbles: true, pointerId: 1 })); await new Promise(r => setTimeout(r, 120)); } __tap(700, 400, false); return [F.phase, F.spin && F.spin.attract];", "sleep": 120 },
+        { "shot": "m02-spin.png" },
+        { "name": "поклёвка на спиннинге", "js": "window.dispatchEvent(new PointerEvent('pointerup', { clientX: 700, clientY: 400, bubbles: true, pointerId: 1 })); const F = FB.fishing; if (F.phase === 'wait') F.spin.attract = 99; await __until(() => F.phase === 'bite', 3000); return F.phase;", "sleep": 200 },
+        { "shot": "m03-spin-bite.png" },
+        { "name": "донка", "js": "const F = FB.fishing; F.reset(); FB.S.bait = 'shrimp'; FB.hud.update(); FB.panels.goTo('pier'); FB.ui.closeAll(); FB.scene.setPlace('pier', 'evening'); FB.S.tips.pl_school = 1; await new Promise(r => setTimeout(r, 300)); const p = FB.tutor.castPoint(); __tap(p.x, p.y); await __until(() => F.phase === 'wait'); return F.mode;", "sleep": 500 },
+        { "shot": "m04-bottom-tip.png" },
+        { "name": "колокольчик", "js": "document.querySelector('.coach .btn').click(); const F = FB.fishing; await __until(() => F.phase === 'bite', 15000); return F.phase;", "sleep": 300 },
+        { "shot": "m05-bottom-bite.png" },
+        { "name": "выбор наживки", "js": "FB.fishing.reset(); FB.hud.baitPicker();", "sleep": 700 },
+        { "shot": "m06-baits.png" }
+    ]
+}

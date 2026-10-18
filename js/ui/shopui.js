@@ -55,7 +55,7 @@
         const grid = UI.el('div.grid.small');
         FB.BAITS.forEach(b => {
             const owned = S.baits.includes(b.id), on = S.bait === b.id;
-            const card = UI.el('div.card.item' + (on ? '.on' : ''), { html: '<div class="prev">' + FB.ic(b.icon) + '</div><div class="nm">' + U.esc(FB.name(b)) + '</div>' });
+            const card = UI.el('div.card.item' + (on ? '.on' : ''), { html: '<div class="prev">' + FB.ic(b.icon) + '</div><div class="nm">' + U.esc(FB.name(b)) + '</div><div class="mode">' + FB.t('mode_' + (b.mode || 'float')) + '</div>' });
             if (on) card.appendChild(UI.el('span.owned', { html: FB.ic('check') + FB.t('equipped') }));
             else if (owned) card.appendChild(UI.btn('small', FB.t('take'), () => { S.bait = b.id; FB.state.save(); FB.hud.update(); UI.refresh(); }));
             else if (S.level < b.level) card.appendChild(UI.btn('small grey off', FB.ic('lock') + FB.t('lvl_n', { n: b.level })));

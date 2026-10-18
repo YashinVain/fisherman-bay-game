@@ -16,10 +16,10 @@
 
     // ---------- Наживка (покупается один раз навсегда) ----------
     FB.BAITS = [
-        { id: 'worm', price: 0, level: 1, n: { ru: 'Червь', en: 'Worm' }, icon: 'worm' },
-        { id: 'maggot', price: 150, level: 2, n: { ru: 'Опарыш', en: 'Maggot' }, icon: 'maggot' },
-        { id: 'spinner', price: 700, level: 4, n: { ru: 'Блесна', en: 'Spinner' }, icon: 'spinner' },
-        { id: 'shrimp', price: 2500, level: 12, n: { ru: 'Креветка', en: 'Shrimp' }, icon: 'shrimp' }
+        { id: 'worm', price: 0, level: 1, n: { ru: 'Червь', en: 'Worm' }, icon: 'worm', mode: 'float' },
+        { id: 'maggot', price: 150, level: 2, n: { ru: 'Опарыш', en: 'Maggot' }, icon: 'maggot', mode: 'float' },
+        { id: 'spinner', price: 700, level: 4, n: { ru: 'Блесна', en: 'Spinner' }, icon: 'spinner', mode: 'spin' },
+        { id: 'shrimp', price: 2500, level: 12, n: { ru: 'Креветка', en: 'Shrimp' }, icon: 'shrimp', mode: 'bottom' }
     ];
 
     FB.rodById = {}; FB.RODS.forEach(r => { FB.rodById[r.id] = r; });

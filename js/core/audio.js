@@ -147,6 +147,16 @@
             str = str || 0.4;
             for (let i = 0; i < 2 + Math.round(str * 3); i++) noise(0.12, { freq: rnd(900, 1600), to: 400, vol: 0.08 + str * 0.12, delay: i * rnd(0.08, 0.14) });
         },
+        // Колокольчик донки: тихий на пробе, громкий на поклёвке
+        bell: (k) => { k = k || 1; const f = rnd(1900, 2100); tone(f, 0.5, { type: 'sine', vol: 0.12 * k }); tone(f * 2.76, 0.3, { type: 'sine', vol: 0.05 * k }); if (k > 0.8) tone(f * 1.02, 0.5, { type: 'sine', vol: 0.1, delay: 0.14 }); },
+        // Рывок блесной
+        twitch: () => noise(0.08, { freq: rnd(1800, 2600), to: 900, vol: 0.08 }),
+        // Отличная подсечка: звонкое «дзынь»
+        perfect: () => { tone(1568, 0.12, { type: 'triangle', vol: 0.2 }); tone(2093, 0.22, { type: 'triangle', vol: 0.18, delay: 0.07 }); },
+        // Начался жор: весёлый наигрыш
+        frenzy: () => [523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, { type: 'triangle', vol: 0.2, delay: i * 0.07 })),
+        // Серия выросла / сгорела
+        streak: (n) => tone(660 + Math.min(10, n || 1) * 60, 0.12, { type: 'triangle', vol: 0.14 }),
         snap: () => { tone(pick([900, 1100, 760]), 0.25, { type: 'sawtooth', to: 120, vol: 0.18 }); noise(0.2, { freq: 3000, vol: 0.15 }); tone(70, 0.3, { to: 45, vol: 0.12, delay: 0.05 }); },
         miss: () => {
             const v = pick([[400, 300, 220], [440, 330, 247], [370, 277, 208]]);
@@ -236,11 +246,15 @@
     // Медленный перебор по пентатонике: аккорды меняются раз в 2 такта
     const CHORDS = [[196, 247, 294, 392], [165, 196, 247, 330], [175, 220, 262, 349], [147, 185, 220, 294]];
     const MELODY = [392, 440, 494, 587, 659, 587, 494, 440];
-    let step = 0;
-    function startMusic() {
+    let step = 0, beat = 0.42;
+    // Настроение музыки: во время жора — бодрее
+    A.setMood = (m) => {
+        beat = m === 'frenzy' ? 0.26 : 0.42;
+        if (musicTimer) { clearInterval(musicTimer); musicTimer = null; startMusic(true); }
+    };
+    function startMusic(noWater) {
         if (musicTimer) return;
-        startWater();
-        const beat = 0.42;
+        if (!noWater) startWater();
         musicTimer = setInterval(() => {
             if (!ctx || muted || !FB.S || !FB.S.settings.music) return;
             const chord = CHORDS[Math.floor(step / 8) % CHORDS.length];

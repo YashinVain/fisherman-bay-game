@@ -6,7 +6,7 @@
 (function (FB) {
     const ST = FB.state = {};
     const U = FB.U;
-    FB.VERSION = '0.12.0';
+    FB.VERSION = '0.13.0';
 
     ST.fresh = () => ({
         v: 1,
@@ -35,7 +35,9 @@
         buy: { noAds: false, starter: false, supporter: false },
         settings: { sound: true, music: true, lang: null },
         tut: 0,               // шаг обучения (tutor.js): 0 — не начато, 99 — пройдено
-        tips: {}              // разовые подсказки, которые уже показаны
+        tips: {},             // разовые подсказки, которые уже показаны
+        luck: 0,              // серия удачи: уловов подряд без срыва (отличная подсечка — за два)
+        aqua: FB.aqua ? FB.aqua.fresh() : null   // домашний аквариум (game/aqua.js)
     });
 
     // Дополнить загруженное сохранение недостающими полями (после обновлений игры)
@@ -140,6 +142,21 @@
             FB.emit('levelUp', { level: S.level, ponds: unlocked, reward });
         }
     };
+    // ---------- Серия удачи ----------
+    ST.STREAK_MAX = 10;
+    ST.streakMul = () => 1 + 0.05 * Math.min(FB.S.luck || 0, ST.STREAK_MAX);
+    ST.streakUp = (perfect) => {
+        const S = FB.S, before = S.luck || 0;
+        S.luck = Math.min(ST.STREAK_MAX, before + (perfect ? 2 : 1));
+        S.stats.bestLuck = Math.max(S.stats.bestLuck || 0, S.luck);
+        if (S.luck !== before) FB.emit('streak', { n: S.luck, up: true });
+    };
+    ST.streakBreak = () => {
+        const S = FB.S;
+        if ((S.luck || 0) >= 2) FB.emit('streak', { n: 0, lost: S.luck });
+        S.luck = 0;
+    };
+
     // Подарок за новый уровень: монеты всегда, каждый пятый — ещё и жемчуг
     ST.levelReward = (l) => ({ coins: 20 + l * 10, pearls: l % 5 === 0 ? 10 : 0 });
     // Что откроется дальше (для окна нового уровня, если сейчас ничего не открылось)

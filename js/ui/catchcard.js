@@ -127,6 +127,7 @@
 
     function afterCard() {
         FB.fishing.done();
+        FB.hud.update();
         catchesSinceAd++;
         FB.tutor.afterCatch();
         // Межстраничная реклама — только здесь, в спокойной паузе между уловами

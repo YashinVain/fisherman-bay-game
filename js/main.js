@@ -58,6 +58,15 @@
         FB.on('toast', (e) => UI.toast(FB.t(e.key), 'info'));
         FB.on('questDone', () => { UI.toast(FB.t('quest_done'), 'check'); FB.audio.play('coin'); FB.hud.update(); });
         FB.on('cast', (e) => { if (e.bubble) UI.toast(FB.t('bubble_cast'), 'sparkle', 1500); });
+        FB.on('streak', (e) => {
+            FB.hud.update();
+            if (e.lost) UI.toast(FB.t('streak_lost', { n: e.lost }), 'info', 1800);
+            else if (e.n >= 2) FB.audio.play('streak', e.n);
+        });
+        FB.on('frenzy', (on) => {
+            if (on) UI.toast(FB.t('frenzy_start'), 'fish', 2600);
+            FB.hud.update();
+        });
         FB.on('driftFound', (e) => {
             UI.toast(FB.t('find_' + e.kind), e.reward.pearls ? 'pearl' : 'gift', 2200);
             UI.fly('coin', e.x, e.y, 5);
@@ -89,12 +98,15 @@
             FB.fishing.press(e.clientX, e.clientY);
         });
         const up = () => FB.fishing.release();
+        window.addEventListener('pointermove', (e) => { if (playing && !paused) FB.fishing.move(e.clientX); });
         window.addEventListener('pointerup', up);
         window.addEventListener('pointercancel', up);
         window.addEventListener('blur', up);
         window.addEventListener('contextmenu', (e) => e.preventDefault());
         // Пробел — то же, что нажатие (удобно на компьютере)
         window.addEventListener('keydown', (e) => {
+            // Стрелки — повести удочку, когда рыба уходит в камыш
+            if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') && playing && !UI.isOpen()) FB.fishing.steer(e.code === 'ArrowLeft' ? -1 : 1);
             if (e.code !== 'Space' || e.repeat || !playing || UI.isOpen() || FB.tutor.blocking()) return;
             e.preventDefault();
             const F = FB.fishing;

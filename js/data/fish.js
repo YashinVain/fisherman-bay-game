@@ -11,6 +11,7 @@
 //   bait          — любимая наживка (worm | maggot | spinner | shrimp): шанс ×3
 //   wx            — погода, в которую клюёт охотнее: { rain: 2, night: 3 ... }
 //   art           — как рисовать (см. view/fishart.js)
+//   st            — характер в вываживании (calm | dart | jump | dive | snag), см. ниже
 
 (function (FB) {
     FB.RARITY = {
@@ -95,6 +96,18 @@
         F('swordfish', 'lagoon', 'epic', 'Рыба-меч', 'Swordfish', [15000, 150000], [0.7, 1], 'spinner', null, A('sword', '#3a4a7a', '#dfe6f0', '#2c3860')),
         F('mola', 'lagoon', 'legendary', 'Рыба-луна', 'Ocean Sunfish', [50000, 600000], [0.8, 1], 'shrimp', { fog: 1.5 }, A('mola', '#9aa6b8', '#e8eef4', '#7e8ca0', 'dots', '#c0cad8', { shine: true }))
     ];
+
+    // Характер рыбы в вываживании. Кого нет в списке — спокойная (calm):
+    //   dart — резкие рывки, jump — прыгает свечкой (надо отпустить),
+    //   dive — долго тянет на глубину, snag — уводит в камыш и коряги (надо вести в сторону)
+    const STYLE = {
+        perch: 'dart', chub: 'dart', ide: 'dart', pike: 'dart', scad: 'dart', barracuda: 'dart',
+        trout: 'jump', grayling: 'jump', salmon: 'jump', char: 'jump', laketrout: 'jump', nelma: 'jump', mullet: 'jump', swordfish: 'jump', taimen: 'jump',
+        bream: 'dive', catfish: 'dive', stingray: 'dive', flounder: 'dive', dogfish: 'dive', tuna: 'dive', mola: 'dive', peled: 'dive',
+        tench: 'snag', carp: 'snag', goldcarp: 'snag', eel: 'snag', bullhead: 'snag', spirit: 'snag'
+    };
+    FB.FISH.forEach(f => { f.st = STYLE[f.id] || 'calm'; });
+    FB.STYLES = ['calm', 'dart', 'jump', 'dive', 'snag'];
 
     // Мусор: попадается везде, немного смешно, иногда приятно (сундук с монетами)
     FB.JUNK = [

@@ -172,6 +172,21 @@ div.pill { cursor: default; }
 .pill .plus { position: absolute; right: -6px; top: -6px; width: 22px; height: 22px; border-radius: 50%; background: var(--leaf); color: #fff; font-size: 18px; line-height: 22px; text-align: center; box-shadow: 0 2px 0 var(--leaf-d); }
 .hud-right { display: flex; gap: 8px; }
 
+/* Серия удачи */
+.pill.streak { min-width: 0; padding: 0 12px 0 40px; background: linear-gradient(#fff3d6, #ffe0a0); box-shadow: 0 3px 0 #e6b860, 0 5px 10px rgba(0,30,60,.22); animation: pop .35s cubic-bezier(.3,1.6,.5,1); }
+.pill.streak b { font-size: 19px; }
+.pill.streak small { margin-left: 6px; font-size: 13px; color: #b8600a; }
+/* Жор */
+.frenzy {
+    position: absolute; top: calc(140px + var(--safe-t)); left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 8px; padding: 6px 16px 6px 8px; border-radius: 20px; white-space: nowrap;
+    background: linear-gradient(#ff9a3a, #e8601a); color: #fff; font-size: 15px; box-shadow: 0 4px 12px rgba(120,40,0,.3);
+    animation: pulse 1s ease-in-out infinite; pointer-events: none !important;
+}
+.frenzy .ic { width: 28px; height: 28px; }
+.frenzy-on .toasts { top: calc(192px + var(--safe-t)); }
+.frenzy b { font-size: 17px; }
+
 /* Плашка турнира */
 .tourney-chip {
     position: absolute; top: calc(84px + var(--safe-t)); left: 50%; transform: translateX(-50%);
@@ -353,8 +368,33 @@ div.pill { cursor: default; }
 }
 .coach-note .ic { width: 28px; height: 28px; flex: none; }
 
+.card.item .mode { margin: -2px 0 4px; font-size: 12px; font-weight: 900; color: var(--sea-d); }
 .card.item .perk { display: flex; align-items: center; gap: 4px; margin: -2px 0 6px; font-size: 11px; font-weight: 700; line-height: 1.2; color: var(--sea-d); text-align: left; }
 .card.item .perk .ic { width: 16px; height: 16px; flex: none; }
+
+/* ---------- Аквариум ---------- */
+.aq-tank { position: relative; border-radius: 22px; overflow: hidden; margin-bottom: 10px; box-shadow: 0 0 0 5px #6a4a2a, 0 0 0 8px #8a6a3a, 0 6px 16px rgba(0,30,60,.3); }
+.aq-tank canvas { display: block; width: 100%; }
+.aq-income { display: flex; align-items: center; gap: 10px; padding: 8px 12px; margin: 14px 0 6px; border-radius: 16px; background: #fff6d0; box-shadow: inset 0 -3px 0 #f0d78f; font-size: 15px; }
+.aq-income .ic { width: 28px; height: 28px; flex: none; }
+.aq-income span:first-of-type { flex: 1; }
+.aq-slot .prev img { max-width: 90%; max-height: 70px; }
+.aq-slot.empty .prev { border: 3px dashed var(--cream-3); border-radius: 14px; }
+.aq-slot .plus-big { font-size: 40px; color: var(--cream-3); font-weight: 900; }
+.aq-slot.locked .prev .ic { width: 40px; height: 40px; opacity: .6; }
+.aq-plaque { display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-radius: 18px; background: linear-gradient(#8a6a3a, #6a4a2a); color: #fff; box-shadow: 0 4px 0 #4a3018; }
+.aq-plaque img { width: 110px; filter: drop-shadow(0 3px 3px rgba(0,0,0,.4)); }
+.aq-plaque > .ic { width: 48px; height: 48px; }
+.aq-plaque .k { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--sun); }
+.aq-plaque .v { font-size: 18px; font-weight: 900; }
+.aq-coll { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+.aq-coll .coll { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 14px; background: #fff; box-shadow: 0 3px 0 var(--cream-3); }
+.aq-coll .coll .ic { width: 32px; height: 32px; flex: none; opacity: .5; }
+.aq-coll .coll.done { background: linear-gradient(#fff6d0, #ffe9a0); box-shadow: 0 3px 0 #e6c060; }
+.aq-coll .coll.done .ic { opacity: 1; }
+.aq-coll b { display: block; font-size: 14px; }
+.aq-coll small { font-size: 12px; color: var(--ink-soft); }
+.aqua-btn { position: relative; }
 
 /* ---------- Окна ---------- */
 .shade {

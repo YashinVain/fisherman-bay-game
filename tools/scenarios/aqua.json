@@ -1,0 +1,21 @@
+{
+    "steps": [
+        { "size": [1100, 680, 1] },
+        { "open": "http://127.0.0.1:8940/", "wait": 2500 },
+        { "name": "подготовка", "js": "document.querySelector('.title .btn').click(); await new Promise(r => setTimeout(r, 600)); FB.ui.closeAll(); const S = FB.S; S.tut = 99; S.tips = { chip: 1, profile: 1, bait: 1, bubbles: 1, drift: 1, pl_ducks: 1, see_ducks: 1 }; S.stats.catches = 60; S.coins = 20000; S.pearls = 200; ['crucian','perch','rudd','tench','bream','carp','goldcarp','trout','pike','clown','tang','swordfish'].forEach(id => { const f = FB.fishById[id]; S.album[id] = { n: 2, best: Math.round(f.w[0] + (f.w[1]-f.w[0])*0.5) }; }); S.stats.bestId = 'swordfish'; S.stats.bestG = 80000; S.trophies.push({ idx: 140, rank: 3, kind: 'silver' }, { idx: 142, rank: 15, kind: 'top20' }); FB.hud.update();", "sleep": 900 },
+        { "shot": "a00-hud-tip.png" },
+        { "name": "открыть", "js": "document.querySelector('.coach .btn') && document.querySelector('.coach .btn').click(); FB.aquaUI.open('fish');", "sleep": 900 },
+        { "shot": "a01-empty-tip.png" },
+        { "name": "посадить рыб", "js": "document.querySelector('.coach .btn') && document.querySelector('.coach .btn').click(); const A = FB.aqua; ['carp','clown','pike'].forEach(id => A.addFish(id)); A.buySlot(); A.buySlot(); A.addFish('goldcarp'); A.addFish('tang'); A.buyDecor('stones'); A.buyDecor('chest'); A.buyDecor('castle'); A.buyDecor('coral'); FB.ui.refresh();", "sleep": 1500 },
+        { "shot": "a02-fish.png" },
+        { "name": "украшения", "js": "document.querySelectorAll('.sheet .tab')[1].click();", "sleep": 900 },
+        { "shot": "a03-decor.png" },
+        { "name": "ночной фон и кораблик", "js": "FB.aqua.buyTheme('night'); FB.aqua.buyDecor('ship'); FB.aqua.buyDecor('diver'); FB.ui.refresh(); document.querySelector('.sheet .sheet-body').scrollTop = 0;", "sleep": 1200 },
+        { "shot": "a04-night.png" },
+        { "name": "трофеи", "js": "document.querySelectorAll('.sheet .tab')[2].click();", "sleep": 900 },
+        { "shot": "a05-trophy.png" },
+        { "size": [540, 960, 2, true] },
+        { "js": "FB.ui.closeAll(); FB.scene.resize(); FB.aqua.setTheme('sea'); FB.aquaUI.open('fish');", "sleep": 1400 },
+        { "shot": "a06-phone.png" }
+    ]
+}

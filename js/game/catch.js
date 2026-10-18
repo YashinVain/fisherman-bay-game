@@ -56,6 +56,7 @@
         rnd = rnd || Math.random;
         let k = 1.7 / Math.sqrt(ctx.rod.luck);
         if (ctx.bubble) k *= 0.8;
+        if (ctx.heavy) k *= 0.75;      // донка: крупная рыба чаще
         const t = Math.pow(rnd(), k);
         const g = Math.exp(U.lerp(Math.log(f.w[0]), Math.log(f.w[1]), t));
         return Math.max(f.w[0], Math.min(f.w[1], Math.round(g)));

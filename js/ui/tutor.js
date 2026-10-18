@@ -32,7 +32,9 @@
         { id: 'quests', where: 'tasks-daily', target: '.sheet .card.quest' },
         { id: 'season', where: 'tasks-season', target: '.sheet .season-card .sc-head' },
         { id: 'tiers', where: 'tasks-season', target: '.sheet .tiers' },
-        { id: 'medals', where: 'profile', target: '.sheet .trophies, .sheet .trophies-empty' }
+        { id: 'medals', where: 'profile', target: '.sheet .trophies, .sheet .trophies-empty' },
+        { id: 'aqua_btn', where: 'main', target: '.hud-right .aqua-btn', cond: (S) => Object.keys(S.album).length >= 3 },
+        { id: 'aqua', where: 'aqua', target: '.sheet .aq-tank' }
     ];
     // Особенность каждого места — когда игрок впервые там рыбачит
     Object.keys({ village: 1, river: 1, mountain: 1, swamp: 1, pier: 1, lagoon: 1 }).forEach(pond => {
@@ -123,7 +125,7 @@
     // ---------- Что показать сейчас ----------
     function view() {
         const S = FB.S, F = FB.fishing, SC = FB.scene;
-        if (S.tut >= STEP.done) return tipsView() || driftView() || placeView() || bubblesView();
+        if (S.tut >= STEP.done) return fightTipView() || tipsView() || driftView() || placeView() || bubblesView();
         if (UI.isOpen()) return null;
 
         if (S.tut === STEP.hello) {
@@ -212,6 +214,33 @@
                 li('trophy', FB.t('tut_chip_prize')) + '</ul>';
         }
         return v;
+    }
+
+    // Первая свечка, уход в камыш, тяга на глубину, отличная подсечка — игра
+    // встаёт на паузу и объясняет, что делать. Жор — без паузы
+    function fightTipView() {
+        const S = FB.S, F = FB.fishing;
+        if (UI.isOpen()) return null;
+        if (FB.events.frenzyOn() && !S.tips.ev_frenzy && F.phase === 'idle') {
+            const el = document.querySelector('.frenzy');
+            if (el && visible(el)) return { key: 'ev-frenzy', rect: el, block: true, dim: true, title: FB.t('tut_ev_frenzy_t'), text: FB.t('tut_ev_frenzy'), btns: [[FB.t('tut_got'), 'small', () => seen('ev_frenzy')]] };
+        }
+        if (F.phase === 'wait' && (F.mode === 'spin' || F.mode === 'bottom') && !S.tips['ev_' + F.mode]) {
+            const p = FB.scene.project(F.target.tx, F.target.dist);
+            const id = F.mode;
+            return { key: 'ev-' + id, point: { x: p.x, y: p.y - FB.scene.unit() * 3 }, block: true, dim: true, wide: true,
+                title: FB.t('tut_ev_' + id + '_t'), text: FB.t('tut_ev_' + id), btns: [[FB.t('tut_got'), 'small', () => { seen('ev_' + id); FB.fishing.release(); }]] };
+        }
+        if (F.phase !== 'fight') return null;
+        let id = null;
+        if (F.jumpWarn > 0) id = 'jump';
+        else if (F.run) id = 'run';
+        else if (F.surge > 0 && F.styleId === 'dive') id = 'dive';
+        else if (F.perfect && F.call && F.call.key === 'perfect') id = 'perfect';
+        if (!id || S.tips['ev_' + id]) return null;
+        const p = FB.scene.project(F.fishTx, F.fishDist);
+        return { key: 'ev-' + id, point: { x: p.x, y: p.y - FB.scene.unit() * 4 }, block: true, dim: true, wide: true,
+            title: FB.t('tut_ev_' + id + '_t'), text: FB.t('tut_ev_' + id), btns: [[FB.t('tut_got'), 'small', () => { seen('ev_' + id); FB.fishing.release(); }]] };
     }
 
     // Первая встреча с уткой, тенью, огоньком или косяком: «смотри, вот оно»

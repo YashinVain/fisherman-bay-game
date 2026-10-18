@@ -107,7 +107,8 @@
             [FB.t('bites'), depthWord(f.d)],
             [FB.t('weight_range'), U.weight(f.w[0]) + ' – ' + U.weight(f.w[1])],
             [FB.t('likes_bait'), known ? U.esc(FB.name(FB.baitById[f.bait])) : '???'],
-            [FB.t('likes_weather'), known ? (wx.length ? wx.map(w => FB.t('wx_' + w)).join(', ') : FB.t('any_weather')) : '???']
+            [FB.t('likes_weather'), known ? (wx.length ? wx.map(w => FB.t('wx_' + w)).join(', ') : FB.t('any_weather')) : '???'],
+            [FB.t('character'), known ? FB.t('st_' + (f.st || 'calm')) : '???']
         ];
         if (known) {
             facts.push([FB.t('record'), U.weight(a.best)]);

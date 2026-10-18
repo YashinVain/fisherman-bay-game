@@ -44,11 +44,14 @@
         els.lvl = UI.el('button.lvl', { onclick: () => { FB.audio.play('click'); FB.panels.profile(); } });
         els.coins = UI.el('div.pill.coins');
         els.pearls = UI.el('button.pill.pearls', { onclick: () => { FB.audio.play('click'); FB.shopUI.open('pearls'); } });
-        const pills = UI.el('div.pills', {}, [els.coins, els.pearls]);
-        const right = UI.el('div.hud-right', {}, [UI.el('button.round', { html: FB.ic('gear'), onclick: () => { FB.audio.play('click'); FB.panels.settings(); } })]);
+        els.streak = UI.el('button.pill.streak.hidden', { onclick: () => { FB.audio.play('click'); UI.toast(FB.t('streak_info', { n: FB.S.luck, p: Math.round((FB.state.streakMul() - 1) * 100) }), 'sparkle', 3500); } });
+        const pills = UI.el('div.pills', {}, [els.coins, els.pearls, els.streak]);
+        els.aqua = UI.el('button.round.aqua-btn', { title: FB.t('aqua'), html: FB.ic('tank'), onclick: () => { FB.audio.play('click'); FB.aquaUI.open(); } });
+        const right = UI.el('div.hud-right', {}, [els.aqua, UI.el('button.round', { html: FB.ic('gear'), onclick: () => { FB.audio.play('click'); FB.panels.settings(); } })]);
         top.append(els.lvl, pills, right);
 
         els.chip = UI.el('button.tourney-chip', { onclick: () => { FB.audio.play('click'); FB.top.open('week'); } });
+        els.frenzy = UI.el('div.frenzy.hidden');
 
         els.nav = UI.el('div.nav');
         const nav = [
@@ -75,7 +78,7 @@
         els.hint = UI.el('div.hint.soft');
         els.fight = buildFight();
 
-        root.append(top, els.chip, els.nav, els.bait, els.place, els.hint, els.fight);
+        root.append(top, els.chip, els.frenzy, els.nav, els.bait, els.place, els.hint, els.fight);
         H.update();
     };
 
@@ -107,11 +110,15 @@
         els.lvl.innerHTML = '<b>' + S.level + '</b><small>' + FB.t('lvl') + '</small>';
         els.coins.innerHTML = FB.ic('coin') + U.fmt(S.coins);
         els.pearls.innerHTML = FB.ic('pearl') + U.fmt(S.pearls) + '<span class="plus">+</span>';
+        const lk = S.luck || 0;
+        els.streak.classList.toggle('hidden', lk < 2);
+        els.streak.innerHTML = flame() + '<b>' + lk + '</b><small>+' + Math.round((FB.state.streakMul() - 1) * 100) + '%</small>';
         const bait = FB.baitById[S.bait];
         els.bait.innerHTML = FB.ic(bait.icon) + '<span>' + U.esc(FB.name(bait)) + '</span>';
         H.updateChip();
         const n = FB.quests.badge();
         setBadge(els.navBtn.tasks, n);
+        setBadge(els.aqua, FB.aqua.canCollect() ? 1 : 0);
         setBadge(els.navBtn.shop, FB.S.buy.starter ? 0 : (FB.S.stats.catches >= 5 && !H.seenStarter ? 1 : 0));
     };
     function setBadge(btn, n) {
@@ -143,12 +150,14 @@
         hintKey = key;
         if (!els.hint) return;
         // Во время обучения говорит подсказчик (tutor.js), а не эта строка
-        const show = key && !FB.tutor.active() && (key === 'tap_now' || key === 'wait_bite');
+        const show = key && !FB.tutor.active() && (key === 'tap_now' || key === 'wait_bite' || key === 'spin');
         els.hint.className = 'hint' + (key === 'tap_now' ? ' big' : '') + (show ? '' : ' soft');
         if (key) els.hint.textContent = FB.t('hint_' + key);
         if (key === 'hold_reel') els.hint.className = 'hint soft';
     };
 
+    // Огонёк серии удачи
+    const flame = () => '<svg class="ic" viewBox="0 0 48 48"><path d="M24 4c3 8 13 12 13 25a13 13 0 01-26 0c0-6 3-10 6-13 0 5 2 8 5 8-2-7 0-14 2-20z" fill="#ff8a2a" stroke="#2a3550" stroke-width="2.6" stroke-linejoin="round"/><path d="M24 22c2 4 6 6 6 12a6 6 0 01-12 0c0-3 2-5 3-6 0 2 1 3 2 3-1-3 0-6 1-9z" fill="#ffd23a"/></svg>';
     const PLACE_IC = { ducks: 'sparkle', current: 'swap', shadows: 'fish', wisp: 'star', school: 'fish', tide: 'clock' };
 
     // ---------- Каждый кадр ----------
@@ -158,6 +167,14 @@
         const calm = F.phase === 'idle' || F.phase === 'lost';
         els.nav.classList.toggle('away', !calm);
         els.bait.classList.toggle('away', !calm);
+        const fz = FB.events.frenzyOn();
+        els.frenzy.classList.toggle('hidden', !fz);
+        document.body.classList.toggle('frenzy-on', fz);
+        if (fz) {
+            const left = Math.ceil(FB.events.frenzyLeft());
+            const html = FB.ic('fish') + '<span><b>' + FB.t('frenzy') + '</b> ' + FB.t('frenzy_sub') + ' · 0:' + String(left).padStart(2, '0') + '</span>';
+            if (els.frenzy.dataset.h !== html) { els.frenzy.innerHTML = html; els.frenzy.dataset.h = html; }
+        }
         const pc = FB.places.chip();
         els.place.classList.toggle('away', !calm || !pc);
         if (pc) {
@@ -198,6 +215,7 @@
                 const likes = FB.FISH.filter(f => f.bait === b.id && FB.S.album[f.id]).length;
                 const card = UI.el('div.card.item' + (on ? '.on' : ''), { html:
                     '<div class="prev">' + FB.ic(b.icon) + '</div><div class="nm">' + U.esc(FB.name(b)) + '</div>' +
+                    '<div class="mode">' + FB.t('mode_' + (b.mode || 'float')) + '</div>' +
                     '<div class="src">' + FB.t('bait_likes', { n: likes }) + '</div>' });
                 if (owned) card.appendChild(UI.btn(on ? 'small grey' : 'small', on ? FB.t('equipped') : FB.t('take'), () => { FB.S.bait = b.id; FB.state.save(); H.update(); UI.close(); }));
                 else if (FB.S.level < b.level) card.appendChild(UI.btn('small grey off', FB.ic('lock') + FB.t('lvl_n', { n: b.level }), null));

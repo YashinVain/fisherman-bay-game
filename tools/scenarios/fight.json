@@ -1,0 +1,24 @@
+{
+    "steps": [
+        { "size": [1100, 680, 1] },
+        { "open": "http://127.0.0.1:8940/", "wait": 2500 },
+        { "name": "подготовка", "js": "window.__until = (fn, ms) => new Promise(r => { const t = setInterval(() => { if (fn()) { clearInterval(t); r(true); } }, 15); setTimeout(() => { clearInterval(t); r(false); }, ms || 15000); }); document.querySelector('.title .btn').click(); await new Promise(r => setTimeout(r, 600)); FB.ui.closeAll(); const S = FB.S; S.tut = 99; S.tips = { chip: 1, profile: 1, bait: 1, bubbles: 1, drift: 1, pl_ducks: 1, see_ducks: 1, pl_current: 1 }; S.stats.catches = 30; S.luck = 4; S.xp = 3000; S.level = FB.state.levelFromXp(3000); S.rods.push('carbon'); S.rod = 'carbon'; FB.panels.goTo('river'); FB.ui.closeAll(); FB.scene.setPlace('river', 'sun'); FB.hud.update(); window.__fight = (fish, g) => { const F = FB.fishing; F.reset(); F.res = { kind: 'fish', fish: FB.fishById[fish], g }; F.ctx = { pond: 'river', dist: 0.5, bait: 'spinner', rod: FB.rodById.carbon, weather: 'sun', bubble: false }; F.target = { tx: 0.3, dist: 0.45 }; F.phase = 'bite'; F.window = 9; F.press(0, 0); }; return S.luck;", "sleep": 400 },
+        { "name": "подсечка", "js": "__fight('trout', 1500);", "sleep": 350 },
+        { "shot": "f01-perfect-tip.png" },
+        { "name": "дальше", "js": "document.querySelector('.coach .btn').click(); const F = FB.fishing; F.holding = true; F.surgeIn = 99; F.call = null; F.jumpWarn = 0.5; F.say && 0;", "sleep": 300 },
+        { "shot": "f02-jump-tip.png" },
+        { "name": "свечка", "js": "document.querySelector('.coach .btn').click(); FB.fishing.holding = false;", "sleep": 900 },
+        { "shot": "f03-jump.png" },
+        { "name": "камыш", "js": "const F = FB.fishing; await __until(() => F.jump <= 0, 3000); F.surgeIn = 99; F.res = { kind: 'fish', fish: FB.fishById.tench, g: 1500 }; F.style = F.STYLE.snag; F.styleId = 'snag'; F.run = { dir: 1, t: 0, x0: 0 }; F.call = { key: 'run_l', t: 0, warn: true, dur: 2.6 };", "sleep": 400 },
+        { "shot": "f04-run-tip.png" },
+        { "js": "document.querySelector('.coach .btn').click(); FB.fishing.holding = true;", "sleep": 700 },
+        { "shot": "f05-run.png" },
+        { "name": "жор", "js": "FB.fishing.reset(); FB.events.startFrenzy();", "sleep": 900 },
+        { "shot": "f06-frenzy.png" },
+        { "js": "document.querySelector('.coach .btn') && document.querySelector('.coach .btn').click();", "sleep": 700 },
+        { "shot": "f07-frenzy-play.png" },
+        { "size": [540, 960, 2, true] },
+        { "js": "FB.scene.resize(); FB.S.tips.ev_dive = 1; __fight('salmon', 9000); await new Promise(r => setTimeout(r, 300)); const F = FB.fishing; F.surgeIn = 99; F.call = null; F.jumpWarn = 0.01;", "sleep": 600 },
+        { "shot": "f08-phone-jump.png" }
+    ]
+}
