@@ -79,6 +79,9 @@
         els.fight = buildFight();
 
         root.append(top, els.chip, els.frenzy, els.nav, els.bait, els.place, els.hint, els.fight);
+        els.pills = pills; els.right = right;
+        FB.sonar.mount(root);
+        window.addEventListener('resize', placeChip);
         H.update();
     };
 
@@ -116,6 +119,7 @@
         const bait = FB.baitById[S.bait];
         els.bait.innerHTML = FB.ic(bait.icon) + '<span>' + U.esc(FB.name(bait)) + '</span>';
         H.updateChip();
+        placeChip();
         const n = FB.quests.badge();
         setBadge(els.navBtn.tasks, n);
         setBadge(els.aqua, FB.aqua.canCollect() ? 1 : 0);
@@ -127,6 +131,20 @@
             if (!b) { b = UI.el('span.badge'); btn.appendChild(b); }
             b.textContent = n;
         } else if (b) b.remove();
+    }
+
+    // Плашка турнира поднимается в верхнюю строку, если там хватает места
+    // между счётчиками и кнопками справа
+    function placeChip() {
+        const c = els.chip;
+        if (!c || !els.pills) return;
+        let left = 0;
+        [...els.pills.children].forEach(p => { if (!p.classList.contains('hidden')) left = Math.max(left, p.getBoundingClientRect().right); });
+        const right = els.right.getBoundingClientRect().left;
+        const w = c.offsetWidth, mid = innerWidth / 2;
+        const up = w > 0 && mid - w / 2 >= left + 14 && mid + w / 2 <= right - 14;
+        c.classList.toggle('up', up);
+        document.body.classList.toggle('chip-up', up);
     }
 
     // Плашка турнира: где и какая рыба недели, а в месте турнира — мои очки
@@ -142,6 +160,7 @@
                 ? FB.t('my_score') + ': <b>' + U.fmt(FB.state.weekScore()) + '</b> · ' + U.esc(FB.name(fish)) + ' ×2'
                 : U.esc(FB.name(FB.pondById[cfg.pond])) + ' · ' + U.esc(FB.name(fish)) + ' ×2') + '</span></span>' +
             '<span class="fishw"><img src="' + FB.fishArt.url(fish.id, 60) + '" alt=""></span>';
+        placeChip();
     };
 
     // ---------- Подсказки ----------
@@ -161,9 +180,13 @@
     const PLACE_IC = { ducks: 'sparkle', current: 'swap', shadows: 'fish', wisp: 'star', school: 'fish', tide: 'clock' };
 
     // ---------- Каждый кадр ----------
+    let lastT = 0;
     H.frame = () => {
         if (!els.nav) return;
         const F = FB.fishing;
+        const now = performance.now(), dt = Math.min(0.05, (now - (lastT || now)) / 1000);
+        lastT = now;
+        FB.sonar.frame(dt);
         const calm = F.phase === 'idle' || F.phase === 'lost';
         els.nav.classList.toggle('away', !calm);
         els.bait.classList.toggle('away', !calm);

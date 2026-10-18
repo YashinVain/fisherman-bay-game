@@ -958,6 +958,13 @@
         if (Math.random() < 0.5) SC.fx.push({ kind: 'drop', x: p.x + U.rand(-size, size) * 0.3, y, vx: U.rand(-20, 20), vy: U.rand(-10, 30), r: u * 0.4, life: 0, max: 0.5, color: '#e8f8ff', ground: p.y });
     }
 
+    // Доля ожидания поклёвки 0..1 (для эхолота): по времени, а на спиннинге — по игре блесны
+    F.waitK = () => {
+        if (F.phase !== 'wait') return F.phase === 'bite' ? 1 : 0;
+        if (F.mode === 'spin') return F.spin ? U.clamp(F.spin.attract / F.spin.need, 0, 1) : 0;
+        return isFinite(F.biteAt) && F.biteAt > 0 ? U.clamp(T / F.biteAt, 0, 1) : 0;
+    };
+
     F.fightInfo = () => F.phase === 'fight' ? {
         tension: F.tension, progress: F.progress, lo: F.zone.lo, hi: F.zone.hi, surge: F.surge > 0,
         slack: F.slack / F.TUNE.slackMax,

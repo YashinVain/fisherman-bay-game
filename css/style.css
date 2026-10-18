@@ -202,6 +202,15 @@ div.pill { cursor: default; }
 .tourney-chip .fishw { position: relative; flex: none; width: 46px; margin: -8px 0; }
 .tourney-chip .fishw img { width: 46px; height: auto; display: block; }
 .tourney-chip.dim { opacity: .55; }
+.tourney-chip.up { top: calc(12px + var(--safe-t)); }
+.chip-up .toasts { top: calc(84px + var(--safe-t)); }
+.chip-up .frenzy { top: calc(84px + var(--safe-t)); }
+.chip-up.frenzy-on .toasts { top: calc(136px + var(--safe-t)); }
+/* Эхолот — справа, над плашкой места */
+.sonar { position: absolute; right: 14px; bottom: calc(196px + var(--safe-b)); display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: none !important; filter: drop-shadow(0 4px 8px rgba(0,20,50,.35)); }
+.sonar canvas { display: block; border-radius: 50%; }
+.sn-label { max-width: 210px; padding: 4px 12px; border-radius: 12px; background: rgba(6,42,36,.88); color: #bfffe6; font-size: 12px; font-weight: 900; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sn-label.hot { animation: pulse .8s ease-in-out infinite; }
 .tourney-chip.here { background: linear-gradient(rgba(216,147,12,.92), rgba(186,110,8,.92)); }
 
 /* ---------- Нижняя панель ---------- */
@@ -526,6 +535,7 @@ div.pill { cursor: default; }
 .flag.rec { background: linear-gradient(#ffe27a, var(--sun)); color: #6a3a00; }
 .flag.week { background: linear-gradient(#ffb08a, var(--coral)); }
 .flag.tour { background: linear-gradient(var(--sea-l), var(--sea)); }
+.flag.season { background: linear-gradient(#ffe27a, var(--sun-d)); color: #5a3000; text-shadow: none; }
 .flag.miss { background: linear-gradient(#b8c4d0, #8a98a8); }
 .choice { position: relative; z-index: 1; display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
 .choice .btn { flex: 1; min-width: 150px; flex-direction: column; gap: 0; line-height: 1.1; padding: 8px 12px; min-height: 64px; }
@@ -539,9 +549,10 @@ div.pill { cursor: default; }
 @keyframes floatUp { 0% { opacity: 0; transform: translate(-50%, 10px) scale(.6); } 20% { opacity: 1; transform: translate(-50%, 0) scale(1.1); } 100% { opacity: 0; transform: translate(-50%, -60px) scale(1); } }
 
 /* Тост */
-.toasts { position: absolute; top: calc(140px + var(--safe-t)); left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none !important; z-index: 20; }
-.toast { padding: 10px 20px; border-radius: 20px; background: rgba(255,248,234,.97); box-shadow: 0 4px 0 var(--cream-3), 0 8px 18px rgba(0,30,60,.25); font-size: 17px; font-weight: 900; display: flex; align-items: center; gap: 8px; animation: toastIn .4s cubic-bezier(.3,1.6,.5,1); max-width: 92vw; }
-.toast .ic { width: 30px; height: 30px; flex: none; }
+.toasts { position: absolute; top: calc(140px + var(--safe-t)); transition: top .3s; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none !important; z-index: 20; }
+.toast { padding: 7px 16px 7px 10px; border-radius: 16px; background: rgba(255,248,234,.96); box-shadow: 0 3px 0 var(--cream-3), 0 6px 14px rgba(0,30,60,.22); font-size: 14px; line-height: 1.25; font-weight: 800; display: flex; align-items: center; gap: 8px; animation: toastIn .4s cubic-bezier(.3,1.6,.5,1); max-width: min(92vw, 460px); }
+.toast .ic { width: 24px; height: 24px; flex: none; }
+.toast.bump { animation: bump .3s cubic-bezier(.3,1.8,.5,1); }
 .toast.out { animation: fadeOut .3s forwards; }
 @keyframes toastIn { from { transform: translateY(-20px) scale(.8); opacity: 0; } }
 
@@ -807,8 +818,10 @@ div.pill { cursor: default; }
 /* Рыбак сидит слева: подсказки и наживку держим подальше от него */
 @media (orientation: portrait) {
     .hint { bottom: auto; top: calc(132px + var(--safe-t)); }
+    .sonar { bottom: auto; top: calc(140px + var(--safe-t)); right: 10px; }
 }
 @media (orientation: landscape) and (min-width: 760px) {
     .bait-chip { bottom: calc(18px + var(--safe-b)); }
     .place-chip { bottom: calc(70px + var(--safe-b)); }
+    .sonar { bottom: calc(118px + var(--safe-b)); }
 }

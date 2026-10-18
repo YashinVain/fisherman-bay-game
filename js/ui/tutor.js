@@ -34,7 +34,8 @@
         { id: 'tiers', where: 'tasks-season', target: '.sheet .tiers' },
         { id: 'medals', where: 'profile', target: '.sheet .trophies, .sheet .trophies-empty' },
         { id: 'aqua_btn', where: 'main', target: '.hud-right .aqua-btn', cond: (S) => Object.keys(S.album).length >= 3 },
-        { id: 'aqua', where: 'aqua', target: '.sheet .aq-tank' }
+        { id: 'aqua', where: 'aqua', target: '.sheet .aq-tank' },
+        { id: 'sonar', where: 'main', target: '.sonar', cond: () => FB.sonar.has() }
     ];
     // Особенность каждого места — когда игрок впервые там рыбачит
     Object.keys({ village: 1, river: 1, mountain: 1, swamp: 1, pier: 1, lagoon: 1 }).forEach(pond => {

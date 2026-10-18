@@ -1,0 +1,30 @@
+{
+    "steps": [
+        { "size": [1920, 980, 1] },
+        { "open": "http://127.0.0.1:8940/", "wait": 2500 },
+        { "name": "подготовка", "js": "window.__tap = (x, y) => { const o = { clientX: x, clientY: y, bubbles: true, pointerId: 1 }; document.getElementById('game').dispatchEvent(new PointerEvent('pointerdown', o)); window.dispatchEvent(new PointerEvent('pointerup', o)); }; window.__until = (fn, ms) => new Promise(r => { const t = setInterval(() => { if (fn()) { clearInterval(t); r(true); } }, 15); setTimeout(() => { clearInterval(t); r(false); }, ms || 15000); }); document.querySelector('.title .btn').click(); await new Promise(r => setTimeout(r, 600)); FB.ui.closeAll(); const S = FB.S; S.tut = 99; S.tips = { chip: 1, profile: 1, bait: 1, bubbles: 1, drift: 1, pl_current: 1, see_ducks: 1 }; S.stats.catches = 30; S.luck = 3; S.xp = 400; S.level = FB.state.levelFromXp(400); S.owned.push('bt_red', 'bt_raft', 'bt_yacht', 'pet_dog'); S.look.boat = 'bt_red'; FB.panels.goTo('river'); FB.ui.closeAll(); FB.scene.setPlace('river', 'evening'); FB.hud.update(); return document.querySelector('.tourney-chip').classList.contains('up');", "sleep": 800 },
+        { "shot": "s01-sonar-tip.png" },
+        { "name": "уведомления без повторов", "js": "document.querySelector('.coach .btn') && document.querySelector('.coach .btn').click(); for (let i = 0; i < 3; i++) document.querySelector('.place-chip').click(); for (let i = 0; i < 3; i++) document.querySelector('.pill.streak').click(); return document.querySelectorAll('.toast').length;", "sleep": 400 },
+        { "shot": "s02-toasts.png" },
+        { "name": "заброс", "js": "FB.ui.closeAll(); const F = FB.fishing; const p = FB.tutor.castPoint(); __tap(p.x, p.y); await __until(() => F.phase === 'wait'); F.res = { kind: 'fish', fish: FB.fishById.trout, g: 1400 }; await __until(() => F.waitK() > 0.5, 8000); return [F.phase, F.waitK()];", "sleep": 300 },
+        { "shot": "s03-sonar-rare.png" },
+        { "name": "находки", "js": "const F = FB.fishing; F.reset(); const D = FB.drift; D.spawn('bottle', 0.3); D.item.tx = FB.scene.unproject(FB.scene.W * 0.62, FB.scene.project(0, 0.3).y).tx; D.item.t = 3;", "sleep": 600 },
+        { "shot": "s04-bottle.png", "clip": [900, 450, 700, 400, 1] },
+        { "js": "const D = FB.drift; D.spawn('duck', 0.25); D.item.tx = FB.scene.unproject(FB.scene.W * 0.62, FB.scene.project(0, 0.25).y).tx; D.item.t = 3;", "sleep": 500 },
+        { "shot": "s05-duck.png", "clip": [900, 450, 700, 400, 1] },
+        { "js": "FB.S.look.boat = 'bt_yacht'; const D = FB.drift; D.spawn('chest', 0.25); D.item.tx = FB.scene.unproject(FB.scene.W * 0.62, FB.scene.project(0, 0.25).y).tx; D.item.t = 3;", "sleep": 500 },
+        { "shot": "s06-chest.png", "clip": [900, 450, 700, 400, 1] },
+        { "js": "const D = FB.drift; D.spawn('shell', 0.25); D.item.tx = FB.scene.unproject(FB.scene.W * 0.62, FB.scene.project(0, 0.25).y).tx; D.item.t = 3;", "sleep": 500 },
+        { "shot": "s07-shell.png", "clip": [900, 450, 700, 400, 1] },
+        { "name": "яхта: эхолот с весом", "js": "FB.drift.item = null; const F = FB.fishing; const p = FB.tutor.castPoint(); __tap(p.x, p.y); await __until(() => F.phase === 'wait'); F.res = { kind: 'fish', fish: FB.fishById.chub, g: 2350 }; await __until(() => F.waitK() > 0.5, 8000);", "sleep": 300 },
+        { "shot": "s08-yacht.png" },
+        { "name": "карточка улова", "js": "FB.fishing.reset(); FB.catchCard.show({ kind: 'fish', fish: FB.fishById.chub, g: 2350 }, { pond: 'river', dist: 0.5, bait: 'worm', rod: FB.rodById.bamboo, weather: 'evening', bubble: false });", "sleep": 1400 },
+        { "shot": "s09-card.png" },
+        { "size": [1100, 680, 1] },
+        { "js": "FB.ui.closeAll(); FB.scene.resize(); FB.hud.update(); window.dispatchEvent(new Event('resize'));", "sleep": 700 },
+        { "shot": "s10-narrow.png" },
+        { "size": [540, 960, 2, true] },
+        { "js": "FB.scene.resize(); window.dispatchEvent(new Event('resize')); FB.S.look.boat = 'bt_raft'; const F = FB.fishing; const p = FB.tutor.castPoint(); __tap(p.x, p.y); await __until(() => F.phase === 'wait'); F.res = { kind: 'junk', junk: FB.JUNK[0] }; await __until(() => F.waitK() > 0.5, 8000);", "sleep": 300 },
+        { "shot": "s11-phone-raft.png" }
+    ]
+}

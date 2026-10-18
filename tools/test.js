@@ -233,6 +233,7 @@ FB.tourney.checkWeek().then(r => {
     excitementChecks();
     modeChecks();
     aquaChecks();
+    sonarChecks();
     finish();
 });
 
@@ -473,6 +474,36 @@ function excitementChecks() {
     ok(E.frenzyOn() && E.frenzyLeft() > 30, 'жор начался');
     for (let t = 0; t < E.FRENZY_LEN + 1; t += 0.5) E.update(0.5);
     ok(!E.frenzyOn(), 'жор кончается');
+}
+
+// ---------- Эхолот и находки ----------
+function sonarChecks() {
+    section('Эхолот');
+    const code = fs.readFileSync(path.join(ROOT, 'js/ui/sonar.js'), 'utf8');
+    vm.runInContext(code, sandbox, { filename: 'sonar.js' });
+    const SN = FB.sonar;
+    const keepBoat = FB.person.boatType;
+    FB.person.boatType = () => 'pier';
+    ok(!SN.has(), 'с мостков эхолота нет');
+    FB.person.boatType = () => 'raft';
+    ok(SN.level() === 1, 'на плоту — простой эхолот');
+    const big = { kind: 'fish', fish: FB.fishById.catfish, g: 40000 }, small = { kind: 'fish', fish: FB.fishById.bleak, g: 15 };
+    ok(SN.read(big, 1).text !== SN.read(small, 1).text, 'плот отличает крупную рыбу от мелочи');
+    ok(SN.read({ kind: 'junk', junk: FB.JUNK[0] }, 1).junk, 'эхолот видит мусор');
+    ok(SN.read(big, 2).text.indexOf(FB.t('r_epic')) === 0, 'лодка показывает редкость');
+    ok(SN.read(big, 3).text.indexOf('~') > 0, 'яхта показывает и вес');
+    FB.person.boatType = keepBoat;
+    // Находки плывут через весь экран и не исчезают посреди воды
+    const D = FB.drift;
+    const keepP = FB.scene.project, keepU = FB.scene.unproject;
+    FB.scene.project = (tx, dist) => ({ x: 500 + tx * 400, y: 400 + dist * 100, s: 1 });
+    FB.scene.unproject = (x, y) => ({ tx: (x - 500) / 400, dist: (y - 400) / 100 });
+    const it = D.spawn('bottle', 0.3);
+    ok(FB.scene.project(it.tx, it.dist).x > FB.scene.W && FB.scene.project(it.t1, 0.3).x < 0, 'находка появляется и уплывает за краем экрана');
+    ok(Math.abs((it.t1 - it.tx) / it.v - D.CROSS) < 1e-6, 'плывёт с постоянной скоростью');
+    FB.scene.project = keepP; FB.scene.unproject = keepU;
+    D.item = null;
+    ok(['bottle', 'duck', 'shell', 'chest'].every(k => typeof D.ART[k] === 'function'), 'у каждой находки своя картинка');
 }
 
 // ---------- Аквариум ----------

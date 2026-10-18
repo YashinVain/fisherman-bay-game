@@ -97,12 +97,21 @@
 
     // ---------- Сообщения ----------
     let toastBox = null;
+    // Одинаковое сообщение не повторяем: если оно уже на экране — просто продлеваем
     UI.toast = (text, icon, ms) => {
         if (!toastBox) { toastBox = UI.el('div.toasts'); UI.root().appendChild(toastBox); }
+        const hide = (t) => { clearTimeout(t._timer); t._timer = setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 300); }, ms || 2200); };
+        const same = [...toastBox.children].find(t => t.dataset.text === text && !t.classList.contains('out'));
+        if (same) {
+            same.classList.remove('bump'); void same.offsetWidth; same.classList.add('bump');
+            hide(same);
+            return;
+        }
         const t = UI.el('div.toast', { html: (icon ? FB.ic(icon) : '') + '<span>' + U.esc(text) + '</span>' });
+        t.dataset.text = text;
         toastBox.appendChild(t);
-        while (toastBox.children.length > 3) toastBox.firstChild.remove();
-        setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 300); }, ms || 2200);
+        while (toastBox.children.length > 2) toastBox.firstChild.remove();
+        hide(t);
     };
 
     // Всплывающее «+25» в точке экрана

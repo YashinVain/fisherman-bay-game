@@ -147,6 +147,8 @@
             str = str || 0.4;
             for (let i = 0; i < 2 + Math.round(str * 3); i++) noise(0.12, { freq: rnd(900, 1600), to: 400, vol: 0.08 + str * 0.12, delay: i * rnd(0.08, 0.14) });
         },
+        // Эхолот узнал рыбу: «пинг», у редкой — двойной и выше
+        sonar: (order) => { const f = 1200 + Math.max(0, order || 0) * 180; tone(f, 0.35, { type: 'sine', vol: 0.1 }); if (order >= 2) tone(f * 1.25, 0.35, { type: 'sine', vol: 0.09, delay: 0.16 }); },
         // Колокольчик донки: тихий на пробе, громкий на поклёвке
         bell: (k) => { k = k || 1; const f = rnd(1900, 2100); tone(f, 0.5, { type: 'sine', vol: 0.12 * k }); tone(f * 2.76, 0.3, { type: 'sine', vol: 0.05 * k }); if (k > 0.8) tone(f * 1.02, 0.5, { type: 'sine', vol: 0.1, delay: 0.14 }); },
         // Рывок блесной

@@ -60,6 +60,7 @@
             (pv.isWeekFish ? '<span class="flag week" style="animation-delay:.5s">' + FB.t('week_fish_x2') + '</span>' : '') +
             (pv.inTourney && pv.weekGain > 0 ? '<span class="flag tour" style="animation-delay:.6s">' + FB.t('tourney_plus', { n: pv.weekGain }) + '</span>' : '') +
             (pv.inTourney && pv.weekGain <= 0 ? '<span class="flag miss" style="animation-delay:.6s">' + FB.t('tourney_miss', { n: U.fmt(pv.weekMin) }) + '</span>' : '') +
+            '<span class="flag season" style="animation-delay:.7s">' + FB.t('season_plus', { n: U.fmt(pv.pts) }) + '</span>' +
             '</div>' +
             '<div class="stats">' +
             '<div class="stat"><b>' + U.weight(res.g) + '</b><small>' + FB.t('weight') + '</small></div>' +
