@@ -131,6 +131,11 @@
         topRow.appendChild(UI.el('div', { html: '<div class="nm">' + U.esc(name) + (S.buy.supporter ? ' ' + FB.ic('heart').replace('class="ic"', 'class="ic" style="width:22px;height:22px;vertical-align:-4px"') : '') + '</div>' +
             '<div class="muted">' + FB.t('lvl_n', { n: S.level }) + ' · ' + FB.t('fame') + ': ' + U.fmt(FB.state.fame()) + '</div>' }));
         body.appendChild(topRow);
+        const sc = document.createElement('canvas');
+        sc.width = 640; sc.height = 300;
+        sc.className = 'pl-scene';
+        FB.person.showcase(sc, S.look, S.who);
+        body.appendChild(sc);
         body.appendChild(UI.el('div.progress.gold', { html: '<i style="width:' + Math.round(FB.state.levelProgress() * 100) + '%"></i><span>' + FB.t('to_next_level') + '</span>' }));
         const best = S.stats.bestId ? FB.fishById[S.stats.bestId] : null;
         const species = Object.keys(S.album).length;
@@ -151,6 +156,47 @@
                 '<div class="trophy">' + FB.ic('medal', colors[t.kind] || '#9cd4f4') + '<div>' + FB.t('place_n', { n: t.rank }) + '</div><div class="muted">' + FB.t('week_n', { n: t.idx - FB.week.index(Date.UTC(2026, 9, 19)) + 1 }) + '</div></div>').join('') }));
         } else body.appendChild(UI.el('p.muted.trophies-empty', { text: FB.t('no_trophies') }));
         UI.open({ title: FB.t('profile'), body, width: 'min(96vw, 560px)', tip: 'profile' });
+    };
+
+    // ---------- Профиль игрока из топа ----------
+    // d = { name, avatar, rank, me, ex (разобранный extraData) }. Свой профиль — из сохранения
+    PN.player = (d) => {
+        const S = FB.S;
+        const ex = d.me ? FB.tourney.parseExtra(FB.tourney.extra(true)) : d.ex;
+        const body = UI.el('div.player');
+        const head = UI.el('div.pl-head');
+        const ava = UI.avatar(d.name, d.avatar, ex.frame);
+        head.appendChild(ava);
+        head.appendChild(UI.el('div', { html: '<div class="nm' + (ex.supporter ? ' sup' : '') + '">' + U.esc(d.name || FB.t('hidden_angler')) +
+            (ex.supporter ? FB.ic('heart').replace('class="ic"', 'class="ic heart"') : '') + '</div>' +
+            (ex.supporter ? '<div class="badge-sup">' + FB.t('supporter_badge') + '</div>' : '') +
+            (d.rank ? '<div class="muted">' + FB.t('place_n', { n: d.rank }) + (d.board ? ' · ' + FB.t('lb_' + d.board) : '') + '</div>' : '') }));
+        body.appendChild(head);
+        // Рыбак в своём наряде
+        const c = document.createElement('canvas');
+        c.width = 640; c.height = 360;
+        c.className = 'pl-scene';
+        const look = ex.look || { who: 'boy', look: FB.DEFAULT_LOOK };
+        FB.person.showcase(c, Object.assign({}, look.look, { frame: ex.frame }), look.who);
+        body.appendChild(c);
+        // Что надето
+        const worn = ['hat', 'jacket', 'boat', 'pet'].map(k => look.look[k]).filter(id => id && FB.cosById[id] && FB.cosById[id].src !== 'default')
+            .concat(ex.frame !== 'fr_none' ? [ex.frame] : []);
+        if (worn.length) body.appendChild(UI.el('div.pl-worn', { html: worn.map(id => '<span' + (FB.cosById[id].cost && FB.cosById[id].cost.pearls || ['pass', 'captain', 'starter', 'tourney', 'supporter', 'legend'].includes(FB.cosById[id].src) ? ' class="rare"' : '') + '>' + U.esc(FB.name(FB.cosById[id])) + '</span>').join('') }));
+        // Статистика
+        const st = ex.stats;
+        if (st) {
+            const best = st.bestId ? FB.fishById[st.bestId] : null;
+            body.appendChild(UI.el('div.stats-grid', { html: [
+                [FB.t('lvl'), st.level], [FB.t('st_catches'), U.fmt(st.catches)], [FB.t('st_species'), st.species + ' / ' + FB.FISH.length]
+            ].map(([k, v]) => '<div class="stat"><b style="font-size:18px">' + v + '</b><small>' + k + '</small></div>').join('') }));
+            if (best) body.appendChild(UI.el('div.pl-best', { html: '<img src="' + FB.fishArt.url(best.id, 110) + '" alt=""><div><div class="k">' + FB.t('aq_record') + '</div><div class="v">' + U.esc(FB.name(best)) + ' · ' + U.weight(st.bestG) + '</div></div>' }));
+            if (ex.big) {
+                const bf = FB.fishById[ex.big.f];
+                body.appendChild(UI.el('div.pl-best.week', { html: '<img src="' + FB.fishArt.url(bf.id, 110) + '" alt=""><div><div class="k">' + FB.t('big_catch') + '</div><div class="v">' + U.esc(FB.name(bf)) + ' · ' + U.weight(ex.big.g) + '</div></div>' }));
+            }
+        } else body.appendChild(UI.el('p.muted.center', { text: FB.t('pl_no_stats') }));
+        UI.open({ title: d.me ? FB.t('profile') : FB.t('pl_title'), body, width: 'min(94vw, 440px)' });
     };
 
     // ---------- Настройки ----------

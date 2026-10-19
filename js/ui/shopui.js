@@ -99,7 +99,7 @@
             const prev = UI.el('div.prev');
             if (item.cat === 'frame') {
                 const a = UI.avatar(FB.sdk.playerName() || FB.t('angler'), FB.sdk.playerPhoto(), item.id);
-                a.style.width = a.style.height = '58px';
+                a.style.width = a.style.height = '66px';
                 prev.appendChild(a);
             } else {
                 const c = document.createElement('canvas');
@@ -131,44 +131,100 @@
         return '<span class="price">' + U.esc(c.price) + (c.icon ? ' <img src="' + U.esc(c.icon) + '" alt="">' : ' ' + FB.t('yan')) + '</span>';
     }
 
+    // Вкладка «Жемчуг»: наборы, жемчуг, без рекламы, пропуск, что за него купить
+    // и бонусы поддержки. Всё за жемчуг — только для красоты
     function pearls() {
-        const box = UI.el('div');
+        const box = UI.el('div.pearl-shop');
         const S = FB.S;
-        if (!FB.sdk.paymentsAvailable()) {
-            box.appendChild(UI.el('div.notice', { text: FB.t('pay_unavailable') }));
+        box.appendChild(UI.el('div.pr-banner', { html:
+            '<div class="pr-pile">' + pearlPile(2) + '</div>' +
+            '<div><div class="t">' + FB.t('pr_title') + '</div><div class="s">' + FB.t('pr_sub') + '</div></div>' }));
+        if (!FB.sdk.paymentsAvailable()) box.appendChild(UI.el('div.notice', { text: FB.t('pay_unavailable') }));
+
+        // Наборы: капитана (всегда сверху, пока не куплен) и новичка
+        const packs = ['captain', 'starter'].filter(id => !S.buy[id]);
+        if (packs.length) {
+            box.appendChild(UI.el('div.sec-title', { html: FB.ic('gift') + FB.t('pr_packs') }));
+            packs.forEach(id => box.appendChild(packCard(FB.productById[id])));
         }
-        const grid = UI.el('div.grid');
-        // Набор новичка — один раз, выгодно, сверху
-        if (!S.buy.starter) {
-            const p = FB.productById.starter;
-            const card = UI.el('div.card.product.wide');
-            const pv = UI.el('div', { style: 'display:flex;gap:4px;flex:none' });
-            p.items.forEach(id => { const c = document.createElement('canvas'); c.width = 144; c.height = 120; c.style.width = '72px'; c.style.height = '60px'; FB.person.preview(c, FB.cosById[id]); pv.appendChild(c); });
-            card.appendChild(pv);
-            card.appendChild(UI.el('div.txt', { html: '<div class="nm">' + U.esc(FB.name(p)) + '</div><div class="muted">' + p.items.map(id => U.esc(FB.name(FB.cosById[id]))).join(' + ') + ' + ' + p.pearls + ' ' + FB.t('pearls_word') + '</div>' }));
-            card.appendChild(UI.btn('coral small', realPrice(p.id), () => buy(p.id)));
-            card.appendChild(UI.el('div.tagline', { text: FB.t('once') }));
-            grid.appendChild(card);
-        }
+
+        // Жемчуг
+        box.appendChild(UI.el('div.sec-title', { html: FB.ic('pearl') + FB.t('shop_pearls') }));
+        const grid = UI.el('div.grid.pr-grid');
+        const base = FB.productById.pearls_s.pearls / FB.productById.pearls_s.price;
         ['pearls_s', 'pearls_m', 'pearls_l'].forEach((id, i) => {
             const p = FB.productById[id];
-            const card = UI.el('div.card.product', { html:
-                '<div class="big-ic">' + pearlPile(i) + '</div><div class="amount">' + p.pearls + '</div><div class="nm">' + U.esc(FB.name(p)) + '</div>' });
+            const bonus = Math.round(((p.pearls / p.price) / base - 1) * 10) * 10;
+            const card = UI.el('div.card.product.pr-pack.p' + i, { html:
+                '<div class="big-ic">' + pearlPile(i) + '</div><div class="amount">' + p.pearls + '</div><div class="nm">' + U.esc(FB.name(p)) + '</div>' +
+                (bonus > 0 ? '<div class="bonus">+' + bonus + '% ' + FB.t('pr_bonus') + '</div>' : '') });
             card.appendChild(UI.btn('violet small', realPrice(p.id), () => buy(p.id)));
             if (p.tag) card.appendChild(UI.el('div.tagline', { text: FB.t('tag_' + p.tag) }));
             grid.appendChild(card);
         });
-        // Без рекламы
-        const na = UI.el('div.card.product.wide', { html: '<div class="big-ic" style="width:64px;height:64px">' + FB.ic('video') + '</div><div class="txt"><div class="nm">' + FB.t('no_ads') + '</div><div class="muted">' + FB.t('no_ads_desc') + '</div></div>' });
-        na.appendChild(S.buy.noAds ? UI.el('span.owned', { html: FB.ic('check') + FB.t('bought') }) : UI.btn('blue small', realPrice('no_ads'), () => buy('no_ads')));
-        grid.appendChild(na);
-        // Золотой пропуск — ведёт в задания
-        const gp = UI.el('div.card.product.wide', { html: '<div class="big-ic" style="width:64px;height:64px">' + FB.ic('crown') + '</div><div class="txt"><div class="nm">' + FB.t('golden_pass') + '</div><div class="muted">' + FB.t('golden_pass_desc') + '</div></div>' });
-        gp.appendChild(S.season.pass ? UI.el('span.owned', { html: FB.ic('check') + FB.t('bought') }) : UI.btn('yellow small', FB.t('look_at'), () => { UI.close(); FB.tasks.open('season'); }));
-        grid.appendChild(gp);
         box.appendChild(grid);
+
+        // Без рекламы и пропуск
+        const more = UI.el('div.grid');
+        const na = UI.el('div.card.product.wide', { html: '<div class="big-ic" style="width:56px;height:56px">' + FB.ic('video') + '</div><div class="txt"><div class="nm">' + FB.t('no_ads') + '</div><div class="muted">' + FB.t('no_ads_desc') + '</div></div>' });
+        na.appendChild(S.buy.noAds ? UI.el('span.owned', { html: FB.ic('check') + FB.t('bought') }) : UI.btn('blue small', realPrice('no_ads'), () => buy('no_ads')));
+        more.appendChild(na);
+        const gp = UI.el('div.card.product.wide.gold-card', { html: '<div class="big-ic" style="width:56px;height:56px">' + FB.ic('crown') + '</div><div class="txt"><div class="nm">' + FB.t('golden_pass') + '</div><div class="muted">' + FB.t('golden_pass_desc') + '</div></div>' });
+        gp.appendChild(S.season.pass ? UI.el('span.owned', { html: FB.ic('check') + FB.t('bought') }) : UI.btn('yellow small', FB.t('look_at'), () => { UI.close(); FB.tasks.open('season'); }));
+        more.appendChild(gp);
+        box.appendChild(more);
+
+        // Что купить за жемчуг — витрина
+        box.appendChild(UI.el('div.sec-title', { html: FB.ic('sparkle') + FB.t('pr_spend') }));
+        const row = UI.el('div.pr-show');
+        ['fr_fire', 'fr_crystal', 'fr_stars', 'pet_raccoon', 'jk_hawaii', 'hat_captain'].forEach(id => {
+            const item = FB.cosById[id];
+            const cell = UI.el('button.pr-item', { onclick: () => { FB.audio.play('click'); tab = 'look'; cat = item.cat; UI.refresh(); } });
+            if (item.cat === 'frame') {
+                const av = UI.avatar(FB.sdk.playerName() || FB.t('angler'), FB.sdk.playerPhoto(), id);
+                cell.appendChild(UI.el('div.pv', {}, [av]));
+            } else {
+                const c = document.createElement('canvas');
+                c.width = 144; c.height = 120;
+                FB.person.preview(c, item);
+                cell.appendChild(UI.el('div.pv', {}, [c]));
+            }
+            cell.appendChild(UI.el('div.nm', { text: FB.name(item) }));
+            cell.appendChild(UI.el('div.pr', { html: S.owned.includes(id) ? FB.ic('check') : UI.price(item.cost) }));
+            row.appendChild(cell);
+        });
+        box.appendChild(row);
+
+        // Бонусы поддержки
+        box.appendChild(UI.el('div.pr-perks', { html:
+            '<div class="t">' + FB.ic('heart') + FB.t('pr_perks_t') + (S.buy.supporter ? '<span class="have">' + FB.ic('check') + FB.t('pr_have') + '</span>' : '') + '</div>' +
+            ['pr_perk1', 'pr_perk2', 'pr_perk3', 'pr_perk4'].map(k => '<div class="p">' + FB.t(k) + '</div>').join('') }));
         box.appendChild(UI.el('p.muted.center', { text: FB.t('pearls_note'), style: 'font-size:13px;margin-top:12px' }));
         return box;
+    }
+
+    // Карточка набора: картинки вещей, что внутри и цена
+    function packCard(p) {
+        const card = UI.el('div.card.pack' + (p.id === 'captain' ? '.gold' : ''));
+        const pv = UI.el('div.pk-items');
+        p.items.forEach(id => {
+            const item = FB.cosById[id];
+            if (item.cat === 'frame') pv.appendChild(UI.el('div.pk-it', {}, [UI.avatar(FB.sdk.playerName() || FB.t('angler'), FB.sdk.playerPhoto(), id)]));
+            else {
+                const c = document.createElement('canvas');
+                c.width = 144; c.height = 120;
+                FB.person.preview(c, item);
+                pv.appendChild(UI.el('div.pk-it', {}, [c]));
+            }
+        });
+        pv.appendChild(UI.el('div.pk-it.pearls', { html: pearlPile(1) + '<b>+' + p.pearls + '</b>' }));
+        card.appendChild(UI.el('div.pk-head', { html: '<div class="nm">' + U.esc(FB.name(p)) + '</div><div class="muted">' + FB.t('pk_' + p.id) + '</div>' }));
+        card.appendChild(pv);
+        card.appendChild(UI.el('div.pk-list', { text: p.items.map(id => FB.name(FB.cosById[id])).join(' · ') + ' · ' + p.pearls + ' ' + FB.t('pearls_word') }));
+        const foot = UI.el('div.pk-foot', { html: '<span class="once">' + FB.t('once') + '</span>' });
+        foot.appendChild(UI.btn(p.id === 'captain' ? 'yellow' : 'coral', realPrice(p.id), () => buy(p.id)));
+        card.appendChild(foot);
+        return card;
     }
 
     function pearlPile(n) {

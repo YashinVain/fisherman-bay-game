@@ -1,0 +1,29 @@
+{
+    "steps": [
+        { "size": [1920, 980, 1] },
+        { "open": "http://127.0.0.1:8940/", "wait": 2500 },
+        { "name": "подготовка", "js": "document.querySelector('.title .btn').click(); await new Promise(r => setTimeout(r, 600)); FB.ui.closeAll(); const S = FB.S; S.tut = 99; S.tips = { chip: 1, profile: 1, bait: 1, bubbles: 1, drift: 1, pl_ducks: 1, see_ducks: 1, top: 1, shop: 1, rods: 1, look: 1, medals: 1, sonar: 1, aqua_btn: 1 }; S.stats.catches = 60; S.luck = 7; S.xp = 1200; S.level = FB.state.levelFromXp(1200); S.coins = 9000; S.pearls = 400; S.owned.push('bt_red', 'fr_fire', 'jk_hawaii', 'hat_captain'); S.look.boat = 'bt_red'; S.look.frame = 'fr_fire'; S.look.jacket = 'jk_hawaii'; S.look.hat = 'hat_captain'; S.who = 'girl'; FB.panels.goTo('village'); FB.ui.closeAll(); FB.scene.setPlace('village', 'sun'); FB.hud.update(); return document.querySelector('.tourney-chip').className;", "sleep": 700 },
+        { "shot": "x01-chip-not-here.png" },
+        { "name": "жор и ошибка", "js": "FB.events.startFrenzy(); await new Promise(r => setTimeout(r, 300)); for (let i = 0; i < 3; i++) FB.ui.toast(FB.t('too_far'), 'info'); return document.querySelectorAll('.toast').length;", "sleep": 400 },
+        { "shot": "x02-frenzy-toast.png" },
+        { "name": "итоги недели", "js": "FB.ui.closeAll(); const idx = FB.state.weekIdx() - 1; const r = { idx, rank: 16, pts: 265, reward: FB.tourney.rewardFor(16) }; FB.S.lastResult = r; FB.catchCard.weekResult(r);", "sleep": 900 },
+        { "shot": "x03-week-result.png" },
+        { "name": "топ прошлой недели", "js": "document.querySelector('.wr-btns .btn').click();", "sleep": 1500 },
+        { "shot": "x04-top-last.png" },
+        { "name": "профиль игрока", "js": "document.querySelectorAll('.lb-row')[1].click();", "sleep": 1000 },
+        { "shot": "x05-player.png" },
+        { "name": "свой профиль", "js": "FB.ui.closeAll(); FB.panels.profile();", "sleep": 900 },
+        { "shot": "x06-my-profile.png" },
+        { "name": "жемчуг", "js": "FB.ui.closeAll(); FB.shopUI.open('pearls');", "sleep": 1200 },
+        { "shot": "x07-pearls.png" },
+        { "js": "document.querySelector('.sheet .sheet-body').scrollTop = 700;", "sleep": 500 },
+        { "shot": "x08-pearls-2.png" },
+        { "name": "рамки", "js": "FB.ui.closeAll(); FB.shopUI.open('look'); await new Promise(r => setTimeout(r, 300)); const tabs = document.querySelectorAll('.sheet .tabs')[1].querySelectorAll('.tab'); tabs[6].click();", "sleep": 1200 },
+        { "shot": "x09-frames.png" },
+        { "js": "document.querySelector('.sheet .sheet-body').scrollTop = 500;", "sleep": 500 },
+        { "shot": "x10-frames-2.png" },
+        { "size": [540, 960, 2, true] },
+        { "js": "FB.ui.closeAll(); FB.scene.resize(); window.dispatchEvent(new Event('resize')); FB.top.open('anglers'); await new Promise(r => setTimeout(r, 1200)); document.querySelectorAll('.lb-row')[0].click();", "sleep": 1000 },
+        { "shot": "x11-phone-player.png" }
+    ]
+}

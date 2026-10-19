@@ -195,8 +195,9 @@
         bottle(ctx, s) {
             const lw = Math.max(1.2, s * 0.035);
             ctx.save();
-            ctx.rotate(-0.28);
-            ctx.translate(0, -s * 0.12);
+            // Бутылка лежит на воде: наполовину в воде, горлышко чуть приподнято
+            ctx.rotate(-0.16);
+            ctx.translate(0, s * 0.03);
             const L = s * 0.95, R = s * 0.2;
             const g = ctx.createLinearGradient(0, -R, 0, R);
             g.addColorStop(0, 'rgba(150,230,170,0.92)'); g.addColorStop(0.5, 'rgba(70,170,110,0.85)'); g.addColorStop(1, 'rgba(30,110,70,0.9)');

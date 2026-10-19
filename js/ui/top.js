@@ -1,43 +1,68 @@
 // top.js — окно «Топ»: турнир недели, слава рыбака за всё время, рыба-рекорд.
 // Рядом с именами видны рамки и сердечки поддержки — это то, ради чего
 // приятно наряжаться в магазине. Таблица открывается сразу на твоём месте,
-// а к первому месту можно долистать кнопкой.
+// а к первому месту можно долистать кнопкой. На любого рыбака можно нажать —
+// откроется его профиль: наряд, лодка, питомец и статистика. У турнира есть
+// переключатель «эта неделя / прошлая неделя».
 
 (function (FB) {
     const TP = FB.top = {};
     const UI = FB.ui, U = FB.U;
-    let tab = 'week';
+    let tab = 'week', week = 'now';
 
-    TP.open = (which) => {
+    // which — вкладка; opts.last — сразу показать прошлую неделю
+    TP.open = (which, opts) => {
         tab = which || tab;
+        week = opts && opts.last ? 'last' : 'now';
         const render = () => {
             const box = UI.el('div');
             const tabs = UI.tabs([['week', FB.t('lb_week')], ['anglers', FB.t('lb_anglers')], ['record', FB.t('lb_record')]], tab, (id) => { tab = id; UI.refresh(); });
             box.appendChild(tabs);
-            if (tab === 'week') box.appendChild(weekHead());
+            if (tab === 'week') {
+                // Эта неделя / прошлая неделя
+                const seg = UI.el('div.seg.wk-seg');
+                [['now', FB.t('wk_now')], ['last', FB.t('wk_last')]].forEach(([id, label]) => seg.appendChild(UI.el('button' + (week === id ? '.on' : ''), { text: label, onclick: () => { FB.audio.play('click'); week = id; UI.refresh(); } })));
+                box.appendChild(seg);
+                box.appendChild(week === 'last' ? lastHead() : weekHead());
+            }
             else box.appendChild(UI.el('div.lb-desc', { html: FB.ic(tab === 'record' ? 'fish' : 'star') + '<span>' + FB.t('lb_desc_' + tab) + '</span>' }));
             const mine = UI.el('div.lb-me-card.hidden');
             const big = UI.el('div.lb-big.hidden');
             const list = UI.el('div.lb-list', { html: '<div class="notice">' + FB.t('loading') + '</div>' });
             // Сначала моё место и таблица, ниже — главный улов и правила
-            if (tab === 'week') box.append(mine, list, big, weekRules());
+            if (tab === 'week' && week === 'last') box.append(mine, list, big);
+            else if (tab === 'week') box.append(mine, list, big, weekRules());
             else box.appendChild(list);
             if (FB.sdk.mock) box.appendChild(UI.el('p.lb-mock', { text: FB.t('mock_top') }));
-            if (tab === 'week') myCard(mine, 0);
+            if (tab === 'week') (week === 'last' ? lastCard : myCard)(mine, 0);
             fill(list, mine, big);
             return box;
         };
         UI.open({ title: FB.t('nav_top'), body: render(), render, width: 'min(96vw, 560px)', tip: 'top' });
     };
 
+    // Прошлая неделя: где был турнир и чем всё кончилось
+    function lastHead() {
+        const idx = FB.state.weekIdx() - 1, cfg = FB.week.config(idx), fish = FB.fishById[cfg.fish];
+        return UI.el('div.lb-head.last', { html:
+            '<img src="' + FB.fishArt.url(fish.id, 120) + '" alt="">' +
+            '<div><div class="k">' + FB.t('wk_was') + '</div><div class="v">' + U.esc(FB.name(FB.pondById[cfg.pond])) + '</div>' +
+            '<div class="k" style="margin-top:4px">' + FB.t('fish_of_week') + '</div><div class="v">' + U.esc(FB.name(fish)) + ' ×2</div></div>' +
+            '<div class="time"><div class="k">' + FB.t('wk_done') + '</div><div class="v">' + FB.ic('trophy').replace('class="ic"', 'class="ic" style="width:30px;height:30px"') + '</div></div>' });
+    }
+    function lastCard(el) {
+        const r = FB.S.lastResult, idx = FB.state.weekIdx() - 1;
+        el.classList.remove('hidden');
+        const mine = r && r.idx === idx ? r : null;
+        el.innerHTML =
+            '<div class="cell"><div class="k">' + FB.t('my_place') + '</div><div class="v">' + (mine && mine.rank ? '#' + mine.rank : '—') + '</div></div>' +
+            '<div class="cell"><div class="k">' + FB.t('my_points') + '</div><div class="v">' + (mine ? U.fmt(mine.pts) : '—') + '</div></div>' +
+            '<div class="note">' + (mine ? FB.t('wk_final') : FB.t('wk_not_played')) + '</div>';
+    }
+
     function weekHead() {
         const box = UI.el('div');
         const S = FB.S;
-        if (S.lastResult && S.lastResult.idx === FB.state.weekIdx() - 1) {
-            const r = S.lastResult;
-            box.appendChild(UI.el('div.result-banner', { html: FB.ic('medal', r.rank && r.rank <= 3 ? '#ffd23a' : '#9cd4f4') +
-                '<div><b>' + FB.t('last_week') + '</b><div>' + (r.rank ? FB.t('place_n', { n: r.rank }) + ' · ' : '') + FB.t('week_points', { n: U.fmt(r.pts) }) + '</div></div>' }));
-        }
         const cfg = FB.state.weekCfg();
         const fish = FB.fishById[cfg.fish];
         box.appendChild(UI.el('div.lb-head', { html:
@@ -102,7 +127,8 @@
             list.appendChild(n);
         }
         const cfg = FB.state.weekCfg();
-        const board = tab === 'week' ? FB.week.board(cfg.idx) : tab;
+        const idx = tab === 'week' && week === 'last' ? cfg.idx - 1 : cfg.idx;
+        const board = tab === 'week' ? FB.week.board(idx) : tab;
         FB.tourney.submit();
         const data = await FB.sdk.getEntries(board);
         if (!list.isConnected) return;
@@ -112,11 +138,11 @@
         }
         let entries = data.entries;
         // В недельной доске остаются записи прошлых недель — показываем только эту
-        if (tab === 'week') entries = entries.filter(e => FB.week.decode(e.score).idx === cfg.idx);
+        if (tab === 'week') entries = entries.filter(e => FB.week.decode(e.score).idx === idx);
         const keepNotice = list.querySelector('.notice') && !FB.sdk.isAuthorized();
         if (!keepNotice) list.innerHTML = '';
         const me = entries.find(e => e.me);
-        if (tab === 'week') { myCard(mine, me ? me.rank : 0); bigCard(big, entries); }
+        if (tab === 'week') { if (week === 'now') myCard(mine, me ? me.rank : 0); bigCard(big, entries); }
         if (!entries.length) { list.appendChild(UI.el('div.notice', { text: FB.t('top_empty') })); return; }
         const rows = UI.el('div.lb-rows');
         let prev = 0, meRow = null, firstRow = null;
@@ -127,10 +153,13 @@
             // Яндекс отдаёт топ-20 и соседей игрока — между ними пропуск
             if (prev && rank > prev + 1) rows.appendChild(UI.el('div.lb-gap', { html: '<i></i><i></i><i></i>' }));
             prev = rank;
-            const row = UI.el('div.lb-row' + (e.me ? '.me' : ''));
+            const row = UI.el('div.lb-row' + (e.me ? '.me' : ''), { onclick: () => {
+                FB.audio.play('click');
+                FB.panels.player({ name: e.name, avatar: e.avatar, rank, me: e.me, ex, board: tab });
+            } });
             row.appendChild(UI.el('div.lb-rank' + (rank <= 3 ? '.r' + rank : ''), { text: rank }));
             row.appendChild(UI.avatar(e.name, e.avatar, ex.frame));
-            row.appendChild(UI.el('div.lb-name', { html: U.esc(e.name || FB.t('hidden_angler')) + (ex.supporter ? FB.ic('heart').replace('class="ic"', 'class="ic heart"') : '') }));
+            row.appendChild(UI.el('div.lb-name' + (ex.supporter ? '.sup' : ''), { html: U.esc(e.name || FB.t('hidden_angler')) + (ex.supporter ? FB.ic('heart').replace('class="ic"', 'class="ic heart"') : '') }));
             const v = tab === 'week' ? U.fmt(FB.week.decode(e.score).pts) : tab === 'record' ? U.weight(e.score) : U.fmt(e.score);
             row.appendChild(UI.el('div.lb-score', { text: v }));
             rows.appendChild(row);

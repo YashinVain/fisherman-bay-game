@@ -201,18 +201,23 @@
     CC.weekResult = (r) => {
         CC.later(() => {
             const rw = r.reward;
-            const body = UI.el('div.congrats');
+            const cfg = FB.week.config(r.idx);
+            const body = UI.el('div.week-res');
             const medal = r.rank === 1 ? '#ffd23a' : r.rank && r.rank <= 3 ? '#d6dee6' : r.rank && r.rank <= 10 ? '#e8a46a' : r.rank && r.rank <= 20 ? '#9cd4f4' : '#c8d4de';
-            body.innerHTML = FB.ic('medal', medal).replace('class="ic"', 'class="ic hero"') +
-                (r.rank ? '<div class="big outline">' + FB.t('place_n', { n: r.rank }) + '</div>' : '<div class="big outline" style="font-size:40px">' + FB.t('thanks_member') + '</div>') +
-                '<p>' + FB.t('week_points', { n: U.fmt(r.pts) }) + '</p>' +
-                '<p class="muted">' + FB.t('your_reward') + '</p>' +
-                '<div class="unlock-list">' +
-                (rw.coins ? '<div>' + UI.price({ coins: rw.coins }) + '</div>' : '') +
-                (rw.pearls ? '<div>' + UI.price({ pearls: rw.pearls }) + '</div>' : '') +
-                rw.items.map(id => '<div>' + U.esc(FB.name(FB.cosById[id])) + '</div>').join('') + '</div>';
-            body.appendChild(UI.btn('big yellow', FB.t('great'), () => { UI.close(); FB.hud.update(); }));
-            UI.open({ body, noClose: true, title: FB.t('tourney_results'), gold: true, width: 'min(92vw, 420px)' });
+            body.innerHTML =
+                '<div class="wr-top">' + FB.ic('medal', medal) + '<div>' +
+                (r.rank ? '<div class="wr-place outline">' + FB.t('place_n', { n: r.rank }) + '</div>' : '<div class="wr-place small">' + FB.t('thanks_member') + '</div>') +
+                '<div class="wr-sub">' + U.esc(FB.name(FB.pondById[cfg.pond])) + ' · ' + FB.t('week_points', { n: U.fmt(r.pts) }) + '</div></div></div>' +
+                (r.rank && r.rank <= 20 ? '<div class="wr-medal">' + FB.t('wr_medal') + '</div>' : '') +
+                '<div class="lv-sec">' + FB.t('your_reward') + '</div>' +
+                '<div class="lv-gift">' +
+                (rw.coins ? UI.price({ coins: rw.coins }) : '') + (rw.pearls ? UI.price({ pearls: rw.pearls }) : '') +
+                rw.items.map(id => '<span class="price">' + U.esc(FB.name(FB.cosById[id])) + '</span>').join('') + '</div>';
+            const btns = UI.el('div.wr-btns');
+            btns.appendChild(UI.btn('blue', FB.ic('trophy') + FB.t('wr_see_top'), () => { UI.close(); FB.hud.update(); FB.top.open('week', { last: true }); }));
+            btns.appendChild(UI.btn('yellow', FB.t('great'), () => { UI.close(); FB.hud.update(); }));
+            body.appendChild(btns);
+            UI.open({ body, noClose: true, title: FB.t('tourney_results'), gold: true, width: 'min(92vw, 400px)' });
             if (r.rank && r.rank <= 10) FB.scene.burst(FB.scene.W / 2, FB.scene.H * 0.35, 'fx_confetti');
         });
     };

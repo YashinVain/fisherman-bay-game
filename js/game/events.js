@@ -7,9 +7,9 @@
     const U = FB.U;
 
     E.FRENZY_LEN = 40;                 // сколько длится жор, с
-    E.FRENZY_EVERY = [240, 420];       // как часто, с игры
+    E.FRENZY_EVERY = [480, 840];       // как часто, с игры (8–14 минут)
     E.frenzy = null;                   // { t, len }
-    let wait = 150;                    // до первого жора
+    let wait = 360;                    // до первого жора
 
     E.frenzyOn = () => !!E.frenzy;
     E.frenzyLeft = () => E.frenzy ? Math.max(0, E.frenzy.len - E.frenzy.t) : 0;

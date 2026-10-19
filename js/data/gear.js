@@ -28,6 +28,7 @@
     // ---------- Косметика ----------
     // cat: hat | jacket | float | boat | pet | frame | effect
     // cost: { coins: N } или { pearls: N }; src: 'shop' | 'pass' | 'starter' | 'tourney' | 'supporter'
+    //   | 'album' (20 видов в альбоме) | 'legend' (поймать легендарную рыбу) | 'captain' (набор капитана)
     // c — цвета для рисования
     const C = (id, cat, ru, en, cost, src, c) => ({ id, cat, n: { ru, en }, cost: cost || null, src: src || 'shop', c: c || {} });
     FB.COSMETICS = [
@@ -73,6 +74,16 @@
         C('fr_rainbow', 'frame', 'Радуга', 'Rainbow', { pearls: 100 }, 'shop', { a: 'rainbow' }),
         C('fr_gold', 'frame', 'Золотая', 'Golden', null, 'tourney', { a: '#f2b51d' }),
         C('fr_heart', 'frame', 'Сердце поддержки', 'Supporter Heart', null, 'supporter', { a: '#f24a6a' }),
+        C('fr_rope', 'frame', 'Канат', 'Rope', { coins: 1500 }, 'shop', { a: '#e2c08a' }),
+        C('fr_lily', 'frame', 'Кувшинки', 'Water Lilies', { coins: 2500 }, 'shop', { a: '#5ab85a' }),
+        C('fr_shells', 'frame', 'Ракушки', 'Seashells', { coins: 4000 }, 'shop', { a: '#f2dca0' }),
+        C('fr_anchor', 'frame', 'Якорь', 'Anchor', { pearls: 60 }, 'shop', { a: '#24365c' }),
+        C('fr_stars', 'frame', 'Звёздная ночь', 'Starry Night', { pearls: 80 }, 'shop', { a: '#3a4a9a' }),
+        C('fr_fire', 'frame', 'Огненная', 'Fire', { pearls: 120 }, 'shop', { a: '#ff7a1a' }),
+        C('fr_crystal', 'frame', 'Кристаллы', 'Crystals', { pearls: 150 }, 'shop', { a: '#7ad0f0' }),
+        C('fr_fisher', 'frame', 'Рыбья карусель', 'Fish Carousel', null, 'album', { a: '#3a9ad8' }),
+        C('fr_legend', 'frame', 'Легенда', 'Legend', null, 'legend', { a: '#d88aff' }),
+        C('fr_royal', 'frame', 'Королевская', 'Royal', null, 'captain', { a: '#f2b51d' }),
         // Эффекты улова
         C('fx_splash', 'effect', 'Брызги', 'Splash', null, 'default', { a: '#ffffff' }),
         C('fx_stars', 'effect', 'Звёзды', 'Stars', { coins: 2000 }, 'shop', { a: '#f2c43a' }),
@@ -93,6 +104,7 @@
         { id: 'pearls_m', kind: 'consumable', pearls: 180, price: 79, n: { ru: 'Мешочек жемчуга', en: 'Bag of Pearls' }, tag: 'popular' },
         { id: 'pearls_l', kind: 'consumable', pearls: 500, price: 199, n: { ru: 'Сундук жемчуга', en: 'Chest of Pearls' }, tag: 'best' },
         { id: 'starter', kind: 'permanent', pearls: 100, price: 49, n: { ru: 'Набор новичка', en: 'Starter Pack' }, items: ['bt_red', 'pet_dog'] },
+        { id: 'captain', kind: 'permanent', pearls: 200, price: 149, n: { ru: 'Набор капитана', en: 'Captain Pack' }, items: ['fr_royal', 'hat_captain', 'jk_navy', 'pet_raccoon'] },
         { id: 'no_ads', kind: 'permanent', price: 99, n: { ru: 'Без рекламы', en: 'No Ads' } },
         // Пропуск привязан к сезону: после покупки он «расходуется» (consume), чтобы
         // в следующем сезоне его можно было купить снова. Хранится в сохранении.

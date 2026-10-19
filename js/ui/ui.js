@@ -163,12 +163,10 @@
     };
     // Аватар с рамкой (для топа и профиля)
     UI.avatar = (name, src, frameId) => {
-        const fr = FB.cosById[frameId] || FB.cosById.fr_none;
-        const cls = fr.c.a === 'rainbow' ? '.fr-rainbow' : frameId === 'fr_gold' ? '.fr-gold' : '';
-        const a = UI.el('div.ava' + cls);
-        if (fr.c.a !== 'rainbow') a.style.setProperty('--fr', frameId === 'fr_none' ? 'transparent' : fr.c.a);
+        const a = UI.el('div.ava');
         if (src) a.appendChild(UI.el('img', { src, alt: '' }));
-        else a.textContent = (name || '?').trim().charAt(0).toUpperCase() || '?';
+        else a.appendChild(UI.el('span', { text: (name || '?').trim().charAt(0).toUpperCase() || '?' }));
+        a.insertAdjacentHTML('beforeend', FB.frames.svg(FB.frames.has(frameId) ? frameId : 'fr_none'));
         return a;
     };
 })(window.FB);

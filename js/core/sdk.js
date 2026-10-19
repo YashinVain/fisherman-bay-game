@@ -324,6 +324,10 @@
             const score = isWeek ? FB.week.encode(boardIdx, pts) : pts;
             const fr = MOCK_FRAMES[Math.floor(rnd() * MOCK_FRAMES.length)];
             let extra = 'f:' + fr + (rnd() < 0.2 ? ';s:1' : '');
+            const pick = (cat) => { const l = FB.COSMETICS.filter(c => c.cat === cat); return l[Math.floor(rnd() * l.length)].id.replace(/^[a-z]+_/, ''); };
+            const best = FB.FISH[Math.floor(rnd() * FB.FISH.length)];
+            extra += ';o:' + 'bgd'[Math.floor(rnd() * 3)] + '.' + ['hat', 'jacket', 'boat', 'pet'].map(pick).join('.') +
+                ';p:' + (3 + Math.floor(rnd() * 30)) + '.' + (40 + Math.floor(rnd() * 900)) + '.' + (5 + Math.floor(rnd() * 35)) + '.' + best.id + '.' + Math.round(FB.U.lerp(best.w[0], best.w[1], rnd()));
             if (isWeek) {
                 // Главный улов у тестовых игроков — рыба места этой недели
                 const fish = FB.fishOfPond(FB.week.config(boardIdx).pond);

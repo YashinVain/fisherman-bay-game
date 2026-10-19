@@ -45,9 +45,10 @@
         const p = FB.productById[id], S = FB.S;
         if (!p) return false;
         if (id === 'no_ads') S.buy.noAds = true;
-        else if (id === 'starter') {
-            if (S.buy.starter) return false;
-            S.buy.starter = true;
+        else if (p.kind === 'permanent' && p.items) {
+            // Наборы (новичка, капитана): один раз
+            if (S.buy[id]) return false;
+            S.buy[id] = true;
             ST().addPearls(p.pearls);
             p.items.forEach(it => ST().giveItem(it));
         } else if (id === 'season_pass') S.season.pass = true;
@@ -81,7 +82,7 @@
             if (!p) continue;
             if (p.kind === 'permanent') {
                 if (it.id === 'no_ads') FB.S.buy.noAds = true;
-                if (it.id === 'starter' && !FB.S.buy.starter) SH.grant('starter');
+                if (p.items && !FB.S.buy[it.id]) SH.grant(it.id);
                 FB.S.buy.supporter = true;
                 if (!FB.S.owned.includes('fr_heart')) FB.S.owned.push('fr_heart');
             } else {

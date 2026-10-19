@@ -4,22 +4,41 @@
 (function (FB) {
     const T = FB.tourney = {};
 
-    // Что видят другие игроки рядом с моим именем в топе: рамка, значок поддержки
-    // и главный улов недели (рыба.вес.очки). Яндекс хранит это в extraData записи
+    // Что видят другие игроки, когда нажимают на меня в топе. Яндекс хранит это
+    // в extraData записи, коротко:
+    //   f:рамка  s:1 (поддерживает игру)  b:главный улов недели (рыба.вес.очки)
+    //   o:образ (рыбак.шапка.куртка.лодка.питомец — без приставок hat_, jk_…)
+    //   p:статистика (уровень.уловы.виды.рыба-рекорд.вес рекорда)
+    const WHO = { boy: 'b', girl: 'g', grandpa: 'd' }, WHO_BACK = { b: 'boy', g: 'girl', d: 'grandpa' };
+    const PRE = { hat: 'hat_', jacket: 'jk_', boat: 'bt_', pet: 'pet_' };
+    const LOOK_KEYS = ['hat', 'jacket', 'boat', 'pet'];
+    const short = (id, pre) => String(id || '').replace(pre, '');
     T.extra = (withBig) => {
-        const S = FB.S, b = S.week.big;
-        return 'f:' + S.look.frame + (S.buy.supporter ? ';s:1' : '') +
-            (withBig && b && S.week.idx === FB.state.weekIdx() ? ';b:' + b.f + '.' + b.g + '.' + b.pts : '');
+        const S = FB.S, b = S.week.big, st = S.stats;
+        return 'f:' + short(S.look.frame, 'fr_') + (S.buy.supporter ? ';s:1' : '') +
+            (withBig && b && S.week.idx === FB.state.weekIdx() ? ';b:' + b.f + '.' + b.g + '.' + b.pts : '') +
+            ';o:' + (WHO[S.who] || 'b') + '.' + LOOK_KEYS.map(k => short(S.look[k], PRE[k])).join('.') +
+            ';p:' + S.level + '.' + st.catches + '.' + Object.keys(S.album).length + '.' + (st.bestId || '') + '.' + (st.bestG || 0);
     };
     T.parseExtra = (s) => {
-        const out = { frame: 'fr_none', supporter: false, big: null };
+        const out = { frame: 'fr_none', supporter: false, big: null, look: null, stats: null };
         String(s || '').split(';').forEach(part => {
-            const [k, v] = part.split(':');
-            if (k === 'f' && FB.cosById[v]) out.frame = v;
+            const i = part.indexOf(':'), k = part.slice(0, i), v = part.slice(i + 1);
+            if (k === 'f') { const id = FB.cosById['fr_' + v] ? 'fr_' + v : v; if (FB.cosById[id] && FB.cosById[id].cat === 'frame') out.frame = id; }
             if (k === 's') out.supporter = v === '1';
             if (k === 'b' && v) {
                 const [f, g, pts] = v.split('.');
                 if (FB.fishById[f] && +g > 0) out.big = { f, g: +g, pts: +pts || 0 };
+            }
+            if (k === 'o' && v) {
+                const [w, ...rest] = v.split('.');
+                const look = Object.assign({}, FB.DEFAULT_LOOK);
+                LOOK_KEYS.forEach((key, j) => { const id = PRE[key] + (rest[j] || ''); if (FB.cosById[id] && FB.cosById[id].cat === key) look[key] = id; });
+                out.look = { who: WHO_BACK[w] || 'boy', look };
+            }
+            if (k === 'p' && v) {
+                const [lvl, catches, species, bestId, bestG] = v.split('.');
+                out.stats = { level: +lvl || 1, catches: +catches || 0, species: +species || 0, bestId: FB.fishById[bestId] ? bestId : null, bestG: +bestG || 0 };
             }
         });
         return out;

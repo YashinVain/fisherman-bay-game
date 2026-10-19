@@ -234,6 +234,7 @@ FB.tourney.checkWeek().then(r => {
     modeChecks();
     aquaChecks();
     sonarChecks();
+    packChecks();
     finish();
 });
 
@@ -413,6 +414,20 @@ function newChecks() {
     const ex = FB.tourney.parseExtra(FB.tourney.extra(true));
     ok(ex.big && big && ex.big.f === big.f && ex.big.g === big.g && ex.big.pts === big.pts, 'главный улов уходит в топ и читается обратно');
     ok(!FB.tourney.parseExtra('f:fr_none;b:nofish.10.5').big, 'чужой мусор в extraData не ломает топ');
+    // Образ и статистика уходят в топ и читаются обратно
+    FB.S.who = 'grandpa';
+    Object.assign(FB.S.look, { hat: 'hat_captain', jacket: 'jk_hawaii', boat: 'bt_rowboat', pet: 'pet_raccoon', frame: 'fr_crystal' });
+    FB.S.buy.supporter = true;
+    FB.S.stats.catches = 99999; FB.S.stats.bestId = 'swordfish'; FB.S.stats.bestG = 600000; FB.S.level = 60;
+    FB.FISH.forEach(f => { FB.S.album[f.id] = { n: 1, best: 1 }; });
+    FB.S.week.big = { f: 'swordfish', g: 150000, pts: 4000 };
+    const exs = FB.tourney.extra(true);
+    ok(exs.length <= 120, 'extraData короткий (' + exs.length + ' символов)');
+    const px = FB.tourney.parseExtra(exs);
+    ok(px.frame === 'fr_crystal' && px.supporter && px.look && px.look.who === 'grandpa' && px.look.look.hat === 'hat_captain' && px.look.look.pet === 'pet_raccoon', 'образ рыбака читается из топа');
+    ok(px.stats && px.stats.level === 60 && px.stats.catches === 99999 && px.stats.species === FB.FISH.length && px.stats.bestId === 'swordfish', 'статистика читается из топа');
+    ok(FB.tourney.parseExtra('f:fr_gold').frame === 'fr_gold' && FB.tourney.parseExtra('f:gold').frame === 'fr_gold', 'старый и новый формат рамки');
+    ok(!FB.tourney.parseExtra('o:x.nohat.nojk.noboat.nopet').look.look.hat.startsWith('hat_no'), 'чужой мусор в образе заменяется обычным');
 }
 
 // ---------- Характер, подсечка, серия, жор ----------
@@ -626,6 +641,26 @@ function driftChecks() {
         if (r.pearls && !f.pearls) { ok(false, 'жемчуг там, где не положено: ' + k); break; }
     }
     ok(true, 'награды за находки в своих пределах');
+}
+
+// ---------- Наборы и рамки ----------
+function packChecks() {
+    section('Наборы и рамки');
+    FB.S = FB.state.fresh();
+    ok(FB.shop.grant('captain') && FB.S.buy.captain && FB.S.owned.includes('fr_royal') && FB.S.pearls === FB.productById.captain.pearls, 'набор капитана выдаётся');
+    ok(!FB.shop.grant('captain'), 'набор не выдаётся дважды');
+    ok(FB.S.buy.supporter && FB.S.owned.includes('fr_heart'), 'любая покупка — бонусы поддержки');
+    FB.COSMETICS.filter(c => c.cat === 'frame').forEach(c => ok(c.cost || c.src !== 'shop', 'у рамки нет цены: ' + c.id));
+    ok(FB.COSMETICS.filter(c => c.cat === 'frame' && c.cost && c.cost.coins).length >= 4, 'есть рамки за монеты');
+    ok(FB.COSMETICS.filter(c => c.cat === 'frame' && c.cost && c.cost.pearls).length >= 4, 'есть рамки за жемчуг');
+    // Рамки за достижения
+    FB.S = FB.state.fresh();
+    FB.state.applyCatch({ kind: 'fish', fish: FB.fishById.goldcarp, g: 5000 }, { pond: 'village' }, true);
+    ok(FB.S.owned.includes('fr_legend'), 'легендарная рыба — рамка «Легенда»');
+    FB.FISH.slice(0, 19).forEach(f => { FB.S.album[f.id] = { n: 1, best: 1 }; });
+    const fresh = FB.FISH.find(f => !FB.S.album[f.id]);
+    FB.state.applyCatch({ kind: 'fish', fish: fresh, g: fresh.w[0] }, { pond: fresh.pond }, true);
+    ok(Object.keys(FB.S.album).length >= 20 && FB.S.owned.includes('fr_fisher'), '20 видов — рамка «Рыбья карусель»');
 }
 
 function finish() {

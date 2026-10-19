@@ -6,7 +6,7 @@
 (function (FB) {
     const ST = FB.state = {};
     const U = FB.U;
-    FB.VERSION = '0.14.0';
+    FB.VERSION = '0.15.0';
 
     ST.fresh = () => ({
         v: 1,
@@ -142,6 +142,8 @@
             FB.emit('levelUp', { level: S.level, ponds: unlocked, reward });
         }
     };
+    ST.FISHER_SPECIES = 20;
+
     // ---------- Серия удачи ----------
     ST.STREAK_MAX = 10;
     ST.streakMul = () => 1 + 0.05 * Math.min(FB.S.luck || 0, ST.STREAK_MAX);
@@ -236,6 +238,10 @@
         out.record = !out.newSpecies && g > a.best;
         a.n++;
         if (g > a.best) a.best = g;
+        // Рамки за достижения
+        const award = (id) => { if (!S.owned.includes(id)) { S.owned.push(id); out.newFrame = id; FB.emit('award', id); } };
+        if (Object.keys(S.album).length >= ST.FISHER_SPECIES) award('fr_fisher');
+        if (f.r === 'legendary') award('fr_legend');
         S.stats.totalG += g;
         if (g > S.stats.bestG) { S.stats.bestG = g; S.stats.bestId = f.id; out.bigRecord = true; }
 

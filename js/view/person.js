@@ -507,6 +507,38 @@
         }
     };
 
+    // Рыбак во весь рост в своём наряде: лодка, питомец, удочка. look — образ
+    // (как в сохранении), who — какой рыбак. Для профилей в топе
+    P.showcase = (canvas, look, who) => {
+        const SC = FB.scene, S = FB.S;
+        const w = canvas.width, h = canvas.height;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, w, h);
+        // Небо и вода
+        const g = ctx.createLinearGradient(0, 0, 0, h);
+        g.addColorStop(0, '#9ad8f4'); g.addColorStop(0.55, '#d8f0fa'); g.addColorStop(0.56, '#6cc4e8'); g.addColorStop(1, '#2a8ac0');
+        ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        for (let i = 0; i < 6; i++) ctx.fillRect(w * (0.08 + i * 0.16), h * (0.66 + (i % 3) * 0.09), w * 0.06, 2);
+        const keep = { W: SC.W, H: SC.H, L: SC.L, weather: SC.weather, look: S.look, pose: Object.assign({}, P.pose), t: SC.t, who: S.who };
+        S.look = Object.assign({}, FB.DEFAULT_LOOK, look || {});
+        S.who = who || 'boy';
+        SC.weather = 'sun'; SC.t = 0.6;
+        SC.W = w; SC.H = h;
+        const ph = h * 0.46;
+        SC.L = { ph, px: w * 0.5, py: h * 0.66, hy: h * 0.56, nearY: h, cx: w / 2 };
+        P.pose = { rod: -0.8, bend: 0.05, reel: false, lean: 0, look: 0, face: 'happy' };
+        try {
+            P.drawBoatBack(ctx);
+            P.drawPet(ctx);
+            P.drawPerson(ctx, { plain: true });
+            P.drawBoatFront(ctx);
+        } finally {
+            SC.W = keep.W; SC.H = keep.H; SC.L = keep.L; SC.weather = keep.weather; SC.t = keep.t;
+            S.look = keep.look; S.who = keep.who; P.pose = keep.pose;
+        }
+    };
+
     // Портрет рыбака для кружков (подсказки обучения, выбор рыбака):
     // голова с шапкой крупно и по центру
     P.portrait = (canvas, who, face) => {

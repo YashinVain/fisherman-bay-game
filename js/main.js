@@ -58,6 +58,7 @@
         FB.on('toast', (e) => UI.toast(FB.t(e.key), 'info'));
         FB.on('questDone', () => { UI.toast(FB.t('quest_done'), 'check'); FB.audio.play('coin'); FB.hud.update(); });
         FB.on('cast', (e) => { if (e.bubble) UI.toast(FB.t('bubble_cast'), 'sparkle', 1500); });
+        FB.on('award', (id) => { UI.toast(FB.t('new_frame', { name: FB.name(FB.cosById[id]) }), 'crown', 3000); });
         FB.on('streak', (e) => {
             FB.hud.update();
             if (e.lost) UI.toast(FB.t('streak_lost', { n: e.lost }), 'info', 1800);
