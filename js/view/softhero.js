@@ -34,7 +34,8 @@
         const jk = o.jacket || FB.cosById.jk_green, hat = o.hat;
         const P = {
             skin: C.skin, hair: C.hair, boots: C.boots, pants: C.pants, bow: C.bow || C.hair,
-            jacket: jk.c.a, acc: jk.c.b, shirt: '#f4ead6'
+            jacket: jk.c.a, acc: jk.c.b, shirt: '#f4ead6',
+            sleeve: jk.c.s || jk.c.a   // рукава: у жилета и комбинезона видна рубашка
         };
         if (mono) Object.keys(P).forEach(k => { P[k] = mono; });
         const col = (c) => mono || c;
@@ -103,12 +104,12 @@
         const hand = SH.localHand(h, lean);
 
         // ---------- Дальняя рука ----------
-        limb([[h * 0.09, -h * 0.47], [h * 0.17, -h * 0.24], [hand[0] + h * 0.03, hand[1] - h * 0.03]], h * 0.11, flat ? P.jacket : U.shade(P.jacket, -0.22));
+        limb([[h * 0.09, -h * 0.47], [h * 0.17, -h * 0.24], [hand[0] + h * 0.03, hand[1] - h * 0.03]], h * 0.11, flat ? P.sleeve : U.shade(P.sleeve, -0.22));
 
         // ---------- Тело ----------
         if (!flat) { ctx.shadowColor = 'rgba(20,40,80,0.2)'; ctx.shadowBlur = h * 0.04; ctx.shadowOffsetY = h * 0.015; }
-        if (!flat && (jk.id === 'jk_yellow' || jk.id === 'jk_gold')) {
-            // Капюшон дождевика лежит на спине
+        if (!flat && (jk.id === 'jk_yellow' || jk.id === 'jk_gold' || jk.id === 'jk_hoodie')) {
+            // Капюшон дождевика (и худи) лежит на спине
             const hood = new Path2D(); hood.ellipse(-h * 0.1, -h * 0.5 + breathe, h * 0.1, h * 0.06, -0.35, 0, TAU);
             fill(hood, U.shade(P.jacket, -0.1));
         }
@@ -133,7 +134,7 @@
         neck.lineTo(h * 0.085, -h * 0.5); neck.lineTo(-h * 0.04, -h * 0.5); neck.closePath();
         fill(neck, flat ? P.skin : U.shade(P.skin, -0.12));
         const collar = new Path2D(); collar.moveTo(-h * 0.04, -h * 0.56 + breathe); collar.lineTo(h * 0.13, -h * 0.545 + breathe); collar.lineTo(h * 0.075, -h * 0.4); collar.closePath();
-        fill(collar, jk.id === 'jk_green' || jk.id === 'jk_navy' ? P.shirt : (flat ? P.jacket : U.shade(P.jacket, 0.12)));
+        fill(collar, jk.id === 'jk_green' || jk.id === 'jk_navy' ? P.shirt : jk.c.s ? P.sleeve : (flat ? P.jacket : U.shade(P.jacket, 0.12)));
 
         // ---------- Голова (размер постоянный) ----------
         const R = h * 0.235;
@@ -175,10 +176,10 @@
         ctx.restore();
 
         // ---------- Ближняя рука, кулак на удочке ----------
-        limb([[-h * 0.02, -h * 0.45], [h * 0.08, -h * 0.2], [hand[0] - h * 0.03, hand[1] + h * 0.01]], h * 0.115, P.jacket);
+        limb([[-h * 0.02, -h * 0.45], [h * 0.08, -h * 0.2], [hand[0] - h * 0.03, hand[1] + h * 0.01]], h * 0.115, P.sleeve);
         if (!flat) {
             const cuff = new Path2D(); cuff.ellipse(hand[0] - h * 0.06, hand[1] + h * 0.012, h * 0.03, h * 0.06, -0.5, 0, TAU);
-            fill(cuff, U.shade(P.jacket, -0.15));
+            fill(cuff, U.shade(P.sleeve, -0.15));
         }
         const fist = new Path2D(); fist.ellipse(hand[0], hand[1], h * 0.05, h * 0.046, 0, 0, TAU);
         fill(fist, P.skin, flat ? null : [hand[0] - h * 0.05, hand[1] - h * 0.05, hand[0] + h * 0.05, hand[1] + h * 0.05]);
@@ -244,9 +245,78 @@
                     ctx.fillStyle = '#ffd23a'; ctx.beginPath(); ctx.arc(fx, fy, h * 0.008, 0, TAU); ctx.fill();
                 }
                 break;
+            case 'jk_sweater': {
+                // Вязаный узор: полоса с зигзагом на груди, резинка внизу
+                ctx.fillStyle = acc;
+                ctx.fillRect(-h * 0.3, -h * 0.43, h * 0.6, h * 0.085);
+                ctx.fillRect(-h * 0.3, -h * 0.3, h * 0.6, h * 0.022);
+                ctx.strokeStyle = '#fbf6ec'; ctx.lineWidth = h * 0.012; ctx.lineJoin = 'round';
+                ctx.beginPath();
+                for (let i = 0; i <= 14; i++) ctx.lineTo(-h * 0.3 + i * h * 0.043, -h * (i % 2 ? 0.365 : 0.405));
+                ctx.stroke();
+                ctx.fillStyle = '#fbf6ec';
+                for (let i = 0; i < 7; i++) { ctx.beginPath(); ctx.arc(-h * 0.26 + i * h * 0.086, -h * 0.445, h * 0.008, 0, TAU); ctx.fill(); }
+                ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = Math.max(1, h * 0.006);
+                for (let x = -0.22; x < 0.24; x += 0.025) { ctx.beginPath(); ctx.moveTo(h * x, -h * 0.07); ctx.lineTo(h * x, h * 0.02); ctx.stroke(); }
+                // Петельки вязки
+                ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+                for (let y = -0.24; y < -0.08; y += 0.035) for (let x = -0.2; x < 0.22; x += 0.04) { ctx.beginPath(); ctx.arc(h * x, h * y, h * 0.01, 0.2, Math.PI - 0.2); ctx.stroke(); }
+                break;
+            }
+            case 'jk_life': {
+                // Светоотражающие полосы и чёрные застёжки
+                [-0.37, -0.2].forEach(y => {
+                    ctx.fillStyle = acc; ctx.fillRect(-h * 0.3, h * y, h * 0.6, h * 0.045);
+                    ctx.fillStyle = 'rgba(120,140,160,0.45)'; ctx.fillRect(-h * 0.3, h * (y + 0.018), h * 0.6, h * 0.01);
+                    ctx.fillStyle = '#2a2e36';
+                    ctx.beginPath(); ctx.roundRect(h * 0.06, h * (y - 0.006), h * 0.07, h * 0.057, h * 0.01); ctx.fill();
+                    ctx.fillStyle = '#5a606a'; ctx.fillRect(h * 0.08, h * (y + 0.012), h * 0.03, h * 0.02);
+                });
+                // Пухлые секции поплавка-жилета
+                ctx.strokeStyle = 'rgba(120,40,0,0.18)'; ctx.lineWidth = h * 0.008;
+                [-0.1, -0.5].forEach(y => { ctx.beginPath(); ctx.moveTo(-h * 0.3, h * y); ctx.quadraticCurveTo(0, h * (y + 0.02), h * 0.3, h * y); ctx.stroke(); });
+                break;
+            }
+            case 'jk_overalls': {
+                // Сверху видна рубашка, ниже — нагрудник комбинезона на лямках
+                ctx.fillStyle = P.sleeve;
+                ctx.fillRect(-h * 0.3, -h * 0.7, h * 0.6, h * 0.29);
+                ctx.strokeStyle = 'rgba(120,60,10,0.25)'; ctx.lineWidth = h * 0.01;
+                for (let x = -0.24; x < 0.26; x += 0.06) { ctx.beginPath(); ctx.moveTo(h * x, -h * 0.7); ctx.lineTo(h * x, -h * 0.41); ctx.stroke(); }
+                ctx.fillStyle = base;
+                ctx.beginPath(); ctx.roundRect(-h * 0.1, -h * 0.47, h * 0.3, h * 0.12, h * 0.025); ctx.fill();
+                ctx.fillStyle = acc;
+                [[-0.075, -0.56], [0.14, -0.55]].forEach(([x, y]) => {
+                    ctx.beginPath(); ctx.moveTo(h * x, h * y); ctx.lineTo(h * (x + 0.04), h * y); ctx.lineTo(h * (x + 0.035), -h * 0.44); ctx.lineTo(h * (x - 0.005), -h * 0.44); ctx.closePath(); ctx.fill();
+                    ctx.fillStyle = '#d8d0b0'; ctx.beginPath(); ctx.arc(h * (x + 0.016), -h * 0.445, h * 0.016, 0, TAU); ctx.fill(); ctx.fillStyle = acc;
+                });
+                pocket(-h * 0.04, -h * 0.33, h * 0.16, h * 0.1, U.shade(base, 0.12));
+                ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.setLineDash([h * 0.012, h * 0.01]); ctx.lineWidth = Math.max(1, h * 0.005);
+                ctx.beginPath(); ctx.roundRect(-h * 0.08, -h * 0.45, h * 0.26, h * 0.42, h * 0.03); ctx.stroke();
+                ctx.setLineDash([]);
+                break;
+            }
+            case 'jk_hoodie': {
+                // Карман-кенгуру, шнурки капюшона и белая рыбка на груди
+                ctx.fillStyle = U.shade(base, -0.12);
+                ctx.beginPath(); ctx.roundRect(-h * 0.13, -h * 0.2, h * 0.28, h * 0.12, h * 0.03); ctx.fill();
+                ctx.strokeStyle = acc; ctx.lineWidth = Math.max(1.2, h * 0.008); ctx.lineCap = 'round';
+                [0.05, 0.11].forEach(x => { ctx.beginPath(); ctx.moveTo(h * x, -h * 0.52); ctx.quadraticCurveTo(h * (x + 0.01), -h * 0.47, h * x, -h * 0.43); ctx.stroke(); });
+                // Рыбка на спине (спереди её закрывает рука): тело-капля, хвост, глаз
+                const fx = -h * 0.1, fy = -h * 0.33, fl = h * 0.075;
+                ctx.fillStyle = acc;
+                ctx.beginPath(); ctx.moveTo(fx + fl, fy);
+                ctx.quadraticCurveTo(fx + fl * 0.3, fy - fl * 0.75, fx - fl * 0.7, fy);
+                ctx.quadraticCurveTo(fx + fl * 0.3, fy + fl * 0.75, fx + fl, fy); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(fx - fl * 0.55, fy); ctx.lineTo(fx - fl * 1.25, fy - fl * 0.5); ctx.quadraticCurveTo(fx - fl * 1.0, fy, fx - fl * 1.25, fy + fl * 0.5); ctx.closePath(); ctx.fill();
+                ctx.fillStyle = base; ctx.beginPath(); ctx.arc(fx + fl * 0.5, fy - fl * 0.1, fl * 0.12, 0, TAU); ctx.fill();
+                ctx.strokeStyle = base; ctx.lineWidth = Math.max(1, h * 0.005);
+                ctx.beginPath(); ctx.arc(fx + fl * 0.05, fy, fl * 0.28, -1.2, 1.2); ctx.stroke();
+                break;
+            }
         }
         // Строчка застёжки
-        if (jk.id !== 'jk_yellow' && jk.id !== 'jk_gold' && jk.id !== 'jk_plaid') {
+        if (!['jk_yellow', 'jk_gold', 'jk_plaid', 'jk_sweater', 'jk_overalls', 'jk_hoodie'].includes(jk.id)) {
             ctx.strokeStyle = 'rgba(0,0,0,0.12)'; ctx.lineWidth = h * 0.007;
             ctx.beginPath(); ctx.moveTo(h * 0.085, -h * 0.5); ctx.lineTo(h * 0.1, -h * 0.02); ctx.stroke();
         }
@@ -497,6 +567,135 @@
                     ctx.fillStyle = '#f6f6f6'; ctx.beginPath(); ctx.arc(-R * 0.05, -R * 0.8, R * 0.14, 0, TAU); ctx.fill();
                     ctx.fillStyle = '#2a2a30'; ctx.beginPath(); ctx.arc(-R * 0.09, -R * 0.82, R * 0.035, 0, TAU); ctx.arc(R * 0.0, -R * 0.82, R * 0.035, 0, TAU); ctx.fill();
                 }
+                break;
+            }
+            case 'hat_fisher': {
+                // Рыбацкая шляпа: мягкие поля, на ленте приколоты блесна и мушка
+                const brim = P2(); brim.ellipse(R * 0.08, -R * 0.46, R * 1.42, R * 0.26, -0.07, 0, TAU);
+                fill(brim, b, [-R * 1.4, -R * 0.72, R * 1.4, -R * 0.2]);
+                fill(dome(0.86, 1.04, 0.48), a, [-R, -R * 1.3, R, -R * 0.4]);
+                if (!flat) {
+                    ctx.fillStyle = U.shade(a, -0.28);
+                    ctx.beginPath(); ctx.moveTo(-R * 0.86, -R * 0.55); ctx.quadraticCurveTo(0, -R * 0.44, R * 0.82, -R * 0.64); ctx.lineTo(R * 0.8, -R * 0.76); ctx.quadraticCurveTo(0, -R * 0.58, -R * 0.85, -R * 0.68); ctx.closePath(); ctx.fill();
+                    // Блесна: серебряная капля с красной точкой и крючком
+                    ctx.save(); ctx.translate(R * 0.42, -R * 0.78); ctx.rotate(0.5);
+                    const sg = ctx.createLinearGradient(-R * 0.1, 0, R * 0.1, 0); sg.addColorStop(0, '#f4f8fc'); sg.addColorStop(1, '#9aa6b4');
+                    ctx.fillStyle = sg; ctx.strokeStyle = '#4a5562'; ctx.lineWidth = Math.max(1, R * 0.025);
+                    ctx.beginPath(); ctx.ellipse(0, 0, R * 0.09, R * 0.17, 0, 0, TAU); ctx.fill(); ctx.stroke();
+                    ctx.fillStyle = '#e8402a'; ctx.beginPath(); ctx.arc(0, -R * 0.03, R * 0.035, 0, TAU); ctx.fill();
+                    ctx.strokeStyle = '#4a5562'; ctx.beginPath(); ctx.arc(R * 0.03, R * 0.24, R * 0.06, Math.PI * 0.1, Math.PI * 1.1); ctx.stroke();
+                    ctx.restore();
+                    // Мушка: тельце и два пёрышка
+                    ctx.save(); ctx.translate(-R * 0.3, -R * 0.86); ctx.rotate(-0.4);
+                    ctx.fillStyle = '#ff9a2a'; ctx.beginPath(); ctx.ellipse(-R * 0.08, -R * 0.06, R * 0.16, R * 0.05, -0.6, 0, TAU); ctx.fill();
+                    ctx.fillStyle = '#ffd84a'; ctx.beginPath(); ctx.ellipse(-R * 0.06, R * 0.04, R * 0.15, R * 0.045, 0.3, 0, TAU); ctx.fill();
+                    ctx.fillStyle = '#3a2a22'; ctx.beginPath(); ctx.ellipse(R * 0.06, 0, R * 0.07, R * 0.045, 0, 0, TAU); ctx.fill();
+                    ctx.restore();
+                }
+                shine(-0.32, -0.94);
+                break;
+            }
+            case 'hat_ushanka': {
+                // Ушанка: ухо свисает сбоку и закрывает ухо, спереди — меховой отворот
+                const ear = P2();
+                ear.moveTo(-R * 0.9, -R * 0.44);
+                ear.bezierCurveTo(-R * 1.06, R * 0.02, -R * 0.86, R * 0.54, -R * 0.54, R * 0.5);
+                ear.bezierCurveTo(-R * 0.28, R * 0.46, -R * 0.26, -R * 0.06, -R * 0.38, -R * 0.44);
+                ear.closePath();
+                fill(ear, b, [-R * 1.06, -R * 0.44, -R * 0.26, R * 0.54]);
+                fill(dome(1.0, 1.1, 0.44), a, [-R, -R * 1.3, R, -R * 0.4]);
+                const flap = P2(); flap.roundRect(-R * 1.06, -R * 0.78, R * 2.08, R * 0.42, R * 0.2);
+                fill(flap, b, [-R, -R * 0.8, R, -R * 0.34]);
+                if (!flat) {
+                    // Ворс меха — короткие светлые штрихи
+                    ctx.strokeStyle = 'rgba(255,245,225,0.55)'; ctx.lineWidth = Math.max(1, R * 0.03); ctx.lineCap = 'round';
+                    for (let i = 0; i < 14; i++) {
+                        const x = -R * 0.92 + i * R * 0.14, y = -R * (0.62 - (i % 3) * 0.06);
+                        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + R * 0.04, y - R * 0.06); ctx.stroke();
+                    }
+                    for (let i = 0; i < 5; i++) { const y = -R * 0.25 + i * R * 0.15; ctx.beginPath(); ctx.moveTo(-R * 0.72, y); ctx.lineTo(-R * 0.66, y - R * 0.05); ctx.stroke(); }
+                    // Завязки на макушке
+                    ctx.strokeStyle = U.shade(a, -0.35); ctx.lineWidth = Math.max(1, R * 0.03);
+                    ctx.beginPath(); ctx.moveTo(-R * 0.1, -R * 1.18); ctx.quadraticCurveTo(-R * 0.3, -R * 1.32, -R * 0.42, -R * 1.2); ctx.stroke();
+                }
+                shine(-0.3, -1.0);
+                break;
+            }
+            case 'hat_frog': {
+                // Шапка-лягушка: зелёный купол, два глаза сверху и улыбка
+                fill(dome(1.04, 1.06, 0.32), a, [-R, -R * 1.35, R, -R * 0.3]);
+                const cuff = P2(); cuff.roundRect(-R * 1.08, -R * 0.52, R * 2.1, R * 0.3, R * 0.13);
+                fill(cuff, flat ? a : U.shade(a, -0.16), [-R, -R * 0.55, R, -R * 0.2]);
+                [[-0.3, -1.2], [0.4, -1.16]].forEach(([x, y]) => {
+                    const e = P2(); e.arc(R * x, R * y, R * 0.27, 0, TAU);
+                    fill(e, a, [R * (x - 0.27), R * (y - 0.27), R * (x + 0.27), R * (y + 0.27)]);
+                    if (flat) return;
+                    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(R * (x + 0.03), R * (y - 0.02), R * 0.18, 0, TAU); ctx.fill();
+                    ctx.fillStyle = '#1e1a22'; ctx.beginPath(); ctx.arc(R * (x + 0.08), R * (y - 0.01), R * 0.1, 0, TAU); ctx.fill();
+                    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(R * (x + 0.05), R * (y - 0.05), R * 0.035, 0, TAU); ctx.fill();
+                });
+                if (!flat) {
+                    ctx.strokeStyle = U.shade(a, -0.45); ctx.lineWidth = Math.max(1.2, R * 0.04); ctx.lineCap = 'round';
+                    ctx.beginPath(); ctx.moveTo(R * 0.12, -R * 0.74); ctx.quadraticCurveTo(R * 0.5, -R * 0.6, R * 0.86, -R * 0.78); ctx.stroke();
+                    ctx.fillStyle = U.rgba(b, 0.7);
+                    ctx.beginPath(); ctx.ellipse(R * 0.04, -R * 0.78, R * 0.09, R * 0.05, 0, 0, TAU); ctx.fill();
+                    ctx.beginPath(); ctx.ellipse(R * 0.9, -R * 0.86, R * 0.07, R * 0.045, 0, 0, TAU); ctx.fill();
+                }
+                shine(-0.4, -0.85);
+                break;
+            }
+            case 'hat_sailor': {
+                // Бескозырка: ленточки сзади, тёмный околыш, белый верх
+                // Две длинные ленточки за спиной, концы «ласточкиным хвостом»
+                [[-0.98, -1.32, 0.86], [-0.86, -1.08, 0.98]].forEach(([x0, x1, y1]) => {
+                    const w = 0.12, rb = P2();
+                    rb.moveTo(R * x0, -R * 0.5);
+                    rb.bezierCurveTo(R * (x0 - 0.22), -R * 0.1, R * (x1 + 0.2), R * 0.3, R * x1, R * y1);
+                    rb.lineTo(R * (x1 + w * 0.5), R * (y1 - 0.1));
+                    rb.lineTo(R * (x1 + w), R * (y1 + 0.02));
+                    rb.bezierCurveTo(R * (x1 + w + 0.2), R * 0.3, R * (x0 + w - 0.22), -R * 0.1, R * (x0 + w), -R * 0.5);
+                    rb.closePath();
+                    fill(rb, b);
+                });
+                const band = P2(); band.roundRect(-R * 0.9, -R * 0.66, R * 1.8, R * 0.28, R * 0.06);
+                fill(band, b);
+                const topP = P2(); topP.ellipse(-R * 0.02, -R * 0.78, R * 1.12, R * 0.26, -0.06, 0, TAU);
+                fill(topP, a, [-R * 1.12, -R * 1.04, R * 1.1, -R * 0.52]);
+                if (!flat) {
+                    ctx.strokeStyle = '#f2c43a'; ctx.lineWidth = Math.max(1, R * 0.025);
+                    ctx.beginPath(); ctx.moveTo(-R * 0.84, -R * 0.52); ctx.lineTo(R * 0.86, -R * 0.52); ctx.stroke();
+                    ctx.fillStyle = '#f2c43a';
+                    for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.roundRect(-R * 0.6 + i * R * 0.26, -R * 0.62, R * 0.16, R * 0.05, R * 0.02); ctx.fill(); }
+                    ctx.fillStyle = '#d8402a'; ctx.beginPath(); ctx.arc(R * 0.5, -R * 0.82, R * 0.07, 0, TAU); ctx.fill();
+                }
+                break;
+            }
+            case 'hat_viking': {
+                // Шлем викинга: рога по бокам, обод с заклёпками, гребень
+                const horn = (side) => {
+                    const x0 = side * 0.72, y0 = -0.8, p = P2();
+                    p.moveTo(R * x0, R * (y0 + 0.14));
+                    p.bezierCurveTo(R * (x0 + side * 0.46), R * (y0 + 0.08), R * (x0 + side * 0.62), R * (y0 - 0.32), R * (x0 + side * 0.48), R * (y0 - 0.72));
+                    p.bezierCurveTo(R * (x0 + side * 0.4), R * (y0 - 0.4), R * (x0 + side * 0.2), R * (y0 - 0.2), R * (x0 - side * 0.1), R * (y0 - 0.16));
+                    p.closePath();
+                    fill(p, b, [R * Math.min(x0, x0 + side * 0.62), R * (y0 - 0.72), R * Math.max(x0, x0 + side * 0.62), R * (y0 + 0.14)]);
+                    if (!flat) {
+                        ctx.strokeStyle = 'rgba(150,110,60,0.35)'; ctx.lineWidth = Math.max(1, R * 0.03);
+                        [0.2, 0.42].forEach(k => { ctx.beginPath(); ctx.moveTo(R * (x0 + side * (0.1 + k * 0.5)), R * (y0 + 0.08 - k * 0.5)); ctx.lineTo(R * (x0 + side * (k * 0.5 - 0.05)), R * (y0 - 0.12 - k * 0.45)); ctx.stroke(); });
+                    }
+                };
+                horn(-1);
+                fill(dome(1.0, 1.08, 0.42), a, [-R, -R * 1.3, R, -R * 0.4]);
+                const rim = P2(); rim.roundRect(-R * 1.04, -R * 0.62, R * 2.06, R * 0.24, R * 0.1);
+                fill(rim, flat ? a : U.shade(a, -0.14));
+                if (!flat) {
+                    ctx.fillStyle = '#eef2f6';
+                    for (let i = 0; i < 7; i++) { ctx.beginPath(); ctx.arc(-R * 0.84 + i * R * 0.28, -R * 0.5, R * 0.04, 0, TAU); ctx.fill(); }
+                    ctx.strokeStyle = U.shade(a, -0.3); ctx.lineWidth = Math.max(1.5, R * 0.06);
+                    ctx.beginPath(); ctx.moveTo(-R * 0.12, -R * 0.62); ctx.quadraticCurveTo(-R * 0.1, -R * 1.1, R * 0.1, -R * 1.26); ctx.stroke();
+                }
+                horn(1);
+                shine(-0.36, -0.95);
                 break;
             }
             default: {

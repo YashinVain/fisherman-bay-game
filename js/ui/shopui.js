@@ -70,12 +70,10 @@
         const grid = UI.el('div.grid.bait-grid');
         FB.BAITS.forEach(b => {
             const owned = S.baits.includes(b.id), on = S.bait === b.id;
-            const fans = FB.FISH.filter(f => f.bait === b.id);
-            const known = fans.filter(f => S.album[f.id]);
             const card = UI.el('div.card.item.bait-card.m-' + (b.mode || 'float') + (on ? '.on' : ''), { html:
                 '<div class="prev">' + FB.ic(b.icon) + '</div><div class="nm">' + U.esc(FB.name(b)) + '</div>' +
                 '<div class="mode">' + FB.t('mode_' + (b.mode || 'float')) + '</div>' +
-                '<div class="fans">' + (known.length ? known.slice(0, 4).map(f => '<img src="' + FB.fishArt.url(f.id, 50) + '" alt="" title="' + U.esc(FB.name(f)) + '">').join('') : '<span>' + FB.t('bait_fans_unknown', { n: fans.length }) + '</span>') + '</div>' });
+                UI.baitFans(b, 3) });
             if (on) card.appendChild(UI.el('span.owned', { html: FB.ic('check') + FB.t('equipped') }));
             else if (owned) card.appendChild(UI.btn('small', FB.t('take'), () => { S.bait = b.id; FB.state.save(); FB.hud.update(); UI.refresh(); }));
             else if (S.level < b.level) card.appendChild(UI.btn('small grey off', FB.ic('lock') + FB.t('lvl_n', { n: b.level })));
@@ -116,6 +114,7 @@
         FB.COSMETICS.filter(c => c.cat === cat).forEach(item => {
             const owned = S.owned.includes(item.id), on = S.look[item.cat] === item.id;
             const card = UI.el('div.card.item' + (on ? '.on' : ''));
+            if (item.fresh && !owned) card.appendChild(UI.el('span.new-tag', { text: FB.t('new_tag') }));
             const prev = UI.el('div.prev');
             if (item.cat === 'frame') {
                 const a = UI.avatar(FB.sdk.playerName() || FB.t('angler'), FB.sdk.playerPhoto(), item.id);

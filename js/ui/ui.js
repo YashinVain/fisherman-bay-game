@@ -163,6 +163,20 @@
         if (r.item) parts.push(U.esc(FB.name(FB.cosById[r.item])));
         return parts.join(' ');
     };
+    // Кто любит наживку: подпись и картинки рыб. Пойманные — цветные,
+    // остальные — силуэтом (интрига, кого ещё можно поймать). Лишние — «+N».
+    UI.baitFans = (b, max) => {
+        const fans = FB.FISH.filter(f => f.bait === b.id);
+        const S = FB.S;
+        fans.sort((x, y) => (S.album[y.id] ? 1 : 0) - (S.album[x.id] ? 1 : 0));
+        const shown = fans.slice(0, max || 4);
+        const more = fans.length - shown.length;
+        return '<div class="fans"><div class="fans-lab">' + FB.t('bait_fans') + '</div><div class="fans-row">' +
+            shown.map(f => S.album[f.id]
+                ? '<img src="' + FB.fishArt.url(f.id, 50) + '" alt="" title="' + U.esc(FB.name(f)) + '">'
+                : '<img class="unk" src="' + FB.fishArt.url(f.id, 50, { silhouette: true }) + '" alt="" title="' + U.esc(FB.t('bait_fan_unknown')) + '">').join('') +
+            (more > 0 ? '<span class="more">+' + more + '</span>' : '') + '</div></div>';
+    };
     // Аватар с рамкой (для топа и профиля)
     UI.avatar = (name, src, frameId) => {
         const a = UI.el('div.ava');

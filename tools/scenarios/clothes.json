@@ -1,0 +1,25 @@
+{
+    "steps": [
+        { "size": [1920, 980, 1] },
+        { "open": "http://127.0.0.1:8940/", "wait": 2500 },
+        { "name": "подготовка", "js": "document.querySelector('.title .btn').click(); await new Promise(r => setTimeout(r, 600)); FB.ui.closeAll(); const S = FB.S; S.tut = 99; S.tips = { chip: 1, profile: 1, bait: 1, bubbles: 1, drift: 1, places: 1, shop: 1, rods: 1, look: 1, baits: 1, aqua_btn: 1, pl_ducks: 1, see_ducks: 1 }; S.coins = 20000; S.pearls = 300; FB.hud.update(); window.__wear = async (who, hat, jk) => { FB.ui.closeAll(); S.who = who; [hat, jk].forEach(id => { if (!S.owned.includes(id)) S.owned.push(id); FB.shop.equip(id); }); FB.hud.update(); await new Promise(r => setTimeout(r, 500)); };", "sleep": 300 },
+        { "name": "шапки", "js": "FB.shopUI.open('look'); await new Promise(r => setTimeout(r, 500)); document.querySelectorAll('.sheet .tabs')[1].querySelectorAll('.tab')[1].click(); await new Promise(r => setTimeout(r, 500));" },
+        { "shot": "c01-hats.png" },
+        { "name": "шапки вниз", "js": "document.querySelector('.shade:last-child .sheet-body').scrollTop = 9999; await new Promise(r => setTimeout(r, 400));" },
+        { "shot": "c02-hats2.png" },
+        { "name": "куртки", "js": "document.querySelector('.shade:last-child .sheet-body').scrollTop = 0; document.querySelectorAll('.sheet .tabs')[1].querySelectorAll('.tab')[2].click(); await new Promise(r => setTimeout(r, 500));" },
+        { "shot": "c03-jackets.png" },
+        { "name": "куртки вниз", "js": "document.querySelector('.shade:last-child .sheet-body').scrollTop = 9999; await new Promise(r => setTimeout(r, 400));" },
+        { "shot": "c04-jackets2.png" },
+        { "name": "викинг", "js": "await __wear('boy', 'hat_viking', 'jk_overalls');" },
+        { "shot": "c05-viking.png", "clip": [120, 330, 560, 520, 1.4] },
+        { "name": "лягушка", "js": "await __wear('girl', 'hat_frog', 'jk_hoodie');" },
+        { "shot": "c06-frog.png", "clip": [120, 330, 560, 520, 1.4] },
+        { "name": "ушанка", "js": "await __wear('grandpa', 'hat_ushanka', 'jk_sweater');" },
+        { "shot": "c07-ushanka.png", "clip": [120, 330, 560, 520, 1.4] },
+        { "name": "бескозырка", "js": "await __wear('boy', 'hat_sailor', 'jk_life');" },
+        { "shot": "c08-sailor.png", "clip": [120, 330, 560, 520, 1.4] },
+        { "name": "блёсны", "js": "await __wear('grandpa', 'hat_fisher', 'jk_overalls');" },
+        { "shot": "c09-fisher.png", "clip": [120, 330, 560, 520, 1.4] }
+    ]
+}

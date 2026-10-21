@@ -1,0 +1,15 @@
+{
+    "steps": [
+        { "size": [1920, 980, 1] },
+        { "open": "http://127.0.0.1:8940/", "wait": 2500 },
+        { "name": "подготовка", "js": "document.querySelector('.title .btn').click(); await new Promise(r => setTimeout(r, 600)); FB.ui.closeAll(); const S = FB.S; S.tut = 99; S.tips = { chip: 1, profile: 1, bait: 1, bubbles: 1, drift: 1, places: 1, aqua_btn: 1, pl_ducks: 1, see_ducks: 1 }; S.stats.catches = 10; FB.hud.update();", "sleep": 300 },
+        { "name": "подсказка: подарок", "js": "FB.tasks.open('daily'); await new Promise(r => setTimeout(r, 900)); const c = document.querySelector('.coach'); return c && !c.classList.contains('hidden') ? c.innerText.slice(0, 60) : 'нет';" },
+        { "shot": "kt01-gift.png" },
+        { "name": "подсказка: задания", "js": "document.querySelector('.coach .btn').click(); await new Promise(r => setTimeout(r, 900)); const c = document.querySelector('.coach'); return c && !c.classList.contains('hidden') ? c.innerText.slice(0, 60) : 'нет';" },
+        { "shot": "kt02-quests.png" },
+        { "name": "подсказка: сезон", "js": "document.querySelector('.coach .btn').click(); await new Promise(r => setTimeout(r, 400)); document.querySelectorAll('.sheet .tabs .tab')[1].click(); await new Promise(r => setTimeout(r, 900)); const c = document.querySelector('.coach'); return c && !c.classList.contains('hidden') ? c.innerText.slice(0, 60) : 'нет';" },
+        { "shot": "kt03-season.png" },
+        { "name": "подсказка: награды", "js": "document.querySelector('.coach .btn').click(); await new Promise(r => setTimeout(r, 900)); const c = document.querySelector('.coach'); return c && !c.classList.contains('hidden') ? c.innerText.slice(0, 60) : 'нет';" },
+        { "shot": "kt04-tiers.png" }
+    ]
+}

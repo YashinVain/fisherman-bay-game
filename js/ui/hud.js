@@ -248,11 +248,10 @@
             FB.BAITS.forEach(b => {
                 const owned = FB.S.baits.includes(b.id);
                 const on = FB.S.bait === b.id;
-                const likes = FB.FISH.filter(f => f.bait === b.id && FB.S.album[f.id]).length;
                 const card = UI.el('div.card.item' + (on ? '.on' : ''), { html:
                     '<div class="prev">' + FB.ic(b.icon) + '</div><div class="nm">' + U.esc(FB.name(b)) + '</div>' +
                     '<div class="mode">' + FB.t('mode_' + (b.mode || 'float')) + '</div>' +
-                    '<div class="src">' + FB.t('bait_likes', { n: likes }) + '</div>' });
+                    UI.baitFans(b, 3) });
                 if (owned) card.appendChild(UI.btn(on ? 'small grey' : 'small', on ? FB.t('equipped') : FB.t('take'), () => { FB.S.bait = b.id; FB.state.save(); H.update(); UI.close(); }));
                 else if (FB.S.level < b.level) card.appendChild(UI.btn('small grey off', FB.ic('lock') + FB.t('lvl_n', { n: b.level }), null));
                 else card.appendChild(UI.btn('small yellow', UI.price({ coins: b.price }), () => {

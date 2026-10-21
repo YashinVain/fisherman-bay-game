@@ -44,15 +44,24 @@
         C('hat_cap', 'hat', 'Кепка', 'Cap', null, 'default', { a: '#d84a3a', b: '#b23a2c' }),
         C('hat_panama', 'hat', 'Панама', 'Bucket Hat', { coins: 600 }, 'shop', { a: '#e8d6a0', b: '#c8b47a' }),
         C('hat_beanie', 'hat', 'Шапка с помпоном', 'Bobble Hat', { coins: 1200 }, 'shop', { a: '#3a7ad8', b: '#f2f2f2' }),
+        C('hat_fisher', 'hat', 'Шляпа с блёснами', 'Lure Hat', { coins: 2200 }, 'shop', { a: '#8a9a52', b: '#5e6c36' }),
+        C('hat_ushanka', 'hat', 'Ушанка', 'Trapper Hat', { coins: 3200 }, 'shop', { a: '#6a4a32', b: '#c8a27a' }),
+        C('hat_frog', 'hat', 'Шапка-лягушка', 'Frog Hat', { coins: 4500 }, 'shop', { a: '#6cc04a', b: '#ff8a9a' }),
         C('hat_straw', 'hat', 'Соломенная шляпа', 'Straw Hat', { pearls: 40 }, 'shop', { a: '#f0cc6a', b: '#d84a3a' }),
+        C('hat_sailor', 'hat', 'Бескозырка', 'Sailor Cap', { pearls: 45 }, 'shop', { a: '#f6f6f6', b: '#1e2c4a' }),
         C('hat_captain', 'hat', 'Капитанская фуражка', 'Captain Hat', { pearls: 80 }, 'shop', { a: '#f6f6f6', b: '#1e2c4a' }),
+        C('hat_viking', 'hat', 'Шлем викинга', 'Viking Helmet', { pearls: 110 }, 'shop', { a: '#a4b0bc', b: '#f4e8c8' }),
         C('hat_crown', 'hat', 'Корона рыбака', 'Angler Crown', null, 'tourney', { a: '#f2c43a', b: '#d8402a' }),
         C('hat_pirate', 'hat', 'Пиратская треуголка', 'Pirate Hat', null, 'pass', { a: '#2a2a30', b: '#f2f2f2' }),
         // Куртки
         C('jk_green', 'jacket', 'Зелёная жилетка', 'Green Vest', null, 'default', { a: '#4f8a3a', b: '#3a6a2a' }),
         C('jk_yellow', 'jacket', 'Жёлтый дождевик', 'Yellow Raincoat', { coins: 900 }, 'shop', { a: '#f2c42a', b: '#d8a81a' }),
         C('jk_plaid', 'jacket', 'Клетчатая рубашка', 'Plaid Shirt', { coins: 1800 }, 'shop', { a: '#c83a3a', b: '#2a2a2a' }),
+        C('jk_sweater', 'jacket', 'Вязаный свитер', 'Knit Sweater', { coins: 2600 }, 'shop', { a: '#ece2cc', b: '#c8403a' }),
+        C('jk_life', 'jacket', 'Спасательный жилет', 'Life Vest', { coins: 3800 }, 'shop', { a: '#ff7a1a', b: '#e8eef2', s: '#3a64a8' }),
+        C('jk_overalls', 'jacket', 'Рыбацкий комбинезон', 'Fishing Waders', { coins: 5500 }, 'shop', { a: '#4e6e46', b: '#2e3a2a', s: '#d8944a' }),
         C('jk_navy', 'jacket', 'Морской бушлат', 'Navy Coat', { pearls: 60 }, 'shop', { a: '#24365c', b: '#f2c43a' }),
+        C('jk_hoodie', 'jacket', 'Худи с рыбкой', 'Fish Hoodie', { pearls: 65 }, 'shop', { a: '#5a8ad8', b: '#ffffff' }),
         C('jk_hawaii', 'jacket', 'Гавайская рубашка', 'Hawaiian Shirt', { pearls: 70 }, 'shop', { a: '#2ab0c8', b: '#f27a8a' }),
         C('jk_gold', 'jacket', 'Золотая куртка', 'Golden Jacket', null, 'pass', { a: '#e8b42a', b: '#fff0a0' }),
         // Поплавки
@@ -72,8 +81,11 @@
         // Питомцы
         C('pet_none', 'pet', 'Без питомца', 'No Pet', null, 'default', {}),
         C('pet_cat', 'pet', 'Рыжий кот', 'Ginger Cat', { coins: 3000 }, 'shop', { a: '#f0903a', b: '#fff0dc', type: 'cat' }),
+        C('pet_penguin', 'pet', 'Пингвин', 'Penguin', { coins: 6000 }, 'shop', { a: '#2c3444', b: '#ffffff', type: 'penguin' }),
         C('pet_duck', 'pet', 'Утка', 'Duck', { pearls: 60 }, 'shop', { a: '#f6f6f0', b: '#f2a81a', type: 'duck' }),
+        C('pet_gull', 'pet', 'Чайка', 'Seagull', { pearls: 75 }, 'shop', { a: '#fbfbfb', b: '#9aa6b4', type: 'gull' }),
         C('pet_raccoon', 'pet', 'Енот', 'Raccoon', { pearls: 120 }, 'shop', { a: '#8a8a90', b: '#2a2a30', type: 'raccoon' }),
+        C('pet_otter', 'pet', 'Выдра', 'Otter', { pearls: 140 }, 'shop', { a: '#8a5a36', b: '#e8c8a0', type: 'otter' }),
         C('pet_dog', 'pet', 'Пёс', 'Puppy', null, 'starter', { a: '#c89a5a', b: '#7a5430', type: 'dog' }),
         // Рамки аватара в топе
         C('fr_none', 'frame', 'Обычная', 'Plain', null, 'default', { a: '#c8d6e0' }),
@@ -102,6 +114,9 @@
     FB.COSMETIC_CATS = ['hat', 'jacket', 'float', 'boat', 'pet', 'frame', 'effect'];
     FB.cosById = {};
     FB.COSMETICS.forEach(c => { FB.cosById[c.id] = c; });
+    // Свежие вещи этого обновления — в магазине с ярлыком «Новинка»
+    ['hat_fisher', 'hat_ushanka', 'hat_frog', 'hat_sailor', 'hat_viking', 'jk_sweater', 'jk_life', 'jk_overalls', 'jk_hoodie', 'pet_penguin', 'pet_gull', 'pet_otter']
+        .forEach(id => { FB.cosById[id].fresh = true; });
     FB.DEFAULT_LOOK = { hat: 'hat_cap', jacket: 'jk_green', float: 'fl_classic', boat: 'bt_pier', pet: 'pet_none', frame: 'fr_none', effect: 'fx_splash' };
 
     // ---------- Покупки за реальные деньги (Яндекс) ----------

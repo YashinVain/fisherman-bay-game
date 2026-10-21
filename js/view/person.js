@@ -388,11 +388,31 @@
         const t = SC.t, type = pet.c.type;
         const a = tint(pet.c.a), b = tint(pet.c.b);
         const lw = Math.max(1, h * 0.011);
+        // Радость: подпрыгивает после улова (на редкой рыбе — дважды и с сердечком),
+        // во время вываживания подскакивает — «болеет» за хозяина
+        const since = t - (P.petJoy ? P.petJoy.at : -99), HOP = 0.42;
+        let dy = 0;
+        if (P.petJoy && since >= 0 && since < P.petJoy.n * HOP) dy = -Math.sin((since % HOP) / HOP * Math.PI) * s * 0.24;
+        else if (FB.fishing && FB.fishing.phase === 'fight') dy = -Math.abs(Math.sin(t * 7)) * s * 0.05;
         ctx.save();
         ctx.translate(x, y);
         ctx.lineWidth = lw; ctx.strokeStyle = OUT; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
         ctx.fillStyle = 'rgba(0,0,0,0.15)';
-        ctx.beginPath(); ctx.ellipse(0, s * 0.02, s * 0.42, s * 0.07, 0, 0, Math.PI * 2); ctx.fill();
+        const shr = 1 + dy / (s * 0.6);
+        ctx.beginPath(); ctx.ellipse(0, s * 0.02, s * 0.42 * shr, s * 0.07 * shr, 0, 0, Math.PI * 2); ctx.fill();
+        if (P.petJoy && P.petJoy.love && since >= 0 && since < 1.4) {
+            const e = since / 1.4;
+            ctx.save();
+            ctx.globalAlpha = 1 - e * e;
+            ctx.translate(s * 0.22, -s * 1.15 - e * s * 0.45);
+            ctx.scale(s * 0.012 * (0.8 + e * 0.4), s * 0.012 * (0.8 + e * 0.4));
+            ctx.fillStyle = '#ff5a7a'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(0, 6); ctx.bezierCurveTo(-12, -2, -6, -12, 0, -5); ctx.bezierCurveTo(6, -12, 12, -2, 0, 6); ctx.fill(); ctx.stroke();
+            ctx.restore();
+        }
+        ctx.translate(0, dy);
+        if (type === 'penguin') { drawPenguin(ctx, s, t, a, b, dy < -1); ctx.restore(); return; }
+        if (type === 'gull') { drawGull(ctx, s, t, a, b, dy < -1); ctx.restore(); return; }
         if (type === 'duck') {
             ctx.fillStyle = a;
             ctx.beginPath(); ctx.ellipse(0, -s * 0.28, s * 0.38, s * 0.28, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
@@ -409,9 +429,13 @@
         ctx.save();
         ctx.translate(-s * 0.28, -s * 0.1);
         ctx.rotate(-0.4 + wag);
-        ctx.strokeStyle = OUT; ctx.lineWidth = s * 0.16 + lw * 2;
-        ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-s * 0.3, -s * 0.1, -s * 0.28, -s * 0.42); ctx.stroke();
-        ctx.strokeStyle = a; ctx.lineWidth = s * 0.16; ctx.stroke();
+        const tw = type === 'otter' ? s * 0.2 : s * 0.16;
+        ctx.strokeStyle = OUT; ctx.lineWidth = tw + lw * 2;
+        ctx.beginPath(); ctx.moveTo(0, 0);
+        if (type === 'otter') ctx.quadraticCurveTo(-s * 0.32, s * 0.02, -s * 0.46, -s * 0.12);
+        else ctx.quadraticCurveTo(-s * 0.3, -s * 0.1, -s * 0.28, -s * 0.42);
+        ctx.stroke();
+        ctx.strokeStyle = a; ctx.lineWidth = tw; ctx.stroke();
         if (type === 'raccoon') {
             ctx.strokeStyle = b; ctx.lineWidth = s * 0.17;
             ctx.setLineDash([s * 0.07, s * 0.08]); ctx.stroke(); ctx.setLineDash([]);
@@ -436,19 +460,35 @@
             ctx.beginPath(); ctx.ellipse(hx - s * 0.08, hy + s * 0.04, s * 0.08, s * 0.16, 0.3 + Math.sin(t * 2) * 0.1, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
             ctx.fillStyle = '#2a2a34'; ctx.beginPath(); ctx.arc(hx + s * 0.34, hy + s * 0.02, s * 0.04, 0, Math.PI * 2); ctx.fill();
         } else {
-            // Уши-треугольники
-            [[-0.06, 1], [0.12, 1]].forEach(([dx]) => {
+            if (type === 'otter') {
+                // Уши — маленькие полукруглые
                 ctx.fillStyle = a;
-                ctx.beginPath(); ctx.moveTo(hx + dx * s - s * 0.07, hy - s * 0.15); ctx.lineTo(hx + dx * s, hy - s * 0.36); ctx.lineTo(hx + dx * s + s * 0.08, hy - s * 0.17); ctx.closePath(); ctx.fill(); ctx.stroke();
-            });
-            ctx.fillStyle = type === 'raccoon' ? '#ffffff' : U.shade(a, 0.3);
-            ctx.beginPath(); ctx.ellipse(hx + s * 0.16, hy + s * 0.06, s * 0.1, s * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+                [[-0.12, -0.17], [0.08, -0.21]].forEach(([dx, dy2]) => { ctx.beginPath(); ctx.arc(hx + dx * s, hy + dy2 * s, s * 0.06, Math.PI * 0.95, Math.PI * 2.05); ctx.fill(); ctx.stroke(); });
+            } else {
+                // Уши-треугольники
+                [[-0.06, 1], [0.12, 1]].forEach(([dx]) => {
+                    ctx.fillStyle = a;
+                    ctx.beginPath(); ctx.moveTo(hx + dx * s - s * 0.07, hy - s * 0.15); ctx.lineTo(hx + dx * s, hy - s * 0.36); ctx.lineTo(hx + dx * s + s * 0.08, hy - s * 0.17); ctx.closePath(); ctx.fill(); ctx.stroke();
+                });
+            }
+            ctx.fillStyle = type === 'raccoon' ? '#ffffff' : type === 'otter' ? b : U.shade(a, 0.3);
+            if (type === 'otter') { ctx.beginPath(); ctx.ellipse(hx + s * 0.13, hy + s * 0.08, s * 0.15, s * 0.11, 0, 0, Math.PI * 2); ctx.fill(); }
+            else { ctx.beginPath(); ctx.ellipse(hx + s * 0.16, hy + s * 0.06, s * 0.1, s * 0.08, 0, 0, Math.PI * 2); ctx.fill(); }
             if (type === 'raccoon') {
                 ctx.fillStyle = b;
                 ctx.beginPath(); ctx.ellipse(hx + s * 0.08, hy - s * 0.02, s * 0.13, s * 0.07, 0, 0, Math.PI * 2); ctx.fill();
             }
-            ctx.fillStyle = '#ff9aa6';
-            ctx.beginPath(); ctx.arc(hx + s * 0.25, hy + s * 0.04, s * 0.035, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = type === 'otter' ? '#3a2a24' : '#ff9aa6';
+            ctx.beginPath(); ctx.arc(hx + s * 0.25, hy + s * 0.04, s * (type === 'otter' ? 0.045 : 0.035), 0, Math.PI * 2); ctx.fill();
+            if (type === 'otter') {
+                ctx.strokeStyle = 'rgba(255,250,240,0.85)'; ctx.lineWidth = Math.max(0.8, s * 0.014);
+                [-0.03, 0.03].forEach(k => { ctx.beginPath(); ctx.moveTo(hx + s * 0.2, hy + s * (0.1 + k)); ctx.lineTo(hx + s * 0.4, hy + s * (0.07 + k * 2)); ctx.stroke(); });
+                // Ракушка в лапках
+                ctx.fillStyle = '#ffd6c0'; ctx.strokeStyle = OUT; ctx.lineWidth = lw;
+                ctx.beginPath(); ctx.moveTo(s * 0.12, -s * 0.36); ctx.arc(s * 0.2, -s * 0.36, s * 0.08, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+                ctx.strokeStyle = 'rgba(200,120,100,0.7)'; ctx.lineWidth = Math.max(0.8, s * 0.012);
+                [-0.04, 0, 0.04].forEach(k => { ctx.beginPath(); ctx.moveTo(s * 0.2, -s * 0.36); ctx.lineTo(s * (0.2 + k * 1.4), -s * 0.43); ctx.stroke(); });
+            }
             if (type === 'cat') {
                 ctx.strokeStyle = U.rgba(U.shade(pet.c.a, -0.35), 0.6); ctx.lineWidth = s * 0.04;
                 [-0.48, -0.36, -0.24].forEach(k => { ctx.beginPath(); ctx.moveTo(-s * 0.22, s * k); ctx.lineTo(-s * 0.08, s * k + s * 0.02); ctx.stroke(); });
@@ -462,6 +502,68 @@
         }
         ctx.restore();
     };
+
+    // Пингвин: стоит столбиком, машет крылышками, когда радуется
+    function drawPenguin(ctx, s, t, a, b, happy) {
+        const flap = happy ? Math.sin(t * 22) * 0.5 : Math.sin(t * 1.5) * 0.08;
+        ctx.fillStyle = '#f2a01a';
+        [-0.1, 0.12].forEach(fx => { ctx.beginPath(); ctx.ellipse(s * fx, -s * 0.01, s * 0.1, s * 0.045, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); });
+        ctx.fillStyle = a;
+        ctx.beginPath(); ctx.ellipse(0, -s * 0.42, s * 0.3, s * 0.42, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = b;
+        ctx.beginPath(); ctx.ellipse(s * 0.09, -s * 0.36, s * 0.19, s * 0.32, 0, 0, Math.PI * 2); ctx.fill();
+        // Крылышко
+        ctx.save(); ctx.translate(-s * 0.1, -s * 0.52); ctx.rotate(0.25 + flap);
+        ctx.fillStyle = a; ctx.beginPath(); ctx.ellipse(0, s * 0.18, s * 0.08, s * 0.22, 0.15, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.restore();
+        // Голова: белые щёки, клюв, глаз
+        ctx.fillStyle = b;
+        ctx.beginPath(); ctx.ellipse(s * 0.14, -s * 0.74, s * 0.1, s * 0.08, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#f2a01a';
+        ctx.beginPath(); ctx.moveTo(s * 0.26, -s * 0.74); ctx.lineTo(s * 0.42, -s * 0.7); ctx.lineTo(s * 0.26, -s * 0.66); ctx.closePath(); ctx.fill(); ctx.stroke();
+        const blink = (t % 4.1) < 0.12;
+        ctx.fillStyle = '#1a1a22';
+        if (blink) ctx.fillRect(s * 0.1, -s * 0.77, s * 0.07, s * 0.018);
+        else {
+            ctx.beginPath(); ctx.arc(s * 0.15, -s * 0.76, s * 0.035, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(s * 0.14, -s * 0.775, s * 0.012, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.fillStyle = 'rgba(255,120,140,0.5)'; ctx.beginPath(); ctx.arc(s * 0.2, -s * 0.66, s * 0.035, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // Чайка: белая, серые крылья, жёлтый клюв с красной точкой; от радости расправляет крылья
+    function drawGull(ctx, s, t, a, b, happy) {
+        ctx.strokeStyle = '#e8a01a'; ctx.lineWidth = Math.max(1.5, s * 0.03);
+        [-0.04, 0.08].forEach(fx => { ctx.beginPath(); ctx.moveTo(s * fx, -s * 0.2); ctx.lineTo(s * fx, 0); ctx.lineTo(s * (fx + 0.07), 0); ctx.stroke(); });
+        ctx.strokeStyle = OUT; ctx.lineWidth = Math.max(1, s * 0.026);
+        // Хвост
+        ctx.fillStyle = b;
+        ctx.beginPath(); ctx.moveTo(-s * 0.26, -s * 0.36); ctx.lineTo(-s * 0.52, -s * 0.3); ctx.lineTo(-s * 0.26, -s * 0.24); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = a;
+        ctx.beginPath(); ctx.ellipse(0, -s * 0.36, s * 0.32, s * 0.2, -0.08, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        // Крыло (поднимается, когда радуется)
+        const up = happy ? 0.9 + Math.sin(t * 20) * 0.3 : Math.sin(t * 1.2) * 0.05;
+        ctx.save(); ctx.translate(s * 0.08, -s * 0.42); ctx.rotate(up);
+        ctx.fillStyle = b;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-s * 0.2, -s * 0.12, -s * 0.42, s * 0.02); ctx.quadraticCurveTo(-s * 0.2, s * 0.1, 0, s * 0.08); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#2a2e36'; ctx.beginPath(); ctx.moveTo(-s * 0.3, -s * 0.02); ctx.lineTo(-s * 0.42, s * 0.02); ctx.lineTo(-s * 0.3, s * 0.06); ctx.closePath(); ctx.fill();
+        ctx.restore();
+        // Голова
+        ctx.fillStyle = a;
+        ctx.beginPath(); ctx.arc(s * 0.24, -s * 0.62, s * 0.16, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#f6c52a';
+        ctx.beginPath(); ctx.moveTo(s * 0.37, -s * 0.64); ctx.lineTo(s * 0.58, -s * 0.6); ctx.lineTo(s * 0.37, -s * 0.56); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#e8402a'; ctx.beginPath(); ctx.arc(s * 0.5, -s * 0.585, s * 0.018, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#1a1a22'; ctx.beginPath(); ctx.arc(s * 0.28, -s * 0.66, s * 0.028, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // Питомец радуется улову (см. drawPet)
+    FB.on('landed', (d) => {
+        const res = d && d.res;
+        if (!res || res.kind !== 'fish' || !res.fish) return;
+        const rare = (FB.RARITY[res.fish.r] || {}).order >= 2;
+        P.petJoy = { at: FB.scene.t, n: rare ? 2 : 1, love: rare };
+    });
 
     // ---------- Превью вещи для магазина ----------
     // Рисуем маленького рыбака (или поплавок, лодку, питомца) уже с этой вещью

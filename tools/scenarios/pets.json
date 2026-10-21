@@ -1,0 +1,17 @@
+{
+    "steps": [
+        { "size": [1920, 980, 1] },
+        { "open": "http://127.0.0.1:8940/", "wait": 2500 },
+        { "name": "подготовка", "js": "document.querySelector('.title .btn').click(); await new Promise(r => setTimeout(r, 600)); FB.ui.closeAll(); const S = FB.S; S.tut = 99; S.tips = { chip: 1, profile: 1, bait: 1, bubbles: 1, drift: 1, places: 1, shop: 1, rods: 1, look: 1, baits: 1, aqua_btn: 1, pl_ducks: 1, see_ducks: 1 }; S.coins = 20000; S.pearls = 300; FB.hud.update(); window.__pet = async (id, joy) => { FB.ui.closeAll(); if (!S.owned.includes(id)) S.owned.push(id); FB.shop.equip(id); FB.hud.update(); await new Promise(r => setTimeout(r, 400)); if (joy) { FB.person.petJoy = { at: FB.scene.t, n: 2, love: true }; await new Promise(r => setTimeout(r, 200)); } };", "sleep": 300 },
+        { "name": "питомцы", "js": "FB.shopUI.open('look'); await new Promise(r => setTimeout(r, 500)); document.querySelectorAll('.sheet .tabs')[1].querySelectorAll('.tab')[5].click(); await new Promise(r => setTimeout(r, 500));" },
+        { "shot": "q01-pets.png" },
+        { "name": "пингвин", "js": "await __pet('pet_penguin');" },
+        { "shot": "q02-penguin.png", "clip": [0, 380, 560, 480, 1.4] },
+        { "name": "пингвин радуется", "js": "await __pet('pet_penguin', true);" },
+        { "shot": "q03-penguin-joy.png", "clip": [0, 380, 560, 480, 1.4] },
+        { "name": "чайка", "js": "await __pet('pet_gull', true);" },
+        { "shot": "q04-gull.png", "clip": [0, 380, 560, 480, 1.4] },
+        { "name": "выдра", "js": "await __pet('pet_otter');" },
+        { "shot": "q05-otter.png", "clip": [0, 380, 560, 480, 1.4] }
+    ]
+}

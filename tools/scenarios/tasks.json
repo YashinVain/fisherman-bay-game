@@ -1,0 +1,17 @@
+{
+    "steps": [
+        { "size": [1920, 980, 1] },
+        { "open": "http://127.0.0.1:8940/", "wait": 2500 },
+        { "name": "подготовка", "js": "document.querySelector('.title .btn').click(); await new Promise(r => setTimeout(r, 600)); FB.ui.closeAll(); const S = FB.S; S.tut = 99; S.tips = { chip: 1, profile: 1, bait: 1, bubbles: 1, drift: 1, places: 1, gift: 1, quests: 1, season: 1, tiers: 1, aqua_btn: 1, pl_ducks: 1, see_ducks: 1 }; S.stats.catches = 10; S.album.crucian = { n: 1, best: 300 }; S.album.perch = { n: 1, best: 300 }; S.season.pts = 1340; S.season.free = [0, 1]; FB.quests.sync(); S.daily.quests[0].p = S.daily.quests[0].n; S.daily.quests[0].done = true; S.daily.quests[1].p = 1; FB.hud.update();", "sleep": 300 },
+        { "name": "задания", "js": "FB.tasks.open('daily'); await new Promise(r => setTimeout(r, 600));" },
+        { "shot": "k01-daily.png" },
+        { "name": "сезон", "js": "document.querySelectorAll('.sheet .tabs .tab')[1].click(); await new Promise(r => setTimeout(r, 600));" },
+        { "shot": "k02-season.png" },
+        { "name": "сезон вниз", "js": "const b = document.querySelector('.shade:last-child .sheet-body'); b.scrollTop = 9999; await new Promise(r => setTimeout(r, 400));" },
+        { "shot": "k03-season-end.png" },
+        { "name": "наживка", "js": "FB.ui.closeAll(); await new Promise(r => setTimeout(r, 300)); FB.hud.baitPicker(); await new Promise(r => setTimeout(r, 500));" },
+        { "shot": "k04-bait.png" },
+        { "name": "магазин наживки", "js": "FB.ui.closeAll(); await new Promise(r => setTimeout(r, 300)); FB.shopUI.open('bait'); await new Promise(r => setTimeout(r, 500));" },
+        { "shot": "k05-shop-bait.png" }
+    ]
+}
