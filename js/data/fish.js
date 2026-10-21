@@ -132,6 +132,10 @@
     FB.JUNK.forEach(j => { FB.junkById[j.id] = j; });
     FB.pondById = {};
     FB.PONDS.forEach(p => { FB.pondById[p.id] = p; });
+    // Турнирная бухта — отдельное место для турнира недели. В список мест не входит
+    // (поэтому и в цепочку недель тоже). Рыба в ней каждую неделю как в «месте недели»
+    FB.ARENA = { id: 'arena', unlock: 1, n: { ru: 'Турнирная бухта', en: 'Tournament Bay' }, theme: 'arena', arena: true };
+    FB.pondById.arena = FB.ARENA;
     FB.fishOfPond = (pondId) => FB.FISH.filter(f => f.pond === pondId);
     FB.name = (obj) => obj.n[FB.lang] || obj.n.ru;
 })(window.FB);

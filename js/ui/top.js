@@ -71,8 +71,8 @@
             '<div class="k" style="margin-top:4px">' + FB.t('fish_of_week') + '</div><div class="v">' + U.esc(FB.name(fish)) + ' ×2</div></div>' +
             '<div class="time"><div class="k">' + FB.t('ends_in') + '</div><div class="v">' + U.duration(FB.week.end(cfg.idx) - FB.sdk.now()) + '</div>' +
             '<div style="margin-top:4px">' + FB.ic('weather_' + cfg.weather).replace('class="ic"', 'class="ic" style="width:30px;height:30px"') + '</div></div>' }));
-        if (S.pond !== cfg.pond) {
-            box.appendChild(UI.btn('yellow', FB.ic('map') + FB.t('go_tourney'), () => { UI.closeAll(); FB.panels.goTo(cfg.pond); }));
+        if (!FB.state.atTourney()) {
+            box.appendChild(UI.btn('yellow', FB.ic('trophy') + FB.t('go_tourney'), () => { UI.closeAll(); FB.panels.goTo('arena'); }));
         }
         return box;
     }

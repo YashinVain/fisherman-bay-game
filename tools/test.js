@@ -167,7 +167,9 @@ const keepXp = FB.state.applyCatch({ kind: 'fish', fish: FB.fishById.perch, g: 3
 const relXp = FB.state.applyCatch({ kind: 'fish', fish: FB.fishById.perch, g: 300 }, Object.assign({}, ctx), false).xp;
 ok(relXp > keepXp, 'отпустить — больше опыта');
 const cfg = FB.state.weekCfg();
-const tctx = Object.assign({}, ctx, { pond: cfg.pond });
+const tctx = Object.assign({}, ctx, { pond: 'arena', fishPond: cfg.pond });
+ok(!FB.state.applyCatch({ kind: 'fish', fish: FB.fishById.crucian, g: 300 }, Object.assign({}, ctx, { pond: cfg.pond }), true).tourney, 'в обычном месте очки турнира не идут');
+FB.S.week.best = []; FB.S.week.catches = 0;
 const fishW = FB.fishById[cfg.fish];
 const o3 = FB.state.applyCatch({ kind: 'fish', fish: fishW, g: fishW.w[1] }, tctx, true);
 ok(o3.tourney && o3.isWeekFish && FB.state.weekScore() === o3.pts, 'улов в турнире засчитан');
@@ -261,7 +263,7 @@ function fightSim() {
         F.update(perfect ? 0.05 : 0.32);
         F.press(0, 0);
         F.release();
-        let want = false, delay = 0, t = 0, result = 'timeout', runSeen = 0;
+        let want = false, delay = 0, t = 0, result = 'timeout', runSeen = 0, nextSteer = 0;
         const dt = 1 / 60;
         while (t < 90) {
             t += dt;
@@ -269,12 +271,14 @@ function fightSim() {
             let target = F.tension < z.lo + w * 0.35 ? true : F.tension > z.hi - w * 0.3 ? false : want;
             if (F.jump > 0 || F.jumpWarn > 0) target = false;
             if (F.run) { runSeen += dt; if (runSeen > react + 0.3) { F.steer(-F.run.dir); runSeen = 0; } } else runSeen = 0;
+            if (t >= nextSteer) { F.steerKey = Math.abs(F.face) > 0.35 ? -Math.sign(F.face) : 0; nextSteer = t + react; }
             if (target !== want) { delay += dt; if (delay >= react) { want = target; delay = 0; } } else delay = 0;
             F.holding = want;
             F.update(dt);
             if (F.phase === 'land') { result = 'caught'; break; }
             if (F.phase === 'lost') { result = F.lostReason; break; }
         }
+        F.steerKey = 0;
         return { result, t };
     };
     const lines = [];
@@ -407,8 +411,8 @@ function newChecks() {
     const cfg = FB.state.weekCfg();
     const fish = FB.fishOfPond(cfg.pond);
     const small = fish[0], large = fish[fish.length - 1];
-    FB.state.applyCatch({ kind: 'fish', fish: small, g: small.w[0] }, { pond: cfg.pond }, true);
-    FB.state.applyCatch({ kind: 'fish', fish: large, g: large.w[1] }, { pond: cfg.pond }, true);
+    FB.state.applyCatch({ kind: 'fish', fish: small, g: small.w[0] }, { pond: 'arena' }, true);
+    FB.state.applyCatch({ kind: 'fish', fish: large, g: large.w[1] }, { pond: 'arena' }, true);
     const big = FB.S.week.big;
     ok(big && big.f === large.id, 'главный улов недели — самый ценный');
     const ex = FB.tourney.parseExtra(FB.tourney.extra(true));
@@ -481,6 +485,27 @@ function excitementChecks() {
     let tangled = false;
     for (let t = 0; t < F.TUNE.runLen + 0.2; t += 1 / 60) { F.holding = F.tension < 0.5; F.update(1 / 60); if (F.call && F.call.key === 'tangled') { tangled = true; break; } if (F.phase !== 'fight') break; }
     ok(tangled && F.phase === 'fight' && F.progress < 0.5, 'не развернул — запуталась, но не сорвалась');
+    // Ведение: против хода рыбы подмотка быстрее, по ходу — медленнее
+    const lead = (side) => {
+        FB.S = FB.state.fresh(); FB.S.stats.catches = 5; FB.S.tut = 99;
+        F.reset();
+        F.res = { kind: 'fish', fish: FB.fishById.perch, g: 300 };
+        F.ctx = { pond: 'village', dist: 0.4, bait: 'worm', rod: FB.rodById.bamboo, weather: 'sun', bubble: false };
+        F.target = { tx: 0, dist: 0.4 }; F.phase = 'bite'; F.window = 9;
+        F.press(0, 0);
+        F.surgeIn = 99; F.face = 1; F.tension = 0.5; F.stam = 1;
+        F.steerKey = side; F.holding = true;
+        const p0 = F.progress;
+        F.update(0.1);
+        F.steerKey = 0;
+        return F.progress - p0;
+    };
+    ok(lead(-1) > lead(0) && lead(0) > lead(1), 'против хода рыбы тянуть быстрее, по ходу — медленнее');
+    // Силы рыбы: кончились — «выдохлась», тянуть легче
+    F.stam = 0.001; F.tension = 0.5; F.holding = true; F.steerKey = -1; F.surgeIn = 99;
+    F.update(0.05);
+    ok(F.tired > 0 && F.stam === 0, 'рыба выдыхается, когда силы кончились');
+    F.steerKey = 0; F.holding = false;
     // Жор
     const E = FB.events;
     FB.S = FB.state.fresh(); FB.S.tut = 99; FB.S.stats.catches = 10;
@@ -625,6 +650,17 @@ function placeChecks() {
     ok(PL.beforeRoll(ctx, 0.21, 0.41) === shadowRes && ctx.waitMul < 1, 'заброс к тени — клюёт эта рыба');
     ok(PL.state().shadows.length === 0, 'тень уплывает после заброса');
     ok(PL.beforeRoll({ pond: 'mountain', tut: true }, 0.2, 0.4) === null, 'на уроке особенности не работают');
+    // Турнирная бухта — отдельное место
+    const wcfg = FB.state.weekCfg();
+    ok(FB.pondById.arena && !FB.PONDS.includes(FB.pondById.arena), 'турнирная бухта — отдельно от обычных мест');
+    FB.S = FB.state.fresh();
+    ok(FB.state.pondOpen('arena'), 'турнирная бухта открыта с первого уровня');
+    ok(FB.FISH.every(fi => FB.pondById[fi.pond] && fi.pond !== 'arena'), 'у рыб дом — обычные места');
+    ok(FB.week.weatherAt('arena', FB.sdk.now()) === wcfg.weather, 'погода в бухте — погода недели');
+    const ach = FB.catcher.chances({ pond: 'arena', fishPond: FB.state.fishPondOf('arena'), dist: 0.5, bait: 'worm', rod: FB.rodById.bamboo, weather: 'sun', bubble: false });
+    ok(ach.length && ach.every(c => c.fish.pond === wcfg.pond), 'в бухте ловится рыба места недели');
+    const locked = FB.PONDS.find(pp => pp.unlock > 1);
+    ok(!FB.state.pondOpen(locked.id), 'обычные места открываются только по уровню');
 }
 
 // ---------- Находки на воде ----------

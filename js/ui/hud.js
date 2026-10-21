@@ -19,7 +19,7 @@
                 UI.el('div.week-card', { html:
                     '<img src="' + FB.fishArt.url(fish.id, 90) + '" alt="">' +
                     '<div><div class="k">' + FB.t('week_tourney') + ' · ' + U.duration(FB.week.end(cfg.idx) - FB.sdk.now()) + '</div>' +
-                    '<div class="v">' + U.esc(FB.name(FB.pondById[cfg.pond])) + '</div>' +
+                    '<div class="v">' + U.esc(FB.name(FB.ARENA)) + '</div>' +
                     '<div class="v">' + FB.t('fish_of_week') + ': <b style="color:var(--sun)">' + U.esc(FB.name(fish)) + ' ×2</b></div></div>' })
             ]),
             UI.el('div.btns', {}, [
@@ -50,7 +50,12 @@
         const right = UI.el('div.hud-right', {}, [els.aqua, UI.el('button.round', { html: FB.ic('gear'), onclick: () => { FB.audio.play('click'); FB.panels.settings(); } })]);
         top.append(els.lvl, pills, right);
 
-        els.chip = UI.el('button.tourney-chip', { onclick: () => { FB.audio.play('click'); FB.top.open('week'); } });
+        // Плашка турнира — своя кнопка: не на турнире — плывём в турнирную бухту, на турнире — топ
+        els.chip = UI.el('button.tourney-chip', { onclick: () => {
+            FB.audio.play('click');
+            if (FB.state.atTourney()) FB.top.open('week');
+            else if (FB.fishing.phase === 'idle' || FB.fishing.phase === 'lost') FB.panels.goTo('arena');
+        } });
         els.frenzy = UI.el('div.frenzy.hidden');
 
         els.nav = UI.el('div.nav');
@@ -91,7 +96,8 @@
         const f = UI.el('div.fight.away');
         f.innerHTML =
             '<div class="row"><div class="lab">' + FB.t('tension') + '</div><div class="meter"><i class="zone z-left"></i><i class="zone z-good"></i><i class="zone z-right"></i><i class="needle"></i></div></div>' +
-            '<div class="row"><div class="lab">' + FB.t('distance') + '</div><div class="track"><i class="fill"></i><span class="fishmark">' + FB.ic('fish') + '</span><span class="goal">' + FB.ic('hook') + '</span></div></div>';
+            '<div class="row"><div class="lab">' + FB.t('distance') + '</div><div class="track"><i class="fill"></i><span class="fishmark">' + FB.ic('fish') + '</span><span class="goal">' + FB.ic('hook') + '</span></div></div>' +
+            '<div class="row stam-row"><div class="lab">' + FB.t('stamina') + '</div><div class="stam"><i></i><span></span></div></div>';
         return f;
     }
     function setZone(info) {
@@ -152,14 +158,15 @@
         if (!els.chip) return;
         const cfg = FB.state.weekCfg();
         const fish = FB.fishById[cfg.fish];
-        const here = FB.S.pond === cfg.pond;
+        const here = FB.state.atTourney();
         els.chip.classList.toggle('here', here);
         const left = FB.t('time_left', { t: U.duration(FB.week.end(cfg.idx) - FB.sdk.now()) });
         els.chip.innerHTML = FB.ic('trophy') + '<span><span class="t1">' + (here ? FB.t('you_in_tourney') : FB.t('week_tourney')) + ' · ' + left + '</span>' +
             '<span class="t2">' + (here
                 ? FB.t('my_score') + ': <b>' + U.fmt(FB.state.weekScore()) + '</b> · ' + U.esc(FB.name(fish)) + ' ×2'
-                : U.esc(FB.name(FB.pondById[cfg.pond])) + ' · ' + U.esc(FB.name(fish)) + ' ×2') + '</span></span>' +
-            '<span class="fishw"><img src="' + FB.fishArt.url(fish.id, 60) + '" alt=""></span>';
+                : U.esc(FB.name(fish)) + ' ×2') + '</span></span>' +
+            '<span class="fishw"><img src="' + FB.fishArt.url(fish.id, 60) + '" alt=""></span>' +
+            (here ? '' : '<span class="go">' + FB.t('chip_go') + '</span>');
         placeChip();
     };
 
@@ -223,6 +230,12 @@
             const p = U.clamp(info.progress, 0, 1);
             els.fight.querySelector('.fishmark').style.left = 'calc(' + (p * 100) + '% - ' + (p * 30) + 'px)';
             els.fight.querySelector('.fill').style.width = 'calc(' + (p * 100) + '% - ' + (p * 30) + 'px)';
+            const st = els.fight.querySelector('.stam');
+            st.querySelector('i').style.width = (U.clamp(info.stam, 0, 1) * 100) + '%';
+            st.classList.toggle('tired', info.tired);
+            const lab = info.tired ? FB.t('stam_tired') : info.counter === 1 ? FB.t('stam_lead') : '';
+            const sp = st.querySelector('span');
+            if (sp.textContent !== lab) sp.textContent = lab;
         }
     };
 

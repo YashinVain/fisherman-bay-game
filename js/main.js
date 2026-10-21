@@ -107,7 +107,11 @@
         // Пробел — то же, что нажатие (удобно на компьютере)
         window.addEventListener('keydown', (e) => {
             // Стрелки — повести удочку, когда рыба уходит в камыш
-            if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') && playing && !UI.isOpen()) FB.fishing.steer(e.code === 'ArrowLeft' ? -1 : 1);
+            if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') && playing && !UI.isOpen()) {
+                const d = e.code === 'ArrowLeft' ? -1 : 1;
+                FB.fishing.steerKey = d;
+                FB.fishing.steer(d);
+            }
             if (e.code !== 'Space' || e.repeat || !playing || UI.isOpen() || FB.tutor.blocking()) return;
             e.preventDefault();
             const F = FB.fishing;
@@ -116,7 +120,10 @@
                 F.press(p.x, p.y);
             } else F.press(0, 0);
         });
-        window.addEventListener('keyup', (e) => { if (e.code === 'Space') up(); });
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'Space') up();
+            if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') FB.fishing.steerKey = 0;
+        });
         window.addEventListener('resize', () => FB.scene.resize());
 
         // Раз в полминуты: смена недели, погоды, дня
@@ -130,7 +137,7 @@
             }
             if (FB.quests.sync()) FB.hud.update();
             const wx = FB.week.weatherAt(FB.S.pond, FB.sdk.now());
-            if (wx !== FB.scene.weather && FB.fishing.phase === 'idle' && !UI.isOpen()) {
+            if (wx !== FB.scene.weather && FB.fishing.phase === 'idle' && !UI.isOpen() && !FB.scene.traveling()) {
                 FB.scene.setPlace(FB.S.pond, wx, true);
                 UI.toast(FB.t('weather_changed', { w: FB.t('wx_' + wx) }), 'weather_' + wx);
             }

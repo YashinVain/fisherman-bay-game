@@ -8,6 +8,29 @@
     PN.places = () => {
         const render = () => {
             const cfg = FB.state.weekCfg();
+            const box = UI.el('div');
+            // Турнирная бухта — отдельно от обычных мест
+            const here = FB.state.atTourney();
+            const ar = UI.el('div.card.arena-card' + (here ? '.cur' : ''));
+            const pic = UI.el('div.pic');
+            const th = FB.scene.thumb('arena', 260, 96);
+            const tc = document.createElement('canvas');
+            tc.width = th.width; tc.height = th.height;
+            tc.getContext('2d').drawImage(th, 0, 0);
+            pic.appendChild(tc);
+            pic.appendChild(UI.el('div.ribbon', { html: FB.ic('trophy') + FB.t('tourney') }));
+            ar.appendChild(pic);
+            const fishW = FB.fishById[cfg.fish];
+            const info = UI.el('div.info', { html:
+                '<div class="nm">' + U.esc(FB.name(FB.ARENA)) + '</div>' +
+                '<div class="ar-sub">' + FB.t('arena_sub', { pond: U.esc(FB.name(FB.pondById[cfg.pond])) }) + '</div>' +
+                '<div class="ar-fish"><img src="' + FB.fishArt.url(fishW.id, 60) + '" alt="">' + FB.t('fish_of_week') + ': <b>' + U.esc(FB.name(fishW)) + ' ×2</b></div>' +
+                '<div class="ar-time">' + FB.ic('clock') + FB.t('time_left', { t: U.duration(FB.week.end(cfg.idx) - FB.sdk.now()) }) + '</div>' });
+            info.appendChild(here ? UI.el('div.ar-here', { text: FB.t('you_here') }) : UI.btn('yellow small', FB.ic('trophy') + FB.t('go_tourney'), () => { PN.goTo('arena'); UI.close(); }));
+            ar.appendChild(info);
+            ar.addEventListener('click', () => { if (!here) { FB.audio.play('click'); PN.goTo('arena'); UI.close(); } });
+            box.appendChild(ar);
+            box.appendChild(UI.el('div.sec-title', { html: FB.ic('map') + FB.t('places_regular') }));
             const grid = UI.el('div.grid');
             FB.PONDS.forEach(p => {
                 const open = FB.state.pondOpen(p.id);
@@ -20,8 +43,7 @@
                 c.width = thumb.width; c.height = thumb.height;
                 c.getContext('2d').drawImage(thumb, 0, 0);
                 pic.appendChild(c);
-                if (p.id === cfg.pond) pic.appendChild(UI.el('div.ribbon', { html: FB.ic('trophy') + FB.t('tourney') }));
-                else if (FB.S.pond === p.id) pic.appendChild(UI.el('div.ribbon.green', { html: FB.t('you_here') }));
+                if (FB.S.pond === p.id) pic.appendChild(UI.el('div.ribbon.green', { html: FB.t('you_here') }));
                 if (!open) pic.appendChild(UI.el('div.lockbox', { html: FB.ic('lock') + FB.t('lvl_n', { n: p.unlock }) }));
                 card.appendChild(pic);
                 card.appendChild(UI.el('div.info', { html:
@@ -37,23 +59,37 @@
                 });
                 grid.appendChild(card);
             });
-            const box = UI.el('div', {}, [grid]);
-            box.appendChild(UI.el('p.muted.center', { html: FB.t('tourney_open_hint'), style: 'font-size:14px;margin:12px 0 0' }));
+            box.appendChild(grid);
             return box;
         };
         UI.open({ title: FB.t('nav_places'), body: render(), render, tip: 'places' });
     };
 
-    // Переезд на другое место — подходящая пауза для рекламы
+    // Переезд на другое место: старое место уплывает, новое проявляется,
+    // по центру — название места. Потом — подходящая пауза для рекламы
     PN.goTo = (id) => {
+        const pond = FB.pondById[id];
+        if (!pond) return;
         FB.S.pond = id;
         FB.state.save();
         FB.fishing.reset();
-        FB.scene.setPlace(id, FB.week.weatherAt(id, FB.sdk.now()));
+        if (FB.drift) FB.drift.reset();
+        FB.scene.travel(id, FB.week.weatherAt(id, FB.sdk.now()));
+        FB.audio.play('travel');
         FB.hud.update();
-        UI.toast(FB.name(FB.pondById[id]), 'map');
-        FB.sdk.showInterstitial();
+        travelCard(pond);
+        setTimeout(() => FB.sdk.showInterstitial(), 1700);
     };
+    function travelCard(pond) {
+        const old = document.querySelector('.travel-card');
+        if (old) old.remove();
+        const f = FB.places.feature(pond.id);
+        const sub = pond.arena ? FB.t('arena_card') : f ? FB.t('plf_' + f) : '';
+        const el = UI.el('div.travel-card' + (pond.arena ? '.arena' : ''), { html:
+            FB.ic(pond.arena ? 'trophy' : 'map') + '<div><div class="t">' + U.esc(FB.name(pond)) + '</div>' + (sub ? '<div class="s">' + U.esc(sub) + '</div>' : '') + '</div>' });
+        UI.root().appendChild(el);
+        setTimeout(() => el.remove(), 2400);
+    }
 
     // ---------- Альбом ----------
     let albumPond = null;

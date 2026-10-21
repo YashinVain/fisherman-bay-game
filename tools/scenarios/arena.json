@@ -1,0 +1,27 @@
+{
+    "steps": [
+        { "size": [1920, 980, 1] },
+        { "open": "http://127.0.0.1:8940/", "wait": 2500 },
+        { "name": "подготовка", "js": "window.__tap = (x, y, up) => { const o = { clientX: x, clientY: y, bubbles: true, pointerId: 1 }; document.getElementById('game').dispatchEvent(new PointerEvent('pointerdown', o)); if (up !== false) window.dispatchEvent(new PointerEvent('pointerup', o)); }; window.__until = (fn, ms) => new Promise(r => { const t = setInterval(() => { if (fn()) { clearInterval(t); r(true); } }, 15); setTimeout(() => { clearInterval(t); r(false); }, ms || 15000); }); document.querySelector('.title .btn').click(); await new Promise(r => setTimeout(r, 600)); FB.ui.closeAll(); const S = FB.S; S.tut = 99; S.tips = { chip: 1, profile: 1, bait: 1, bubbles: 1, drift: 1, pl_ducks: 1, see_ducks: 1, places: 1, sonar: 1, aqua_btn: 1, ev_steer: 1, ev_tired: 1, ev_perfect: 1, ev_spin: 1, ev_frenzy: 1, pl_current: 1 }; S.stats.catches = 40; S.xp = 3000; S.level = FB.state.levelFromXp(3000); S.rods.push('carbon'); S.rod = 'carbon'; S.baits.push('spinner'); S.owned.push('bt_rowboat'); S.look.boat = 'bt_rowboat'; FB.panels.goTo('village'); FB.ui.closeAll(); FB.scene.setPlace('village', 'sun'); FB.hud.update(); return document.querySelector('.tourney-chip').textContent;", "sleep": 1800 },
+        { "shot": "r01-chip.png" },
+        { "name": "окно мест", "js": "FB.panels.places();", "sleep": 1200 },
+        { "shot": "r02-places.png" },
+        { "name": "плывём на турнир", "js": "document.querySelector('.arena-card .btn').click();", "sleep": 450 },
+        { "shot": "r03-travel-mid.png" },
+        { "js": "", "sleep": 1500 },
+        { "shot": "r04-arena.png" },
+        { "name": "пузыри за камышом", "js": "document.querySelector('.coach .btn') && document.querySelector('.coach .btn').click(); FB.ui.closeAll(); FB.panels.goTo('village'); await new Promise(r => setTimeout(r, 1700)); FB.fishing.spots.push({ tx: -1.05, dist: 0.18, t: 1, life: 30 }, { tx: 1.05, dist: 0.14, t: 1, life: 30 }); const D = FB.drift; D.spawn('duck', 0.12); D.item.tx = 1.0; D.item.t = 3;", "sleep": 600 },
+        { "shot": "r05-reeds.png", "clip": [1500, 500, 420, 480, 1] },
+        { "name": "блесна и хищник", "js": "FB.drift.item = null; FB.S.bait = 'spinner'; FB.hud.update(); const F = FB.fishing; const p = FB.tutor.castPoint(); __tap(p.x, p.y); await __until(() => F.phase === 'wait'); F.res = { kind: 'fish', fish: FB.fishById.pike, g: 3000 }; F.spin.need = 99; F.spin.attract = 70; F.spin.chase = 0.75; F.spin.twitch = 0.3; F.holding = true;", "sleep": 250 },
+        { "shot": "r06-lure.png" },
+        { "name": "вываживание: ведём рыбу", "js": "const F = FB.fishing; F.holding = false; F.reset(); F.res = { kind: 'fish', fish: FB.fishById.pike, g: 3000 }; F.ctx = { pond: 'village', dist: 0.5, bait: 'spinner', rod: FB.rodById.carbon, weather: 'sun', bubble: false }; F.target = { tx: 0.25, dist: 0.4 }; F.phase = 'bite'; F.window = 9; F.press(1200, 400); F.surgeIn = 99; F.dart = 0.4; const t = setInterval(() => { F.holding = F.tension < 0.55; }, 30); await new Promise(r => setTimeout(r, 1500)); clearInterval(t); F.holding = true; F.px = FB.scene.project(F.fishTx, F.fishDist).x - (F.face > 0 ? 300 : -300); return [F.face, F.counter];", "sleep": 100 },
+        { "shot": "r07-lead.png" },
+        { "name": "рыба выдохлась", "js": "const F = FB.fishing; F.stam = 0.001; F.tension = 0.5;", "sleep": 300 },
+        { "shot": "r08-tired.png" },
+        { "size": [540, 960, 2, true] },
+        { "js": "FB.fishing.holding = false; FB.fishing.reset(); FB.scene.resize(); window.dispatchEvent(new Event('resize')); FB.panels.places();", "sleep": 1200 },
+        { "shot": "r09-phone-places.png" },
+        { "js": "FB.ui.closeAll(); FB.panels.goTo('arena');", "sleep": 1900 },
+        { "shot": "r10-phone-arena.png" }
+    ]
+}

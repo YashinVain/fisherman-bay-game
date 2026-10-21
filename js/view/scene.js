@@ -38,6 +38,11 @@
         tropic: {
             sky: ['#3cc0f0', '#dcfaff'], water: ['#7ff0e4', '#0f9cc0'],
             life: ['gulls'], foam: true
+        },
+        // Турнирная бухта: шатры с флажками, табло, гирлянда, буйки
+        arena: {
+            sky: ['#58baf4', '#e4f6ff'], water: ['#8ad6f0', '#1a6aa8'],
+            life: ['gulls', 'birds'], buoys: true
         }
     };
 
@@ -136,7 +141,7 @@
         x.drawImage(SC.skyLayer, 0, 0, W, H);
         SC.clouds.forEach(cl => x.drawImage(cl.img, cl.x, cl.y));
         x.drawImage(SC.landLayer, 0, 0, W, H);
-        SC.fade = { c, k: 0, prev: SC.weather };
+        SC.fade = { c, near: SC.nearLayer, k: 0, prev: SC.weather };
     }
     // Запасной холст для «старого» переднего плана (рыбак, мостки, лодка) во время смены погоды
     let frontBuf = null;
@@ -149,6 +154,79 @@
         x.clearRect(0, 0, w, h);
         x.setTransform(SC.dpr, 0, 0, SC.dpr, 0, 0);
         return x;
+    }
+
+    // ---------- Турнирная бухта ----------
+    function tent(ctx, x, y, s, a, b, night) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = 'rgba(40,40,60,0.55)';
+        ctx.lineWidth = Math.max(1, s * 0.04);
+        // Полосатый купол
+        ctx.beginPath(); ctx.moveTo(-s, 0); ctx.lineTo(0, -s * 0.95); ctx.lineTo(s, 0); ctx.closePath();
+        ctx.fillStyle = a; ctx.fill();
+        ctx.save(); ctx.clip();
+        ctx.fillStyle = b;
+        for (let i = -3; i < 3; i += 2) { ctx.beginPath(); ctx.moveTo(0, -s); ctx.lineTo(i * s * 0.34, 0); ctx.lineTo((i + 1) * s * 0.34, 0); ctx.closePath(); ctx.fill(); }
+        ctx.restore();
+        ctx.stroke();
+        // Вход
+        ctx.fillStyle = night ? '#ffd86a' : 'rgba(40,30,30,0.55)';
+        ctx.beginPath(); ctx.moveTo(-s * 0.18, 0); ctx.lineTo(0, -s * 0.42); ctx.lineTo(s * 0.18, 0); ctx.closePath(); ctx.fill();
+        // Флажок на макушке
+        ctx.strokeStyle = '#5a4a3a'; ctx.lineWidth = Math.max(1, s * 0.035);
+        ctx.beginPath(); ctx.moveTo(0, -s * 0.95); ctx.lineTo(0, -s * 1.35); ctx.stroke();
+        ctx.fillStyle = b;
+        ctx.beginPath(); ctx.moveTo(0, -s * 1.35); ctx.lineTo(s * 0.32, -s * 1.25); ctx.lineTo(0, -s * 1.15); ctx.closePath(); ctx.fill();
+        ctx.restore();
+    }
+    function scoreboard(ctx, x, y, s, night) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.fillStyle = '#6a4a2a';
+        ctx.fillRect(-s * 0.9, -s * 0.9, s * 0.08, s * 0.9);
+        ctx.fillRect(s * 0.82, -s * 0.9, s * 0.08, s * 0.9);
+        const g = ctx.createLinearGradient(0, -s * 1.5, 0, -s * 0.8);
+        g.addColorStop(0, '#2a5ab0'); g.addColorStop(1, '#1a3a80');
+        ctx.fillStyle = g;
+        ctx.strokeStyle = '#f2c43a'; ctx.lineWidth = Math.max(1.5, s * 0.06);
+        ctx.beginPath(); ctx.rect(-s, -s * 1.55, s * 2, s * 0.72); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = night ? '#ffe680' : '#ffd23a';
+        ctx.font = '900 ' + Math.round(s * 0.36) + 'px Nunito, sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText((FB.t ? FB.t('arena_sign') : 'CUP').toUpperCase(), 0, -s * 1.2);
+        // Кубок сбоку
+        ctx.fillStyle = '#ffd23a'; ctx.strokeStyle = '#8a5a06'; ctx.lineWidth = Math.max(1, s * 0.03);
+        ctx.beginPath(); ctx.moveTo(s * 1.05, -s * 1.5); ctx.lineTo(s * 1.35, -s * 1.5); ctx.quadraticCurveTo(s * 1.35, -s * 1.15, s * 1.2, -s * 1.12); ctx.quadraticCurveTo(s * 1.05, -s * 1.15, s * 1.05, -s * 1.5); ctx.fill(); ctx.stroke();
+        ctx.fillRect(s * 1.17, -s * 1.12, s * 0.06, s * 0.14);
+        ctx.fillRect(s * 1.1, -s * 0.98, s * 0.2, s * 0.05);
+        ctx.restore();
+    }
+    // Гирлянда флажков между двумя точками (провисает дугой)
+    function bunting(ctx, x0, y0, x1, y1, sag, size) {
+        const cols = ['#e8402a', '#f2c43a', '#3aa84a', '#3a8ae0', '#d85ac8', '#ff8a3a'];
+        ctx.strokeStyle = 'rgba(60,50,40,0.7)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo((x0 + x1) / 2, Math.max(y0, y1) + sag, x1, y1); ctx.stroke();
+        const n = Math.max(6, Math.round(Math.abs(x1 - x0) / (size * 1.6)));
+        for (let i = 1; i < n; i++) {
+            const t = i / n, mt = 1 - t;
+            const x = mt * mt * x0 + 2 * mt * t * (x0 + x1) / 2 + t * t * x1;
+            const y = mt * mt * y0 + 2 * mt * t * (Math.max(y0, y1) + sag) + t * t * y1;
+            ctx.fillStyle = cols[i % cols.length];
+            ctx.beginPath(); ctx.moveTo(x - size * 0.5, y); ctx.lineTo(x + size * 0.5, y); ctx.lineTo(x, y + size * 1.1); ctx.closePath(); ctx.fill();
+        }
+    }
+    function buoy(ctx, x, y, r) {
+        ctx.fillStyle = 'rgba(10,40,70,0.18)';
+        ctx.beginPath(); ctx.ellipse(x, y + r * 0.2, r * 1.4, r * 0.4, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#f2f2f2';
+        ctx.beginPath(); ctx.arc(x, y - r * 0.4, r, Math.PI, 0); ctx.fill();
+        ctx.fillStyle = '#e8402a';
+        ctx.fillRect(x - r, y - r * 0.4, r * 2, r * 0.35);
+        ctx.beginPath(); ctx.arc(x, y - r * 0.4, r * 0.55, Math.PI, 0); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.ellipse(x, y, r * 1.3, r * 0.3, 0, 0, Math.PI * 2); ctx.stroke();
     }
 
     // ---------- Рисовалки природы ----------
@@ -298,8 +376,8 @@
         });
         // Стебли: у воды прозрачные — будто уходят под воду
         stems.forEach(s => {
-            const g = ctx.createLinearGradient(0, s.by, 0, s.by - s.hh * 0.22);
-            g.addColorStop(0, U.rgba(s.col, 0.1));
+            const g = ctx.createLinearGradient(0, s.by, 0, s.by - s.hh * 0.12);
+            g.addColorStop(0, U.rgba(s.col, 0.55));
             g.addColorStop(1, U.rgba(s.col, 1));
             ctx.strokeStyle = g;
             ctx.lineWidth = lw;
@@ -518,6 +596,18 @@
                 lighthouse(c, W * 0.86, hy - u * 5.5, u * 12, night);
                 break;
             }
+            case 'arena': {
+                hills(c, W, hy - u * 2, u * 8, far('#8ac47a'), rnd, 2);
+                // Песчаный берег с шатрами и табло
+                c.fillStyle = far('#f0dca8');
+                c.beginPath(); c.moveTo(0, hy + 1); c.quadraticCurveTo(W * 0.5, hy - u * 3.2, W, hy + 1); c.closePath(); c.fill();
+                const tents = [[0.07, '#e8402a', '#ffffff'], [0.19, '#3a8ae0', '#ffffff'], [0.31, '#f2c43a', '#e8402a'], [0.79, '#3aa84a', '#ffffff'], [0.92, '#d85ac8', '#ffffff']];
+                tents.forEach(([kx, a, b2]) => tent(c, W * kx, hy - u * 0.4, u * U.lerp(4.2, 5.4, rnd()), far(a), b2, night));
+                scoreboard(c, W * 0.64, hy - u * 0.4, u * 6, night);
+                bunting(c, W * 0.05, hy - u * 7, W * 0.32, hy - u * 7.5, u * 2.5, u * 1.1);
+                bunting(c, W * 0.55, hy - u * 7.5, W * 0.95, hy - u * 6.5, u * 3, u * 1.1);
+                break;
+            }
             case 'tropic': {
                 c.fillStyle = '#f2dca0';
                 c.beginPath(); c.ellipse(W * 0.3, hy + 1, W * 0.2, u * 2.4, 0, Math.PI, 0); c.fill();
@@ -619,6 +709,12 @@
                 c.stroke();
             }
         }
+        if (th.buoys) {
+            for (let i = 0; i < 9; i++) {
+                const p = SC.project(U.lerp(-1.3, 1.3, i / 8), 0.82 + Math.sin(i) * 0.03);
+                buoy(c, p.x, p.y, u * 1.2 * Math.max(0.5, p.s * 2));
+            }
+        }
         // Камни, кувшинки, камыши по краям — ближний план. Камни и камыш рисуем
         // на отдельном слое, чтобы солнечная дорожка легла на них светом
         const [nearC, n] = mk();
@@ -645,7 +741,6 @@
             sunPath(n, 1.1);
             n.restore();
         }
-        c.drawImage(nearC, 0, 0, W, H);
 
         // Дымка у горизонта, туман, ночь, дождь
         const haze = c.createLinearGradient(0, hy - u * 6, 0, hy + u * 6);
@@ -682,9 +777,17 @@
             c.fillStyle = 'rgba(70,90,110,0.16)';
             c.fillRect(0, 0, W, H);
         }
+        // Тот же свет и туман — и на переднем плане (камыш, камни)
+        n.save();
+        n.globalCompositeOperation = 'source-atop';
+        if (wx === 'fog') { n.fillStyle = 'rgba(240,245,248,0.35)'; n.fillRect(0, 0, W, H); }
+        if (night) { n.fillStyle = 'rgba(14,24,70,0.45)'; n.fillRect(0, 0, W, H); }
+        if (wx === 'rain') { n.fillStyle = 'rgba(70,90,110,0.16)'; n.fillRect(0, 0, W, H); }
+        n.restore();
 
         SC.skyLayer = skyC;
         SC.landLayer = landC;
+        SC.nearLayer = nearC;
         SC.dirty = false;
     }
 
@@ -693,7 +796,7 @@
     SC.thumb = (pondId, w, h) => {
         const key = pondId + w + 'x' + h;
         if (thumbs[key]) return thumbs[key];
-        const keep = { W: SC.W, H: SC.H, L: SC.L, dpr: SC.dpr, theme: SC.theme, weather: SC.weather, sky: SC.skyLayer, land: SC.landLayer, sun: SC.sun, dirty: SC.dirty };
+        const keep = { W: SC.W, H: SC.H, L: SC.L, dpr: SC.dpr, theme: SC.theme, weather: SC.weather, sky: SC.skyLayer, land: SC.landLayer, near: SC.nearLayer, sun: SC.sun, dirty: SC.dirty };
         SC.W = w; SC.H = h; SC.dpr = 2;
         SC.L = { portrait: false, hy: Math.round(h * 0.52), nearY: h * 1.25, cx: w / 2, ph: h * 0.3, px: w / 2, py: h };
         SC.theme = FB.pondById[pondId].theme;
@@ -704,8 +807,9 @@
         const x = c.getContext('2d');
         x.drawImage(SC.skyLayer, 0, 0);
         x.drawImage(SC.landLayer, 0, 0);
+        x.drawImage(SC.nearLayer, 0, 0);
         SC.W = keep.W; SC.H = keep.H; SC.L = keep.L; SC.dpr = keep.dpr; SC.theme = keep.theme; SC.weather = keep.weather;
-        SC.skyLayer = keep.sky; SC.landLayer = keep.land; SC.sun = keep.sun; SC.dirty = keep.dirty;
+        SC.skyLayer = keep.sky; SC.landLayer = keep.land; SC.nearLayer = keep.near; SC.sun = keep.sun; SC.dirty = keep.dirty;
         return (thumbs[key] = c);
     };
 
@@ -766,7 +870,9 @@
 
     // Рыба выпрыгивает где-то вдали — сцена живая, даже когда не клюёт
     function spawnJump() {
-        const list = FB.fishOfPond(SC.pond).filter(f => f.r === 'common' || f.r === 'uncommon');
+        const pond = FB.state && FB.state.fishPondOf ? FB.state.fishPondOf(SC.pond) : SC.pond;
+        const list = FB.fishOfPond(pond).filter(f => f.r === 'common' || f.r === 'uncommon');
+        if (!list.length) return;
         const f = U.pick(list);
         const tx = U.rand(-0.9, 0.9), dist = U.rand(0.3, 0.95);
         SC.life.push({ kind: 'jump', fish: f.id, tx, dist, t: 0, dir: Math.random() < 0.5 ? 1 : -1 });
@@ -1045,6 +1151,8 @@
         updateFx(dt);
         if (drawWorld) drawWorld(ctx, 'water');
         drawFx(ctx);
+        if (SC.nearLayer) ctx.drawImage(SC.nearLayer, 0, 0, SC.W, SC.H);
+        if (fk > 0 && fade.near) { ctx.globalAlpha = fk; ctx.drawImage(fade.near, 0, 0, SC.W, SC.H); ctx.globalAlpha = 1; }
         if (drawWorld) {
             drawWorld(ctx, 'front');
             // Рыбак, мостки и лодка при старой погоде — поверх, тают вместе с фоном
@@ -1061,5 +1169,62 @@
         }
         if (SC.rainK > 0.01) drawRain(ctx, dt, SC.rainK);
         if (SC.fogK > 0.01) drawFog(ctx, SC.fogK);
+        drawTravel(ctx, dt);
     };
+
+    // ---------- Переезд на другое место ----------
+    // Снимок старого места уплывает влево и тает, новое проявляется из-под него,
+    // по экрану пробегает мягкая волна
+    SC.TRAVEL_TIME = 1.4;
+    SC.travel = (pondId, weather) => {
+        let img = null;
+        if (SC.canvas && SC.canvas.width) {
+            img = document.createElement('canvas');
+            img.width = SC.canvas.width; img.height = SC.canvas.height;
+            img.getContext('2d').drawImage(SC.canvas, 0, 0);
+        }
+        SC.setPlace(pondId, weather);
+        SC.trans = img ? { img, t: 0 } : null;
+    };
+    SC.traveling = () => !!SC.trans;
+    function drawTravel(ctx, dt) {
+        const tr = SC.trans;
+        if (!tr) return;
+        tr.t += Math.min(dt, 0.05);
+        const k = Math.min(1, tr.t / SC.TRAVEL_TIME);
+        if (k >= 1) { SC.trans = null; return; }
+        const e = U.smooth(k), W = SC.W, H = SC.H, u = SC.unit();
+        // Край волны идёт справа налево, слегка волнистый
+        const edge = (y) => W * (1.08 - e * 1.25) + Math.sin(y * 0.018 + tr.t * 6) * u * 2.2 + Math.sin(y * 0.047 - tr.t * 4) * u * 1.2;
+        const path = () => {
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            for (let y = 0; y <= H + 20; y += 20) ctx.lineTo(edge(y), y);
+            ctx.lineTo(0, H);
+            ctx.closePath();
+        };
+        // Старое место — только слева от волны
+        ctx.save();
+        path(); ctx.clip();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.drawImage(tr.img, 0, 0);
+        ctx.restore();
+        // Пена по краю волны
+        ctx.save();
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+        ctx.lineWidth = u * 1.6;
+        ctx.shadowColor = 'rgba(40,120,180,0.5)'; ctx.shadowBlur = u * 2;
+        ctx.beginPath();
+        for (let y = 0; y <= H + 20; y += 20) { const x = edge(y); if (y === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(255,255,255,0.75)';
+        for (let i = 0; i < 18; i++) {
+            const y = (i / 18) * H + Math.sin(i * 3.1) * 12;
+            const x = edge(y) + u * (1 + (i % 3) * 1.4);
+            ctx.beginPath(); ctx.arc(x, y, u * (0.35 + (i % 4) * 0.18), 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
+    }
 })(window.FB);

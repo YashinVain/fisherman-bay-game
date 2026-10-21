@@ -13,6 +13,10 @@
 // У каждой рыбы свой характер (FB.FISH[].st): рывки, свечки (в прыжке надо
 // отпустить), тяга на глубину, уход в камыш (надо вести палец в другую сторону).
 // Подсёк сразу — «отличная подсечка». Уловы подряд копят серию удачи.
+// Рыбу можно вести: палец (или стрелки) с той стороны, куда рыба НЕ плывёт, —
+// тянешь против неё, она быстрее устаёт и подплывает. Силы рыбы тают, пока
+// леска в зелёной зоне; кончились — «рыба выдохлась»: пару секунд она не
+// сопротивляется, тяни что есть сил.
 //
 // Способ ловли зависит от наживки (FB.BAITS[].mode):
 //   • float  — поплавок: ждёшь, пока нырнёт;
@@ -31,7 +35,7 @@
         zoneMax: 0.64, zoneMin: 0.3,      // ширина зелёной зоны: мелочь — широкая, сильная рыба — узкая
         riseBase: 0.4, riseStr: 0.75,     // рост натяжения, когда тянешь
         fall: 0.9,                        // ослабление, когда отпустил
-        reel: 0.34,                       // скорость подмотки
+        reel: 0.29,                       // скорость подмотки
         heavy: 0.55,                      // насколько сильная рыба замедляет подмотку
         slip: 0.025,                      // рыба отвоёвывает леску, пока не тянешь (× сила)
         slackMax: 2.0,                    // сколько стрелка может быть в левой красной зоне, с
@@ -42,8 +46,13 @@
         surgeCap: 1.6,                    // ...но не сильнее этого — чтобы любую рыбу можно было вытащить
         jumpWarn: 0.5, jumpLen: 0.9,      // свечка: предупреждение и время в воздухе
         jumpPull: 2.4,                    // как быстро растёт натяжение, если держать в прыжке
-        runLen: 2.6                       // сколько рыба уходит в камыш, пока не запутается
+        runLen: 2.6,                      // сколько рыба уходит в камыш, пока не запутается
+        counterBoost: 1.35,               // ведёшь против рыбы — подмотка быстрее
+        withPenalty: 0.8,                 // тянешь туда же, куда плывёт рыба, — медленнее
+        stamDrain: 0.13,                  // как быстро тают силы рыбы
+        tiredLen: 2.2, tiredReel: 1.7     // рыба выдохлась: сколько секунд и насколько легче тянуть
     };
+    F.steerKey = 0;       // стрелки на клавиатуре: -1 влево, 1 вправо
 
     // Характеры: every — как часто выкидывает фокусы, len/power — рывок, dart — уход вбок,
     // jump/run — доля событий-прыжков/уходов в камыш, pull — тяга на глубину
@@ -102,6 +111,8 @@
             for (let i = 0; i < 20; i++) {
                 const tx = U.rand(o.tx + 0.25, 0.9), dist = U.rand(0.08, 0.95);
                 const e = F.reachOf(tx, dist, o);
+                const sx = FB.scene.project(tx, dist).x;
+                if (sx < FB.scene.W * 0.2 || sx > FB.scene.W * 0.82) continue;   // не в камыше у краёв
                 if (e > 0.16 && e < reach - 0.03) { F.spots.push({ tx, dist, t: 0, life: U.rand(9, 14) }); break; }
             }
         }
@@ -139,6 +150,7 @@
     // ---------- Ввод ----------
     F.press = (x, y) => {
         F.holding = true;
+        F.px = x;
         switch (F.phase) {
             case 'idle': return tryCast(x, y);
             case 'wait':
@@ -232,7 +244,8 @@
         F.ctx = {
             pond: FB.S.pond, dist: e, bait: FB.S.bait, rod: r,
             weather: FB.scene.weather, bubble, tut, heavy: F.mode === 'bottom',
-            weekFish: FB.S.pond === cfg.pond ? cfg.fish : null
+            fishPond: FB.state.fishPondOf(FB.S.pond),
+            weekFish: FB.S.pond === 'arena' ? cfg.fish : null
         };
         // Особенность места (тень, огонёк, косяк, прилив, течение) — до броска
         const pre = FB.places ? FB.places.beforeRoll(F.ctx, tx, dist) : null;
@@ -301,6 +314,7 @@
         F.window = F.ctx.tut ? Infinity : (F.mode === 'bottom' ? 1.5 : F.mode === 'spin' ? 1.0 : 0.85) - order * 0.04;
         FB.audio.play(F.mode === 'bottom' ? 'bell' : 'bite', 1);
         const p = floatPos();
+        if (F.mode === 'spin' && F.res.kind === 'fish') { FB.scene.splash(p.x, p.y, 0.8 * Math.max(0.5, p.s) * 1.6); FB.audio.play('splash', 0.6); }
         FB.scene.ripple(p.x, p.y, 0.6 * p.s * 1.6);
         FB.emit('hint', 'tap_now');
         FB.emit('bite');
@@ -330,6 +344,7 @@
         F.styleId = res.kind === 'fish' ? res.fish.st || 'calm' : 'calm';
         F.surgeIn *= F.style.every;
         F.jumpWarn = 0; F.jump = 0; F.jumpHeld = 0;
+        F.stam = 1; F.tired = 0; F.counter = 0;
         F.run = null;
         F.call = null;
         if (F.perfect) { F.progress = 0.2; say('perfect', false, 1.4); FB.audio.play('perfect'); }
@@ -420,7 +435,7 @@
             case 'fight': {
                 const s = F.str, r = rod(), sty = F.style;
                 F.surgeIn -= dt;
-                if (F.surgeIn <= 0 && F.res.kind === 'fish' && !F.jump && !F.jumpWarn && !F.run) {
+                if (F.surgeIn <= 0 && F.res.kind === 'fish' && !F.jump && !F.jumpWarn && !F.run && !(F.tired > 0)) {
                     F.surgeIn = U.rand(tune.surgeEvery[0], tune.surgeEvery[1]) / (0.75 + s * 0.6) * sty.every;
                     const roll = Math.random();
                     if (sty.jump && roll < sty.jump && F.progress < 0.9) {
@@ -485,12 +500,31 @@
                     }
                 }
                 const z = F.zone;
+                // Ведение: с какой стороны от рыбы палец и куда она плывёт
+                const fp = FB.scene.project(F.fishTx, F.fishDist);
+                let side = F.steerKey || 0;
+                if (!side && F.holding && F.px !== undefined && F.px !== null) { const dx = F.px - fp.x; if (Math.abs(dx) > FB.scene.W * 0.05) side = Math.sign(dx); }
+                const swimDir = Math.abs(F.face) > 0.35 ? Math.sign(F.face) : 0;
+                F.counter = F.holding && side && swimDir && F.res.kind === 'fish' ? (side === -swimDir ? 1 : -1) : 0;
+                // Рыба выдохлась — отдыхает, потом немного набирается сил
+                const tired = F.tired > 0;
+                if (tired) { F.tired -= dt; if (F.tired <= 0) { F.tired = 0; F.stam = 0.45; } }
                 if (F.holding) {
-                    F.tension += (tune.riseBase + s * tune.riseStr) * r.ctrl * dt;
+                    F.tension += (tune.riseBase + s * tune.riseStr) * r.ctrl * dt * (F.counter === 1 ? 0.9 : 1) * (tired ? 0.6 : 1);
                     // В зелёной зоне подматываем в полную силу, в красной — с трудом
                     const k = F.tension > z.hi ? 0.4 : F.tension < z.lo ? 0.8 : 1;
+                    const lead = F.counter === 1 ? tune.counterBoost : F.counter === -1 ? tune.withPenalty : 1;
                     // Пока рыба уходит в камыш, подмотать почти не получается — сначала разверни
-                    F.progress += tune.reel * Math.pow(r.reel, 0.6) * (1 - s * tune.heavy) * dt * k * (F.run ? 0.2 : 1);
+                    F.progress += tune.reel * Math.pow(r.reel, 0.6) * (1 - s * tune.heavy) * dt * k * (F.run ? 0.2 : 1) * lead * (tired ? tune.tiredReel : 1);
+                    // Силы рыбы тают, пока леска в зелёной зоне; против хода — быстрее
+                    if (!tired && F.res.kind === 'fish' && F.tension >= z.lo && F.tension <= z.hi) {
+                        F.stam -= tune.stamDrain * dt * (F.counter === 1 ? 1.7 : 1) / (0.45 + s * 0.9);
+                        if (F.stam <= 0) {
+                            F.stam = 0; F.tired = tune.tiredLen; F.surge = 0;
+                            say('tired', false, tune.tiredLen);
+                            FB.audio.play('perfect');
+                        }
+                    }
                     if (Math.random() < dt * (10 + F.tension * 8)) FB.audio.play('reel', F.tension);
                     if (F.tension > z.hi && Math.random() < dt * 4) FB.audio.play('strain', F.tension);
                 } else {
@@ -561,6 +595,12 @@
     function spinUpdate(dt) {
         const sp = F.spin, o = F.origin();
         if (sp.twitch > 0) sp.twitch -= dt;
+        // Без игры приманкой интерес хищника понемногу гаснет
+        if (!F.holding && sp.twitch <= 0) sp.attract = Math.max(0, sp.attract - dt * 0.06);
+        // Хищник замечает блесну и плывёт за ней (только у настоящей рыбы)
+        const want = F.res && F.res.kind === 'fish' ? U.clamp((sp.attract / sp.need - 0.35) / 0.65, 0, 1) : 0;
+        sp.chase = (sp.chase || 0) + (want - (sp.chase || 0)) * (1 - Math.exp(-dt * 2.5));
+        if (want > 0.05 && !sp.seen) { sp.seen = true; FB.emit('predator'); }
         if (F.holding) {
             F.spinHold += dt;
             const v = 0.12 * dt;
@@ -680,9 +720,9 @@
         ctx.restore();
     }
 
-    function line(ctx, x0, y0, x1, y1, sag) {
-        ctx.strokeStyle = FB.scene.weather === 'night' ? 'rgba(220,230,255,0.55)' : 'rgba(255,255,255,0.75)';
-        ctx.lineWidth = 1;
+    function line(ctx, x0, y0, x1, y1, sag, color, width) {
+        ctx.strokeStyle = color || (FB.scene.weather === 'night' ? 'rgba(220,230,255,0.55)' : 'rgba(255,255,255,0.75)');
+        ctx.lineWidth = width || 1;
         ctx.beginPath();
         ctx.moveTo(x0, y0);
         ctx.quadraticCurveTo((x0 + x1) / 2, Math.max(y0, y1) + sag, x1, y1);
@@ -744,7 +784,10 @@
                 // Леска натянута и дрожит
                 const shake = (F.tension > 0.7 ? (F.tension - 0.7) * 4 : 0) * Math.sin(SC.t * 60) * u * 0.3;
                 const sag = (1 - F.tension) * u * 5;
-                line(ctx, tip.x, tip.y, p.x + shake, p.y, sag);
+                // Ведёшь против рыбы — леска светится зелёным, тянешь за ней — тускнеет
+                if (F.counter === 1) line(ctx, tip.x, tip.y, p.x + shake, p.y, sag, 'rgba(140,255,150,0.35)', 4);
+                line(ctx, tip.x, tip.y, p.x + shake, p.y, sag, F.counter === 1 ? 'rgba(200,255,200,0.95)' : F.counter === -1 ? 'rgba(255,200,190,0.75)' : null, F.counter === 1 ? 1.6 : 1);
+                drawSwimDir(ctx, p, u);
                 // Бурунчики там, где леска входит в воду
                 if (Math.random() < 0.3) SC.ripple(p.x, p.y, 0.2 * p.s * 1.6);
                 drawCall(ctx);
@@ -843,43 +886,121 @@
         }
     }
 
-    // Блесна у поверхности: блестит, за ней бежит усик волны, когда её ведут
+    // Блесна: серебряная ложечка с красной полоской и тройником. Когда её ведут —
+    // за ней бежит усик волны, на рывке она переворачивается и сверкает.
+    // Заинтересовался хищник — сзади появляется его тень и догоняет приманку
     function drawLure(ctx, tip, SC, u) {
         const p = floatPos(), sp = F.spin || {};
-        const s = Math.max(0.65, p.s * 1.9);
-        line(ctx, tip.x, tip.y, p.x, p.y, F.holding ? u * 0.5 : u * 2.5);
-        if (F.holding || sp.twitch > 0) {
-            const o = F.origin();
-            const back = SC.project(F.target.tx + (F.target.tx - o.tx) * 0.12, F.target.dist + (F.target.dist - o.dist) * 0.12);
-            ctx.strokeStyle = 'rgba(255,255,255,0.55)';
-            ctx.lineWidth = Math.max(1, 1.4 * p.s);
-            const w = u * 1.6 * s;
-            ctx.beginPath();
-            ctx.moveTo(back.x - w, back.y + w * 0.15); ctx.lineTo(p.x, p.y); ctx.lineTo(back.x + w, back.y - w * 0.15);
-            ctx.stroke();
+        const s = Math.max(0.75, p.s * 2.1);
+        const o = F.origin();
+        // Направление «от рыбака» — туда, где за блесной идёт хищник
+        const back = SC.project(F.target.tx + (F.target.tx - o.tx) * 0.18, F.target.dist + (F.target.dist - o.dist) * 0.18);
+        let bx = back.x - p.x, by = back.y - p.y;
+        const bl = Math.hypot(bx, by) || 1; bx /= bl; by /= bl;
+        // Хищник сзади: чем сильнее интерес, тем ближе. На поклёвке — бросок на блесну
+        const chase = F.phase === 'bite' ? 1 : (sp.chase || 0);
+        if (chase > 0.03 && F.res && F.res.kind === 'fish') {
+            const big = U.clamp(Math.log10(F.res.g) / 4, 0.45, 1.3);
+            const dist = F.phase === 'bite' ? 0 : U.lerp(u * 16, u * 3.5, chase) * s * 0.6;
+            const wig = Math.sin(SC.t * 9) * u * 0.5 * s;
+            const fx = p.x + bx * dist + by * wig, fy = p.y + by * dist * 0.6 + u * 0.8 * s;
+            const sw = u * 4.2 * big * s;
+            ctx.save();
+            ctx.translate(fx, fy);
+            ctx.rotate(Math.atan2(-by * 0.6, -bx));
+            ctx.globalAlpha = Math.min(1, chase * 1.4) * 0.42;
+            ctx.fillStyle = '#0a2236';
+            ctx.beginPath(); ctx.ellipse(0, 0, sw, sw * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+            const tw = Math.sin(SC.t * 16) * sw * 0.16;
+            ctx.beginPath(); ctx.moveTo(-sw * 0.85, 0); ctx.lineTo(-sw * 1.35, -sw * 0.26 + tw); ctx.lineTo(-sw * 1.35, sw * 0.26 + tw); ctx.closePath(); ctx.fill();
+            ctx.restore();
         }
-        // Сама блесна: серебряная ложечка, на рывке переворачивается и бликует
+        line(ctx, tip.x, tip.y, p.x, p.y, F.holding ? u * 0.5 : u * 2.5);
+        // Усик волны за блесной
+        if (F.holding || sp.twitch > 0) {
+            ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+            ctx.lineWidth = Math.max(1, 1.4 * p.s);
+            const w = u * 1.8 * s, L = u * 3.2 * s;
+            ctx.beginPath();
+            ctx.moveTo(p.x + bx * L - by * w, p.y + by * L * 0.6 + bx * w * 0.25);
+            ctx.lineTo(p.x, p.y);
+            ctx.lineTo(p.x + bx * L + by * w, p.y + by * L * 0.6 - bx * w * 0.25);
+            ctx.stroke();
+            if (Math.random() < 0.25) SC.ripple(p.x, p.y, 0.18 * p.s * 1.6);
+        }
+        // Сама блесна
         const flip = sp.twitch > 0 ? Math.sin(sp.twitch * 30) : Math.sin(SC.t * 6) * 0.3;
         ctx.save();
         ctx.translate(p.x, p.y - u * 0.3 * s);
-        ctx.scale(1, 0.55 + Math.abs(flip) * 0.45);
+        ctx.rotate(-0.35);
+        // Тройник снизу
+        ctx.strokeStyle = '#5a6470'; ctx.lineWidth = Math.max(1, u * 0.14 * s);
+        ctx.beginPath();
+        ctx.moveTo(-u * 1.1 * s, 0); ctx.lineTo(-u * 1.7 * s, 0);
+        ctx.moveTo(-u * 1.7 * s, 0); ctx.quadraticCurveTo(-u * 2.1 * s, u * 0.45 * s, -u * 1.75 * s, u * 0.5 * s);
+        ctx.moveTo(-u * 1.7 * s, 0); ctx.quadraticCurveTo(-u * 2.1 * s, -u * 0.45 * s, -u * 1.75 * s, -u * 0.5 * s);
+        ctx.stroke();
+        ctx.scale(1, 0.5 + Math.abs(flip) * 0.5);
         const g = ctx.createLinearGradient(-u * s, -u * s, u * s, u * s);
-        g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, '#c8d0d8'); g.addColorStop(1, '#8a96a2');
+        g.addColorStop(0, '#ffffff'); g.addColorStop(0.4, '#d8e0e8'); g.addColorStop(0.7, '#9aa8b4'); g.addColorStop(1, '#e8eef4');
         ctx.fillStyle = g;
-        ctx.strokeStyle = '#4a5460';
-        ctx.lineWidth = Math.max(1, u * 0.2 * s);
-        ctx.beginPath(); ctx.ellipse(0, 0, u * 1.1 * s, u * 0.55 * s, -0.3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = '#3a4450';
+        ctx.lineWidth = Math.max(1, u * 0.18 * s);
+        ctx.beginPath(); ctx.ellipse(0, 0, u * 1.2 * s, u * 0.6 * s, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        // Красная полоска и «глаз»
         ctx.fillStyle = '#e8402a';
-        ctx.beginPath(); ctx.arc(u * 0.35 * s, -u * 0.05 * s, u * 0.22 * s, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(-u * 0.15 * s, 0, u * 0.65 * s, u * 0.16 * s, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffd23a';
+        ctx.beginPath(); ctx.arc(u * 0.6 * s, 0, u * 0.18 * s, 0, Math.PI * 2); ctx.fill();
+        // Колечко с вертлюжком
+        ctx.strokeStyle = '#5a6470';
+        ctx.beginPath(); ctx.arc(u * 1.35 * s, 0, u * 0.18 * s, 0, Math.PI * 2); ctx.stroke();
         ctx.restore();
-        if (sp.twitch > 0.25) {
-            ctx.fillStyle = 'rgba(255,255,240,0.9)';
-            ctx.beginPath(); ctx.arc(p.x - u * 0.6 * s, p.y - u * 1.2 * s, u * 0.35 * s, 0, Math.PI * 2); ctx.fill();
+        // Сверкание на рывке
+        if (sp.twitch > 0.12) {
+            const k = sp.twitch / 0.35, r = u * (0.7 + k) * s;
+            const sx = p.x - u * 0.5 * s, sy = p.y - u * 1.3 * s;
+            ctx.save();
+            ctx.globalAlpha = Math.min(1, k * 1.5);
+            ctx.fillStyle = '#fffbe0';
+            ctx.beginPath();
+            for (let i = 0; i < 8; i++) { const an = i * Math.PI / 4, rr = i % 2 ? r * 0.25 : r; ctx.lineTo(sx + Math.cos(an) * rr, sy + Math.sin(an) * rr); }
+            ctx.closePath(); ctx.fill();
+            ctx.restore();
         }
-        if (F.phase === 'bite') {
-            // Хищник схватил: всплеск вокруг блесны
-            if (Math.random() < 0.4) SC.ripple(p.x, p.y, 0.4 * p.s * 1.6);
+        if (F.phase === 'bite' && Math.random() < 0.4) SC.ripple(p.x, p.y, 0.45 * p.s * 1.6);
+    }
+
+    // Куда плывёт рыба: шевроны перед её носом. Против хода — зелёная стрелка «тяни сюда»
+    function drawSwimDir(ctx, p, u) {
+        if (F.res.kind !== 'fish' || F.jump > 0) return;
+        const dir = Math.abs(F.face) > 0.35 ? Math.sign(F.face) : 0;
+        if (!dir) return;
+        const s = Math.max(0.6, p.s * 1.6), k = (FB.scene.t * 2.2) % 1;
+        ctx.save();
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.lineWidth = Math.max(1.5, u * 0.45);
+        for (let i = 0; i < 2; i++) {
+            const off = u * (5 + i * 2.2 + k * 1.5) * s;
+            ctx.strokeStyle = 'rgba(255,255,255,' + (0.7 - i * 0.25) * (1 - k * 0.5) + ')';
+            ctx.beginPath();
+            ctx.moveTo(p.x + dir * off - dir * u * 0.9 * s, p.y - u * 1.1 * s);
+            ctx.lineTo(p.x + dir * off, p.y);
+            ctx.lineTo(p.x + dir * off - dir * u * 0.9 * s, p.y + u * 1.1 * s);
+            ctx.stroke();
         }
+        // Подсказка «тяни сюда» — с другой стороны, пока игрок не ведёт
+        if (F.counter !== 1 && !F.run) {
+            const ax = p.x - dir * u * 7 * s, ay = p.y - u * 4 * s, w = u * 2.2;
+            ctx.globalAlpha = 0.55 + Math.sin(FB.scene.t * 6) * 0.25;
+            ctx.fillStyle = '#7ce07a'; ctx.strokeStyle = '#2a3550'; ctx.lineWidth = Math.max(1, u * 0.3);
+            ctx.beginPath();
+            ctx.moveTo(ax - dir * w * 1.3, ay);
+            ctx.lineTo(ax, ay - w); ctx.lineTo(ax, ay - w * 0.45); ctx.lineTo(ax + dir * w, ay - w * 0.45);
+            ctx.lineTo(ax + dir * w, ay + w * 0.45); ctx.lineTo(ax, ay + w * 0.45); ctx.lineTo(ax, ay + w);
+            ctx.closePath(); ctx.fill(); ctx.stroke();
+        }
+        ctx.restore();
     }
 
     // Надпись над рыбой во время вываживания (свечка, камыш, рывок, подсечка)
@@ -967,6 +1088,7 @@
 
     F.fightInfo = () => F.phase === 'fight' ? {
         tension: F.tension, progress: F.progress, lo: F.zone.lo, hi: F.zone.hi, surge: F.surge > 0,
+        stam: F.stam, tired: F.tired > 0, counter: F.counter,
         slack: F.slack / F.TUNE.slackMax,
         strain: Math.max(F.strain / F.TUNE.strainMax, F.over / F.TUNE.snapGrace)
     } : null;

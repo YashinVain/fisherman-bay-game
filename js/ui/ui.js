@@ -66,7 +66,8 @@
         const top = UI.stack.pop();
         if (!top) return;
         top.shade.classList.add('out');
-        setTimeout(() => top.shade.remove(), 180);
+        top.shade.style.pointerEvents = 'none';
+        setTimeout(() => top.shade.remove(), 260);
         if (top.opt.onClose) top.opt.onClose();
         FB.emit('modal', UI.stack.length > 0);
     };
@@ -79,6 +80,7 @@
             top.body.innerHTML = '';
             top.body.appendChild(top.opt.render());
             top.body.scrollTop = scroll;
+            top.body.classList.remove('swap'); void top.body.offsetWidth; top.body.classList.add('swap');
         }
     };
 

@@ -6,7 +6,7 @@
 (function (FB) {
     const ST = FB.state = {};
     const U = FB.U;
-    FB.VERSION = '0.15.0';
+    FB.VERSION = '0.16.0';
 
     ST.fresh = () => ({
         v: 1,
@@ -177,10 +177,13 @@
     ST.pondOpen = (id) => {
         const p = FB.pondById[id];
         if (!p) return false;
-        // Турнирное место открыто всем на эту неделю — чтобы соревноваться мог каждый
-        if (id === ST.weekCfg().pond) return true;
+        // Турнирная бухта открыта всем — соревноваться может каждый
+        if (p.arena) return true;
         return FB.S.level >= p.unlock;
     };
+    // Чья рыба водится в месте: в турнирной бухте — рыба «места недели»
+    ST.fishPondOf = (id) => id === 'arena' ? ST.weekCfg().pond : id;
+    ST.atTourney = () => FB.S.pond === 'arena';
     ST.rodObj = () => FB.rodById[FB.S.rod];
 
     // ---------- Турнир ----------
@@ -226,7 +229,7 @@
         }
         const f = res.fish, g = res.g;
         const cfg = ST.weekCfg();
-        const inTourney = ctx.pond === cfg.pond;
+        const inTourney = ctx.pond === 'arena';
         const isWeekFish = inTourney && f.id === cfg.fish;
         out.pts = FB.catcher.points(f, g, isWeekFish);
         out.isWeekFish = isWeekFish;

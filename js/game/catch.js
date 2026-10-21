@@ -30,7 +30,7 @@
 
     // Шансы всех рыб места (для подсказок и тестов): [{fish, p}]
     C.chances = (ctx) => {
-        const list = FB.fishOfPond(ctx.pond);
+        const list = FB.fishOfPond(ctx.fishPond || ctx.pond);
         const counts = {};
         list.forEach(f => { counts[f.r] = (counts[f.r] || 0) + 1; });
         const ws = list.map(f => C.weightOf(f, ctx, counts));

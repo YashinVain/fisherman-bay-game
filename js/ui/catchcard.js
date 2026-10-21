@@ -20,7 +20,7 @@
     function preview(res, ctx) {
         const f = res.fish, g = res.g;
         const cfg = FB.state.weekCfg();
-        const inTourney = ctx.pond === cfg.pond;
+        const inTourney = ctx.pond === 'arena';
         const isWeekFish = inTourney && f.id === cfg.fish;
         const pts = FB.catcher.points(f, g, isWeekFish);
         const base = FB.catcher.points(f, g, false);
@@ -207,7 +207,7 @@
             body.innerHTML =
                 '<div class="wr-top">' + FB.ic('medal', medal) + '<div>' +
                 (r.rank ? '<div class="wr-place outline">' + FB.t('place_n', { n: r.rank }) + '</div>' : '<div class="wr-place small">' + FB.t('thanks_member') + '</div>') +
-                '<div class="wr-sub">' + U.esc(FB.name(FB.pondById[cfg.pond])) + ' · ' + FB.t('week_points', { n: U.fmt(r.pts) }) + '</div></div></div>' +
+                '<div class="wr-sub">' + U.esc(FB.name(FB.ARENA)) + ' · ' + FB.t('week_points', { n: U.fmt(r.pts) }) + '</div></div></div>' +
                 (r.rank && r.rank <= 20 ? '<div class="wr-medal">' + FB.t('wr_medal') + '</div>' : '') +
                 '<div class="lv-sec">' + FB.t('your_reward') + '</div>' +
                 '<div class="lv-gift">' +

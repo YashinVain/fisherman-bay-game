@@ -76,12 +76,13 @@
     };
     W.sum = (best) => best.reduce((s, x) => s + x, 0);
 
-    // Погода в нетурнирных местах меняется каждые 20 минут — тоже по формуле
+    // Погода в турнирной бухте — своя на всю неделю, в остальных местах
+    // меняется каждые 20 минут — тоже по формуле
     W.SLOT_MS = 20 * 60000;
     W.weatherAt = (pondId, t) => {
         const idx = W.index(t);
         const cfg = W.config(idx);
-        if (pondId === cfg.pond) return cfg.weather;
+        if (pondId === 'arena') return cfg.weather;
         const slot = Math.floor(t / W.SLOT_MS);
         let h = 0;
         for (const ch of pondId) h = (h * 31 + ch.charCodeAt(0)) >>> 0;

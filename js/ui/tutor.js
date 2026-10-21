@@ -35,7 +35,8 @@
         { id: 'medals', where: 'profile', target: '.sheet .trophies, .sheet .trophies-empty' },
         { id: 'aqua_btn', where: 'main', target: '.hud-right .aqua-btn', cond: (S) => Object.keys(S.album).length >= 3 },
         { id: 'aqua', where: 'aqua', target: '.sheet .aq-tank' },
-        { id: 'sonar', where: 'main', target: '.sonar', cond: () => FB.sonar.has() }
+        { id: 'sonar', where: 'main', target: '.sonar', cond: () => FB.sonar.has() },
+        { id: 'arena', where: 'main', target: '.tourney-chip', wide: true, cond: (S) => S.pond === 'arena' }
     ];
     // Особенность каждого места — когда игрок впервые там рыбачит
     Object.keys({ village: 1, river: 1, mountain: 1, swamp: 1, pier: 1, lagoon: 1 }).forEach(pond => {
@@ -238,6 +239,8 @@
         else if (F.run) id = 'run';
         else if (F.surge > 0 && F.styleId === 'dive') id = 'dive';
         else if (F.perfect && F.call && F.call.key === 'perfect') id = 'perfect';
+        else if (F.tired > 0) id = 'tired';
+        else if (F.res && F.res.kind === 'fish' && F.progress > 0.18 && Math.abs(F.face) > 0.6 && !F.run && !F.jump) id = 'steer';
         if (!id || S.tips['ev_' + id]) return null;
         const p = FB.scene.project(F.fishTx, F.fishDist);
         return { key: 'ev-' + id, point: { x: p.x, y: p.y - FB.scene.unit() * 4 }, block: true, dim: true, wide: true,

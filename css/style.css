@@ -211,10 +211,14 @@ div.pill { cursor: default; }
 .chip-up .frenzy { top: calc(62px + var(--safe-t)); }
 .chip-up.frenzy-on .toasts { top: calc(96px + var(--safe-t)) !important; }
 /* Эхолот — справа, над плашкой места */
-.sonar { position: absolute; right: 14px; bottom: calc(196px + var(--safe-b)); display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: none !important; filter: drop-shadow(0 4px 8px rgba(0,20,50,.35)); }
+.sonar { position: absolute; right: 14px; bottom: calc(196px + var(--safe-b)); display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: none !important; filter: drop-shadow(0 4px 8px rgba(0,20,50,.35)); transition: opacity .45s ease, transform .45s cubic-bezier(.2,.9,.3,1.1); }
+.sonar.off { opacity: 0; transform: translateY(14px) scale(.85); }
 .sonar canvas { display: block; border-radius: 50%; }
 .sn-label { max-width: 210px; padding: 4px 12px; border-radius: 12px; background: rgba(6,42,36,.88); color: #bfffe6; font-size: 12px; font-weight: 900; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sn-label.hot { animation: pulse .8s ease-in-out infinite; }
+.sn-label { transition: background .4s, color .4s; }
+.sn-label.pop { animation: snPop .35s cubic-bezier(.3,1.5,.5,1); }
+.sn-label.hot { animation: snPop .35s cubic-bezier(.3,1.5,.5,1), pulse .9s ease-in-out .35s infinite; }
+@keyframes snPop { from { transform: scale(.8); opacity: .3; } }
 .tourney-chip.here { background: linear-gradient(rgba(216,147,12,.92), rgba(186,110,8,.92)); }
 
 /* ---------- Нижняя панель ---------- */
@@ -409,6 +413,40 @@ div.pill { cursor: default; }
 .aq-coll small { font-size: 12px; color: var(--ink-soft); }
 .aqua-btn { position: relative; }
 
+/* ---------- Турнирная бухта в окне мест и переезд ---------- */
+.arena-card { display: grid; grid-template-columns: 260px 1fr; align-items: center; gap: 14px; padding: 10px; margin-bottom: 4px; cursor: pointer; overflow: hidden;
+    background: radial-gradient(circle at 95% 0%, rgba(255,240,170,.9), transparent 45%), linear-gradient(#fffaf0, #fff0cc); box-shadow: 0 4px 0 #e6c060, inset 0 0 0 3px #f2c43a; }
+.arena-card .pic { position: relative; height: 96px; border-radius: 14px; overflow: hidden; }
+.arena-card .pic canvas { width: 100%; height: 100%; display: block; }
+.arena-card .nm { font-size: 20px; font-weight: 900; color: #6a3a00; }
+.arena-card .ar-sub { font-size: 13px; color: #9a6a10; }
+.arena-card .ar-fish { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 14px; }
+.arena-card .ar-fish img { width: 36px; }
+.arena-card .ar-time { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+.arena-card .ar-time .ic { width: 16px; height: 16px; }
+.arena-card .info .btn, .arena-card .ar-here { margin-top: 8px; }
+.arena-card .ar-here { display: inline-block; padding: 6px 14px; border-radius: 14px; background: var(--leaf); color: #fff; font-size: 14px; box-shadow: 0 3px 0 var(--leaf-d); }
+.arena-card.cur { cursor: default; }
+@media (max-width: 640px) { .arena-card { grid-template-columns: 1fr; } .arena-card .info .btn { width: 100%; } }
+.tourney-chip .go { margin-left: 2px; padding: 2px 8px; border-radius: 10px; background: var(--sun); color: #6a3a00; font-size: 11px; font-weight: 900; box-shadow: 0 2px 0 var(--sun-d); }
+.travel-card {
+    position: absolute; left: 50%; top: 38%; z-index: 25; display: flex; align-items: center; gap: 14px; width: max-content; max-width: 88vw;
+    padding: 14px 28px 14px 18px; border-radius: 24px; pointer-events: none !important;
+    background: rgba(255,248,234,.96); box-shadow: 0 0 0 4px #fff, 0 12px 30px rgba(0,30,60,.3);
+    animation: travelCard 2.4s cubic-bezier(.2,.8,.3,1) forwards;
+}
+.travel-card.arena { background: linear-gradient(#fffaf0, #ffe9a6); box-shadow: 0 0 0 4px #f2c43a, 0 12px 30px rgba(120,80,0,.3); }
+.travel-card .ic { width: 52px; height: 52px; }
+.travel-card .t { font-size: 26px; font-weight: 900; color: var(--sea-d); }
+.travel-card.arena .t { color: #6a3a00; }
+.travel-card .s { font-size: 14px; color: var(--ink-soft); }
+@keyframes travelCard {
+    0% { opacity: 0; transform: translate(-50%, -50%) translateX(60px) scale(.9); }
+    18% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    78% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) translateX(-60px) scale(.96); }
+}
+
 /* ---------- Вкладка «Жемчуг» ---------- */
 .pr-banner { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-radius: 22px; color: #fff;
     background: radial-gradient(circle at 15% 30%, rgba(255,255,255,.35), transparent 40%), linear-gradient(120deg, #8b62e6, #3a8ae0);
@@ -488,14 +526,25 @@ div.pill { cursor: default; }
 .wr-btns { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
 .wr-btns .btn { width: 100%; }
 
+/* Силы рыбы */
+.stam { position: relative; flex: 1; height: 14px; border-radius: 7px; background: #e8dcc8; box-shadow: inset 0 2px 3px rgba(0,0,0,.18); overflow: hidden; }
+.stam i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; background: linear-gradient(#ff9a7a, #e8503a); transition: width .15s linear; }
+.stam span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 900; color: #5a2a1a; letter-spacing: .03em; text-transform: uppercase; }
+.stam.tired { background: #d8f4d0; }
+.stam.tired i { background: linear-gradient(#9af08a, #3fae4a); }
+.stam.tired span { color: #1a5a1a; animation: pulse .5s ease-in-out infinite; }
+.fight .stam-row .lab { font-size: 11px; }
+
 /* ---------- Окна ---------- */
 .shade {
     position: absolute; inset: 0; z-index: 10;
     background: radial-gradient(ellipse at center, rgba(10,30,60,.35), rgba(10,30,60,.65));
     display: flex; align-items: center; justify-content: center; padding: calc(12px + var(--safe-t)) 12px calc(12px + var(--safe-b));
-    animation: fadeIn .2s ease-out;
+    animation: shadeIn .32s ease-out;
 }
-.shade.out { animation: fadeOut .18s ease-in forwards; }
+.shade.out { animation: shadeOut .26s ease-in forwards; }
+@keyframes shadeIn { from { opacity: 0; backdrop-filter: blur(0); } }
+@keyframes shadeOut { to { opacity: 0; } }
 @keyframes fadeIn { from { opacity: 0; } }
 @keyframes fadeOut { to { opacity: 0; } }
 .sheet {
@@ -506,9 +555,17 @@ div.pill { cursor: default; }
         radial-gradient(circle at 12% 8%, rgba(255,255,255,.7), transparent 30%),
         linear-gradient(var(--cream), #fbefd8);
     box-shadow: 0 0 0 5px #fff, 0 0 0 8px rgba(17,100,143,.35), 0 20px 50px rgba(0,20,50,.45);
-    animation: pop .38s cubic-bezier(.3,1.5,.5,1);
+    animation: sheetIn .46s cubic-bezier(.2,.9,.25,1.04);
 }
-.shade.out .sheet { animation: popOut .18s ease-in forwards; }
+.shade.out .sheet { animation: sheetOut .26s cubic-bezier(.5,0,.75,.3) forwards; }
+@keyframes sheetIn { 0% { opacity: 0; transform: translateY(34px) scale(.94); } 60% { opacity: 1; } 100% { transform: none; } }
+@keyframes sheetOut { to { opacity: 0; transform: translateY(22px) scale(.96); } }
+/* Смена вкладки или содержимого — мягкое проявление */
+.sheet-body.swap { animation: bodySwap .28s ease-out; }
+@keyframes bodySwap { from { opacity: 0; transform: translateY(8px); } }
+.tab { transition: background .25s, color .25s, box-shadow .25s, transform .15s; }
+.tab:active { transform: scale(.95); }
+.btn { transition: transform .12s, filter .2s, box-shadow .12s; }
 @keyframes pop { from { transform: scale(.7); opacity: 0; } }
 @keyframes popOut { to { transform: scale(.85); opacity: 0; } }
 .sheet-head {

@@ -12,7 +12,7 @@
         { "shot": "u03-levelup.png" },
         { "name": "уровень с открытием", "js": "FB.ui.closeAll(); FB.S.xp = 0; FB.S.level = 1; FB.state.addXp(FB.state.need(1));", "sleep": 1200 },
         { "shot": "u04-levelup2.png" },
-        { "name": "турнир: я в месте недели", "js": "FB.ui.closeAll(); const cfg = FB.state.weekCfg(); FB.panels.goTo(cfg.pond); FB.ui.closeAll(); const f = FB.fishOfPond(cfg.pond); FB.state.applyCatch({ kind: 'fish', fish: f[3], g: f[3].w[1] }, { pond: cfg.pond }, true); FB.state.applyCatch({ kind: 'fish', fish: f[0], g: f[0].w[0] }, { pond: cfg.pond }, true); FB.ui.closeAll(); FB.hud.update(); return FB.S.week;", "sleep": 900 },
+        { "name": "турнир: я в месте недели", "js": "FB.ui.closeAll(); const cfg = FB.state.weekCfg(); FB.panels.goTo('arena'); FB.ui.closeAll(); const f = FB.fishOfPond(cfg.pond); FB.state.applyCatch({ kind: 'fish', fish: f[3], g: f[3].w[1] }, { pond: 'arena' }, true); FB.state.applyCatch({ kind: 'fish', fish: f[0], g: f[0].w[0] }, { pond: 'arena' }, true); FB.ui.closeAll(); FB.hud.update(); return FB.S.week;", "sleep": 900 },
         { "shot": "u05-chip-here.png" },
         { "name": "топ", "js": "FB.ui.closeAll(); FB.sdk.dropCache(FB.week.board(FB.state.weekIdx())); FB.top.open('week');", "sleep": 1500 },
         { "shot": "u06-top-week.png" },

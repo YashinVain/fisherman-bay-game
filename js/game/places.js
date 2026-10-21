@@ -165,7 +165,7 @@
     PL.rollCtx = (dist) => {
         const cfg = FB.state.weekCfg();
         const o = F().origin();
-        return { pond: FB.S.pond, dist: Math.max(0.05, dist - o.dist), bait: FB.S.bait, rod: FB.state.rodObj(), weather: FB.scene.weather, bubble: true, weekFish: FB.S.pond === cfg.pond ? cfg.fish : null };
+        return { pond: FB.S.pond, fishPond: FB.state.fishPondOf(FB.S.pond), dist: Math.max(0.05, dist - o.dist), bait: FB.S.bait, rod: FB.state.rodObj(), weather: FB.scene.weather, bubble: true, weekFish: FB.S.pond === 'arena' ? cfg.fish : null };
     };
 
     // ---------- Заброс ----------
