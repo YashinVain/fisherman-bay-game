@@ -15,8 +15,9 @@
         if (!catalog) FB.sdk.getCatalog().then(c => { catalog = c; if (tab === 'pearls') UI.refresh(); });
         const render = () => {
             const box = UI.el('div');
-            box.appendChild(UI.tabs([['gear', FB.t('shop_gear')], ['look', FB.t('shop_look')], ['pearls', FB.t('shop_pearls')]], tab, (id) => { tab = id; UI.refresh(); }));
+            box.appendChild(UI.tabs([['gear', FB.t('rods')], ['bait', FB.t('bait')], ['look', FB.t('shop_look')], ['pearls', FB.t('shop_pearls')]], tab, (id) => { tab = id; UI.refresh(); }));
             if (tab === 'gear') box.appendChild(gear());
+            else if (tab === 'bait') box.appendChild(baits());
             else if (tab === 'look') box.appendChild(look());
             else box.appendChild(pearls());
             return box;
@@ -24,16 +25,24 @@
         UI.open({ title: FB.t('nav_shop'), body: render(), render, tip: () => 'shop-' + tab });
     };
 
-    const rodSvg = (r) => '<svg viewBox="0 0 70 70" width="70" height="70"><path d="M10 62L60 8" stroke="#2a3550" stroke-width="7" stroke-linecap="round"/><path d="M10 62L60 8" stroke="' + r.color + '" stroke-width="4" stroke-linecap="round"/><path d="M10 62l10-11" stroke="#3a2a22" stroke-width="7" stroke-linecap="round"/><circle cx="22" cy="52" r="7" fill="#5a6470" stroke="#2a3550" stroke-width="2.5"/><circle cx="22" cy="52" r="3" fill="#c8d0d8"/><path d="M60 8v34" stroke="#fff" stroke-width="1.5" stroke-dasharray="3 2"/><circle cx="60" cy="44" r="4" fill="#e8402a" stroke="#2a3550" stroke-width="2"/></svg>';
+    // Картинка удочки на карточке
+    const rodPic = (r) => {
+        const src = FB.rodArt.canvas(r, 170, 96);
+        const c = document.createElement('canvas');
+        c.width = src.width; c.height = src.height;
+        c.getContext('2d').drawImage(src, 0, 0);
+        return c;
+    };
 
     function gear() {
         const box = UI.el('div');
         const S = FB.S;
-        box.appendChild(UI.el('div.sec-title', { html: FB.ic('rod') + FB.t('rods') }));
+        box.appendChild(UI.el('p.muted.shop-note', { text: FB.t('rods_hint') }));
         FB.RODS.forEach(r => {
             const owned = S.rods.includes(r.id), on = S.rod === r.id;
-            const card = UI.el('div.card.rodcard' + (on ? '.sel' : ''));
-            card.appendChild(UI.el('div.prev', { html: rodSvg(r) }));
+            const locked = !owned && S.level < r.level;
+            const card = UI.el('div.card.rodcard' + (on ? '.sel' : '') + (locked ? '.locked' : ''));
+            card.appendChild(UI.el('div.prev', {}, [rodPic(r)]));
             const bar = (v) => '<div class="progress"><i style="width:' + Math.round(v * 100) + '%"></i></div>';
             card.appendChild(UI.el('div.body', { html: '<div class="nm">' + U.esc(FB.name(r)) + '</div>' +
                 '<div class="bars"><span>' + FB.t('st_reach') + '</span>' + bar(r.reach) +
@@ -50,12 +59,23 @@
             card.appendChild(act);
             box.appendChild(card);
         });
-        box.appendChild(UI.el('div.sec-title', { html: FB.ic('worm') + FB.t('bait') }));
-        box.appendChild(UI.el('p.muted', { text: FB.t('bait_hint'), style: 'margin:0 4px 10px;font-size:14px' }));
-        const grid = UI.el('div.grid.small');
+        return box;
+    }
+
+    // Наживка: способ ловли, кого любит (из уже пойманных), цена
+    function baits() {
+        const box = UI.el('div');
+        const S = FB.S;
+        box.appendChild(UI.el('p.muted.shop-note', { text: FB.t('bait_hint') }));
+        const grid = UI.el('div.grid.bait-grid');
         FB.BAITS.forEach(b => {
             const owned = S.baits.includes(b.id), on = S.bait === b.id;
-            const card = UI.el('div.card.item' + (on ? '.on' : ''), { html: '<div class="prev">' + FB.ic(b.icon) + '</div><div class="nm">' + U.esc(FB.name(b)) + '</div><div class="mode">' + FB.t('mode_' + (b.mode || 'float')) + '</div>' });
+            const fans = FB.FISH.filter(f => f.bait === b.id);
+            const known = fans.filter(f => S.album[f.id]);
+            const card = UI.el('div.card.item.bait-card.m-' + (b.mode || 'float') + (on ? '.on' : ''), { html:
+                '<div class="prev">' + FB.ic(b.icon) + '</div><div class="nm">' + U.esc(FB.name(b)) + '</div>' +
+                '<div class="mode">' + FB.t('mode_' + (b.mode || 'float')) + '</div>' +
+                '<div class="fans">' + (known.length ? known.slice(0, 4).map(f => '<img src="' + FB.fishArt.url(f.id, 50) + '" alt="" title="' + U.esc(FB.name(f)) + '">').join('') : '<span>' + FB.t('bait_fans_unknown', { n: fans.length }) + '</span>') + '</div>' });
             if (on) card.appendChild(UI.el('span.owned', { html: FB.ic('check') + FB.t('equipped') }));
             else if (owned) card.appendChild(UI.btn('small', FB.t('take'), () => { S.bait = b.id; FB.state.save(); FB.hud.update(); UI.refresh(); }));
             else if (S.level < b.level) card.appendChild(UI.btn('small grey off', FB.ic('lock') + FB.t('lvl_n', { n: b.level })));

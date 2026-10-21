@@ -28,6 +28,7 @@
         { id: 'shop', where: 'shop-gear', target: '.sheet .tabs' },
         { id: 'rods', where: 'shop-gear', target: () => document.querySelectorAll('.sheet .rodcard')[1] },
         { id: 'look', where: 'shop-look', target: '.sheet .grid' },
+        { id: 'baits', where: 'shop-bait', target: '.sheet .bait-grid' },
         { id: 'gift', where: 'tasks-daily', target: '.sheet .gift-row' },
         { id: 'quests', where: 'tasks-daily', target: '.sheet .card.quest' },
         { id: 'season', where: 'tasks-season', target: '.sheet .season-card .sc-head' },
@@ -35,7 +36,6 @@
         { id: 'medals', where: 'profile', target: '.sheet .trophies, .sheet .trophies-empty' },
         { id: 'aqua_btn', where: 'main', target: '.hud-right .aqua-btn', cond: (S) => Object.keys(S.album).length >= 3 },
         { id: 'aqua', where: 'aqua', target: '.sheet .aq-tank' },
-        { id: 'sonar', where: 'main', target: '.sonar', cond: () => FB.sonar.has() },
         { id: 'arena', where: 'main', target: '.tourney-chip', wide: true, cond: (S) => S.pond === 'arena' }
     ];
     // Особенность каждого места — когда игрок впервые там рыбачит
@@ -218,6 +218,34 @@
         return v;
     }
 
+    // Эхолот: первый раз — как он работает, первый спиннинг с эхолотом — как с блесной
+    function sonarTip() {
+        const S = FB.S, F = FB.fishing;
+        if (!FB.sonar.has() || F.phase !== 'wait') return null;
+        const el = document.querySelector('.sonar');
+        if (!el || el.classList.contains('off')) return null;
+        const li = (ic, html) => '<li>' + FB.ic(ic) + '<span>' + html + '</span></li>';
+        const k = F.waitK();
+        if (!S.tips.sonar && F.mode !== 'spin' && k >= FB.sonar.REVEAL + 0.05) {
+            const lv = FB.sonar.level();
+            return { key: 'tip-sonar', rect: el, block: true, dim: true, wide: true, title: FB.t('tut_sonar_t'),
+                text: '<div class="c-lead">' + FB.t('tut_sonar') + '</div><ul class="c-list">' +
+                    li('fish', FB.t(['sn_lv1', 'sn_lv2', 'sn_lv3'][lv - 1] || 'sn_lv1')) +
+                    li('swap', FB.t('sn_skip')) +
+                    li('sparkle', FB.t('sn_spin_hint')) + '</ul>',
+                btns: [[FB.t('tut_got'), 'small', () => { seen('sonar'); F.release(); }]] };
+        }
+        if (!S.tips.sonar_spin && S.tips.ev_spin && F.mode === 'spin' && F.spin && F.spin.attract > 0.25) {
+            return { key: 'tip-sonar-spin', rect: el, block: true, dim: true, wide: true, title: FB.t('tut_sonar_spin_t'),
+                text: '<ul class="c-list">' +
+                    li('sparkle', FB.t('sn_spin1')) +
+                    li('clock', FB.t('sn_spin2')) +
+                    li('hook', FB.t('sn_spin3')) + '</ul>',
+                btns: [[FB.t('tut_got'), 'small', () => { seen('sonar_spin'); seen('sonar'); F.release(); }]] };
+        }
+        return null;
+    }
+
     // Первая свечка, уход в камыш, тяга на глубину, отличная подсечка — игра
     // встаёт на паузу и объясняет, что делать. Жор — без паузы
     function fightTipView() {
@@ -227,6 +255,9 @@
             const el = document.querySelector('.frenzy');
             if (el && visible(el)) return { key: 'ev-frenzy', rect: el, block: true, dim: true, title: FB.t('tut_ev_frenzy_t'), text: FB.t('tut_ev_frenzy'), btns: [[FB.t('tut_got'), 'small', () => seen('ev_frenzy')]] };
         }
+        // Эхолот: объясняем в деле — когда он уже узнал, кто подплывает
+        const sv = sonarTip();
+        if (sv) return sv;
         if (F.phase === 'wait' && (F.mode === 'spin' || F.mode === 'bottom') && !S.tips['ev_' + F.mode]) {
             const p = FB.scene.project(F.target.tx, F.target.dist);
             const id = F.mode;

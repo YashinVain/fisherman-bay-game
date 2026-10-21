@@ -80,7 +80,7 @@
             top.body.innerHTML = '';
             top.body.appendChild(top.opt.render());
             top.body.scrollTop = scroll;
-            top.body.classList.remove('swap'); void top.body.offsetWidth; top.body.classList.add('swap');
+            top.body.classList.remove('body-swap'); void top.body.offsetWidth; top.body.classList.add('body-swap');
         }
     };
 

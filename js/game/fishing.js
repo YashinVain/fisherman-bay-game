@@ -928,8 +928,26 @@
             ctx.stroke();
             if (Math.random() < 0.25) SC.ripple(p.x, p.y, 0.18 * p.s * 1.6);
         }
-        // Сама блесна
+        // Сама блесна (или воблер — маленькая пластиковая рыбка)
         const flip = sp.twitch > 0 ? Math.sin(sp.twitch * 30) : Math.sin(SC.t * 6) * 0.3;
+        if (FB.S.bait === 'wobbler') {
+            ctx.save();
+            ctx.translate(p.x, p.y - u * 0.2 * s);
+            ctx.rotate(Math.atan2(-by * 0.6, -bx) + flip * 0.25);
+            const L = u * 1.6 * s;
+            ctx.fillStyle = '#3ab06a'; ctx.strokeStyle = '#2a3550'; ctx.lineWidth = Math.max(1, u * 0.18 * s);
+            ctx.beginPath(); ctx.ellipse(0, 0, L, L * 0.42, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#f2f2f2'; ctx.beginPath(); ctx.ellipse(-L * 0.05, L * 0.16, L * 0.75, L * 0.14, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#e8402a'; ctx.lineWidth = Math.max(1, u * 0.16 * s);
+            ctx.beginPath(); ctx.moveTo(-L * 0.6, -L * 0.12); ctx.quadraticCurveTo(0, -L * 0.3, L * 0.5, -L * 0.15); ctx.stroke();
+            ctx.fillStyle = '#cfe8ff'; ctx.strokeStyle = '#2a3550'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(L * 0.95, -L * 0.05); ctx.lineTo(L * 1.55, L * 0.12); ctx.lineTo(L * 0.9, L * 0.28); ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(L * 0.62, -L * 0.05, L * 0.13, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#2a3550'; ctx.beginPath(); ctx.arc(L * 0.64, -L * 0.05, L * 0.06, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+            if (F.phase === 'bite' && Math.random() < 0.4) SC.ripple(p.x, p.y, 0.45 * p.s * 1.6);
+            return;
+        }
         ctx.save();
         ctx.translate(p.x, p.y - u * 0.3 * s);
         ctx.rotate(-0.35);

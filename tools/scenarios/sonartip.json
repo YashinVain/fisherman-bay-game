@@ -1,0 +1,11 @@
+{
+    "steps": [
+        { "size": [1920, 980, 1] },
+        { "open": "http://127.0.0.1:8940/", "wait": 2500 },
+        { "name": "подготовка", "js": "window.__tap = (x, y, up) => { const o = { clientX: x, clientY: y, bubbles: true, pointerId: 1 }; document.getElementById('game').dispatchEvent(new PointerEvent('pointerdown', o)); if (up !== false) window.dispatchEvent(new PointerEvent('pointerup', o)); }; window.__until = (fn, ms) => new Promise(r => { const t = setInterval(() => { if (fn()) { clearInterval(t); r(true); } }, 15); setTimeout(() => { clearInterval(t); r(false); }, ms || 15000); }); document.querySelector('.title .btn').click(); await new Promise(r => setTimeout(r, 600)); FB.ui.closeAll(); const S = FB.S; S.tut = 99; S.tips = { chip: 1, profile: 1, bait: 1, bubbles: 1, drift: 1, pl_ducks: 1, see_ducks: 1, aqua_btn: 1 }; S.stats.catches = 20; S.xp = 1500; S.level = FB.state.levelFromXp(1500); S.owned.push('bt_rowboat'); S.look.boat = 'bt_rowboat'; S.baits.push('spinner'); FB.hud.update();", "sleep": 900 },
+        { "name": "поплавок: эхолот узнал рыбу", "js": "const F = FB.fishing; const p = FB.tutor.castPoint(); __tap(p.x, p.y); await __until(() => F.phase === 'wait'); F.res = { kind: 'fish', fish: FB.fishById.bream, g: 2200 }; await __until(() => document.querySelector('.coach') && !document.querySelector('.coach').classList.contains('hidden') && FB.tutor.blocking(), 9000); return FB.S.tips;", "sleep": 300 },
+        { "shot": "n01-sonar-tip.png" },
+        { "name": "спиннинг", "js": "document.querySelector('.coach .btn').click(); const F = FB.fishing; F.reset(); FB.S.bait = 'spinner'; FB.hud.update(); await new Promise(r => setTimeout(r, 300)); const p = FB.tutor.castPoint(); __tap(p.x, p.y); await __until(() => F.phase === 'wait'); await new Promise(r => setTimeout(r, 400)); document.querySelector('.coach .btn').click(); F.res = { kind: 'fish', fish: FB.fishById.pike, g: 3000 }; F.spin.need = 99; for (let i = 0; i < 4; i++) { __tap(800, 500, false); await new Promise(r => setTimeout(r, 220)); window.dispatchEvent(new PointerEvent('pointerup', { clientX: 800, clientY: 500, bubbles: true, pointerId: 1 })); await new Promise(r => setTimeout(r, 120)); } await __until(() => FB.tutor.blocking(), 4000); return FB.S.tips;", "sleep": 400 },
+        { "shot": "n02-sonar-spin.png" }
+    ]
+}

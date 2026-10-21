@@ -1,0 +1,16 @@
+{
+    "steps": [
+        { "size": [1920, 980, 1] },
+        { "open": "http://127.0.0.1:8940/", "wait": 2500 },
+        { "name": "подготовка", "js": "document.querySelector('.title .btn').click(); await new Promise(r => setTimeout(r, 600)); FB.ui.closeAll(); const S = FB.S; S.tut = 99; S.tips = { chip: 1, profile: 1, bait: 1, bubbles: 1, drift: 1, places: 1, album: 1, top: 1, shop: 1, rods: 1, look: 1, gift: 1, quests: 1, season: 1, tiers: 1, aqua: 1, aqua_btn: 1, sonar: 1, pl_ducks: 1, see_ducks: 1, medals: 1 }; S.stats.catches = 10; S.album.crucian = { n: 1, best: 300 }; FB.hud.update(); window.__w = () => { const b = document.querySelector('.shade:last-child .sheet-body'); return b ? Math.round(b.getBoundingClientRect().width) + 'x' + Math.round(b.getBoundingClientRect().height) : 'нет окна'; }; window.__tab = async (i, sel) => { const tabs = document.querySelectorAll((sel || '.sheet') + ' .tabs')[0].querySelectorAll('.tab'); tabs[i].click(); await new Promise(r => setTimeout(r, 450)); return __w(); };", "sleep": 300 },
+        { "name": "альбом: речка", "js": "FB.panels.album(); await new Promise(r => setTimeout(r, 500)); const a = __w(); const b = await __tab(1); const c = await __tab(2); return [a, b, c];" },
+        { "shot": "t01-album.png" },
+        { "name": "аквариум: украшения, трофеи", "js": "FB.ui.closeAll(); await new Promise(r => setTimeout(r, 300)); FB.aquaUI.open('fish'); await new Promise(r => setTimeout(r, 500)); const a = __w(); const b = await __tab(1); const c = await __tab(2); return [a, b, c];" },
+        { "shot": "t02-aqua.png" },
+        { "name": "магазин: образ, жемчуг", "js": "FB.ui.closeAll(); await new Promise(r => setTimeout(r, 300)); FB.shopUI.open('gear'); await new Promise(r => setTimeout(r, 500)); const a = __w(); const b = await __tab(1); const c = await __tab(2); return [a, b, c];" },
+        { "shot": "t03-shop.png" },
+        { "name": "задания: сезон", "js": "FB.ui.closeAll(); await new Promise(r => setTimeout(r, 300)); FB.tasks.open('daily'); await new Promise(r => setTimeout(r, 500)); const a = __w(); const b = await __tab(1); return [a, b];" },
+        { "name": "топ: слава, рекорд", "js": "FB.ui.closeAll(); await new Promise(r => setTimeout(r, 300)); FB.top.open('week'); await new Promise(r => setTimeout(r, 900)); const a = __w(); const b = await __tab(1); const c = await __tab(2); return [a, b, c];" },
+        { "shot": "t04-top.png" }
+    ]
+}

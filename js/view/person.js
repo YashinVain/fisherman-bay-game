@@ -282,7 +282,7 @@
         ctx.strokeStyle = tint('#3a2a22');
         ctx.lineWidth = Math.max(3, h * 0.045);
         ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(t.hx + Math.cos(t.a) * h * 0.06, t.hy + Math.sin(t.a) * h * 0.06); ctx.stroke();
-        ctx.fillStyle = tint('#e2e6ea');
+        ctx.fillStyle = tint((rod.look && rod.look.ring) || '#e2e6ea');
         for (let i = 1; i <= 3; i++) {
             const k = 0.3 + i * 0.17;
             const x = U.lerp(U.lerp(bx, mx, k), U.lerp(mx, t.x, k), k), y = U.lerp(U.lerp(by, my, k), U.lerp(my, t.y, k), k);
@@ -605,6 +605,29 @@
             ctx.fillStyle = tint('#dfe4ea'); ctx.strokeStyle = 'rgba(30,25,40,0.6)'; ctx.lineWidth = Math.max(1, r * 0.1);
             ctx.beginPath(); ctx.ellipse(0, r * 0.55, r * 0.32, r * 0.6, 0, 0, TAU); ctx.fill(); ctx.stroke();
             ctx.fillStyle = '#e8402a'; ctx.beginPath(); ctx.arc(-r * 0.05, r * 0.5, r * 0.12, 0, TAU); ctx.fill();
+            return;
+        }
+        if (id === 'wobbler') {
+            ctx.fillStyle = tint('#3ab06a'); ctx.strokeStyle = 'rgba(30,25,40,0.6)'; ctx.lineWidth = Math.max(1, r * 0.1);
+            ctx.beginPath(); ctx.ellipse(0, r * 0.6, r * 0.28, r * 0.62, 0, 0, TAU); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#f2f2f2'; ctx.beginPath(); ctx.ellipse(r * 0.1, r * 0.62, r * 0.1, r * 0.5, 0, 0, TAU); ctx.fill();
+            ctx.fillStyle = '#2a3550'; ctx.beginPath(); ctx.arc(0, r * 0.15, r * 0.08, 0, TAU); ctx.fill();
+            return;
+        }
+        if (id === 'dough') {
+            ctx.fillStyle = tint('#f2dcae'); ctx.strokeStyle = 'rgba(160,120,70,0.8)'; ctx.lineWidth = Math.max(1, r * 0.08);
+            ctx.beginPath(); ctx.arc(0, r * 0.5, r * 0.36, 0, TAU); ctx.fill(); ctx.stroke();
+            return;
+        }
+        if (id === 'corn') {
+            ctx.fillStyle = tint('#ffd23a'); ctx.strokeStyle = 'rgba(180,120,10,0.9)'; ctx.lineWidth = Math.max(1, r * 0.08);
+            [[0, 0.3], [0.12, 0.62], [-0.1, 0.9]].forEach(([dx, dy]) => { ctx.beginPath(); ctx.ellipse(dx * r, dy * r, r * 0.2, r * 0.17, 0, 0, TAU); ctx.fill(); ctx.stroke(); });
+            return;
+        }
+        if (id === 'squid') {
+            ctx.strokeStyle = tint('#ff9ab6'); ctx.lineWidth = r * 0.16;
+            for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(i * r * 0.12, r * 0.2); ctx.quadraticCurveTo(i * r * 0.3, r * 0.7, i * r * 0.15, r * 1.1); ctx.stroke(); }
+            ctx.fillStyle = tint('#ffb0c8'); ctx.beginPath(); ctx.ellipse(0, r * 0.2, r * 0.22, r * 0.3, 0, 0, TAU); ctx.fill();
             return;
         }
         if (id === 'shrimp') {

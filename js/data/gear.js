@@ -5,21 +5,29 @@
 (function (FB) {
     // ---------- Удочки ----------
     // reach — как далеко достаёт заброс (0..1), ctrl — рост натяжения (меньше = легче),
-    // reel — скорость подмотки, luck — множитель шанса редкой рыбы
+    // reel — скорость подмотки, luck — множитель шанса редкой рыбы.
+    // look — как рисовать в магазине (view/rodart.js): обмотка, рукоять, катушка, узор
     FB.RODS = [
-        { id: 'bamboo', price: 0, level: 1, reach: 0.42, ctrl: 1.0, reel: 1.0, luck: 1.0, color: '#c9a25a', n: { ru: 'Бамбуковая', en: 'Bamboo Rod' } },
-        { id: 'light', price: 400, level: 3, reach: 0.56, ctrl: 0.92, reel: 1.1, luck: 1.1, color: '#4a8ad0', n: { ru: 'Лёгкий спиннинг', en: 'Light Spinner' } },
-        { id: 'carbon', price: 1600, level: 6, reach: 0.7, ctrl: 0.84, reel: 1.2, luck: 1.2, color: '#3a3a44', n: { ru: 'Карбоновая', en: 'Carbon Rod' } },
-        { id: 'sea', price: 5000, level: 11, reach: 0.85, ctrl: 0.76, reel: 1.32, luck: 1.3, color: '#d0503a', n: { ru: 'Морская', en: 'Sea Rod' } },
-        { id: 'star', price: 15000, level: 16, reach: 1.0, ctrl: 0.68, reel: 1.45, luck: 1.42, color: '#f2c43a', n: { ru: 'Звёздная', en: 'Star Rod' } }
+        { id: 'bamboo', price: 0, level: 1, reach: 0.42, ctrl: 1.0, reel: 1.0, luck: 1.0, color: '#d8b46a', n: { ru: 'Бамбуковая', en: 'Bamboo Rod' }, look: { style: 'bamboo', wrap: '#3a7a3a', handle: '#c8955a', reel: '#7a6a5a', bend: 0.08 } },
+        { id: 'light', price: 400, level: 3, reach: 0.56, ctrl: 0.92, reel: 1.1, luck: 1.1, color: '#4a8ad0', n: { ru: 'Лёгкий спиннинг', en: 'Light Spinner' }, look: { wrap: '#ffffff', reel: '#5a7aa8' } },
+        { id: 'glass', price: 900, level: 5, reach: 0.63, ctrl: 0.88, reel: 1.15, luck: 1.15, color: '#3aa87a', n: { ru: 'Стеклопластиковая', en: 'Fiberglass Rod' }, look: { wrap: '#f2c43a', reel: '#4a8a6a' } },
+        { id: 'carbon', price: 1600, level: 7, reach: 0.7, ctrl: 0.84, reel: 1.2, luck: 1.2, color: '#3a3a44', n: { ru: 'Карбоновая', en: 'Carbon Rod' }, look: { style: 'carbon', wrap: '#e8402a', handle: '#2a2a30', seat: '#e8402a', reel: '#3a3a44' } },
+        { id: 'feeder', price: 3200, level: 9, reach: 0.78, ctrl: 0.8, reel: 1.26, luck: 1.25, color: '#7a4ac8', n: { ru: 'Фидерная', en: 'Feeder Rod' }, look: { wrap: '#ffd23a', ring: '#ffd23a', reel: '#5a3a90', bend: 0.1 } },
+        { id: 'sea', price: 5000, level: 11, reach: 0.85, ctrl: 0.76, reel: 1.32, luck: 1.3, color: '#d0503a', n: { ru: 'Морская', en: 'Sea Rod' }, look: { thick: 1.25, wrap: '#ffffff', handle: '#2a3a5a', reel: '#c8d0d8', bend: 0.03 } },
+        { id: 'ice', price: 9000, level: 14, reach: 0.92, ctrl: 0.72, reel: 1.38, luck: 1.36, color: '#6ad0f0', n: { ru: 'Ледяная', en: 'Ice Rod' }, look: { style: 'ice', wrap: '#ffffff', ring: '#e8fbff', handle: '#e8f4fa', reel: '#3a8ac8' } },
+        { id: 'star', price: 15000, level: 16, reach: 1.0, ctrl: 0.68, reel: 1.45, luck: 1.42, color: '#f2c43a', n: { ru: 'Звёздная', en: 'Star Rod' }, look: { style: 'star', wrap: '#2a3a8a', ring: '#fff3a8', handle: '#2a3a8a', seat: '#f2c43a', reel: '#f2c43a' } }
     ];
 
     // ---------- Наживка (покупается один раз навсегда) ----------
     FB.BAITS = [
         { id: 'worm', price: 0, level: 1, n: { ru: 'Червь', en: 'Worm' }, icon: 'worm', mode: 'float' },
         { id: 'maggot', price: 150, level: 2, n: { ru: 'Опарыш', en: 'Maggot' }, icon: 'maggot', mode: 'float' },
+        { id: 'dough', price: 300, level: 3, n: { ru: 'Тесто', en: 'Dough Ball' }, icon: 'dough', mode: 'float' },
         { id: 'spinner', price: 700, level: 4, n: { ru: 'Блесна', en: 'Spinner' }, icon: 'spinner', mode: 'spin' },
-        { id: 'shrimp', price: 2500, level: 12, n: { ru: 'Креветка', en: 'Shrimp' }, icon: 'shrimp', mode: 'bottom' }
+        { id: 'corn', price: 900, level: 5, n: { ru: 'Кукуруза', en: 'Sweet Corn' }, icon: 'corn', mode: 'float' },
+        { id: 'wobbler', price: 1800, level: 8, n: { ru: 'Воблер', en: 'Wobbler' }, icon: 'wobbler', mode: 'spin' },
+        { id: 'shrimp', price: 2500, level: 12, n: { ru: 'Креветка', en: 'Shrimp' }, icon: 'shrimp', mode: 'bottom' },
+        { id: 'squid', price: 4000, level: 15, n: { ru: 'Кальмар', en: 'Squid' }, icon: 'squid', mode: 'bottom' }
     ];
 
     FB.rodById = {}; FB.RODS.forEach(r => { FB.rodById[r.id] = r; });
