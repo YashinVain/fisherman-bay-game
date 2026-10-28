@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Кадры из MP4</title>
+<style>body { margin: 0; background: #20242c; } .g { display: grid; grid-template-columns: repeat(var(--cols, 6), 1fr); gap: 4px; padding: 4px; } figure { margin: 0; position: relative; } canvas { width: 100%; max-width: var(--cw, none); display: block; } figcaption { position: absolute; left: 4px; top: 4px; background: rgba(0,0,0,.65); color: #fff; font: 12px sans-serif; padding: 1px 5px; border-radius: 4px; }</style></head>
+<body>
+<!-- Кадры из готового MP4 в нужные секунды (декодируем настоящий файл):
+     ?v=/docs/promo/video/ad-baika-h.mp4&t=1,1.2,1.4&cols=6 или &from=2&to=4&step=0.2; &w=1280 — кадры в натуральную величину; &cx=0&cy=0&cw=1&ch=0.1 — вырезка (доли кадра) -->
+<div class="g" id="g"></div>
+<script>
+window.__frames = (async () => {
+    const q = new URLSearchParams(location.search);
+    document.body.style.setProperty('--cols', q.get('cols') || 6);
+    const CW = +q.get('w') || 480;
+    // cx, cy, cw, ch — вырезка кадра в долях (по умолчанию весь кадр)
+    const CX = +q.get('cx') || 0, CY = +q.get('cy') || 0, CWf = +q.get('cw') || 1, CHf = +q.get('ch') || 1;
+    document.body.style.setProperty('--cw', CW + 'px');
+    const buf = new Uint8Array(await (await fetch(q.get('v'))).arrayBuffer());
+    const dv = new DataView(buf.buffer);
+    const tag = (o) => String.fromCharCode(buf[o + 4], buf[o + 5], buf[o + 6], buf[o + 7]);
+    const all = (from, to, t) => { const r = []; let o = from; while (o + 8 <= to) { const s = dv.getUint32(o); if (s < 8) break; if (!t || tag(o) === t) r.push({ o, e: Math.min(to, o + s) }); o += s; } return r; };
+    const one = (a, b, t) => all(a, b, t)[0];
+    const moov = one(0, buf.length, 'moov');
+    let v = null;
+    for (const tr of all(moov.o + 8, moov.e, 'trak')) {
+        const mdia = one(tr.o + 8, tr.e, 'mdia'), hdlr = one(mdia.o + 8, mdia.e, 'hdlr');
+        if (String.fromCharCode(buf[hdlr.o + 16], buf[hdlr.o + 17], buf[hdlr.o + 18], buf[hdlr.o + 19]) !== 'vide') continue;
+        const minf = one(mdia.o + 8, mdia.e, 'minf'), stbl = one(minf.o + 8, minf.e, 'stbl');
+        const stsz = one(stbl.o + 8, stbl.e, 'stsz'), stco = one(stbl.o + 8, stbl.e, 'stco'), stss = one(stbl.o + 8, stbl.e, 'stss'), stts = one(stbl.o + 8, stbl.e, 'stts'), stsd = one(stbl.o + 8, stbl.e, 'stsd');
+        const mdhd = one(mdia.o + 8, mdia.e, 'mdhd');
+        const n = dv.getUint32(stsz.o + 16), sizes = [], offs = [];
+        for (let i = 0; i < n; i++) { sizes.push(dv.getUint32(stsz.o + 20 + i * 4)); offs.push(dv.getUint32(stco.o + 16 + i * 4)); }
+        const keys = new Set(); for (let i = 0, k = dv.getUint32(stss.o + 12); i < k; i++) keys.add(dv.getUint32(stss.o + 16 + i * 4) - 1);
+        const avcC = one(stsd.o + 16 + 86, stsd.e, 'avcC'), desc = buf.slice(avcC.o + 8, avcC.e);
+        const hex = (x) => x.toString(16).padStart(2, '0');
+        v = { n, sizes, offs, keys, desc, codec: 'avc1.' + hex(desc[1]) + hex(desc[2]) + hex(desc[3]), w: dv.getUint16(stsd.o + 48), h: dv.getUint16(stsd.o + 50), fps: dv.getUint32(mdhd.o + 20) / dv.getUint32(stts.o + 20) };
+    }
+    let times = (q.get('t') || '').split(',').filter(Boolean).map(Number);
+    if (!times.length) { const f = +q.get('from') || 0, t = +q.get('to') || 4, s = +q.get('step') || 0.25; for (let x = f; x < t; x += s) times.push(+x.toFixed(3)); }
+    const want = new Map(times.map(t => [Math.min(v.n - 1, Math.round(t * v.fps)), t]));
+    const out = new Map();
+    const last = Math.max(...want.keys());
+    const dec = new VideoDecoder({
+        output: (fr) => { const i = Math.round(fr.timestamp / 1e6 * v.fps); if (want.has(i)) { const c = document.createElement('canvas'); c.width = CW; c.height = Math.round(CW * v.h * CHf / (v.w * CWf)); c.getContext('2d').drawImage(fr, v.w * CX, v.h * CY, v.w * CWf, v.h * CHf, 0, 0, c.width, c.height); out.set(i, c); } fr.close(); },
+        error: () => {}
+    });
+    dec.configure({ codec: v.codec, description: v.desc });
+    for (let i = 0; i <= last; i++) {
+        dec.decode(new EncodedVideoChunk({ type: v.keys.has(i) ? 'key' : 'delta', timestamp: Math.round(i / v.fps * 1e6), data: buf.subarray(v.offs[i], v.offs[i] + v.sizes[i]) }));
+        while (dec.decodeQueueSize > 30) await new Promise(r => setTimeout(r, 4));
+    }
+    await dec.flush();
+    const g = document.getElementById('g');
+    for (const i of [...want.keys()].sort((a, b) => a - b)) {
+        const c = out.get(i); if (!c) continue;
+        const fig = document.createElement('figure'); fig.appendChild(c);
+        const cap = document.createElement('figcaption'); cap.textContent = (i / v.fps).toFixed(2) + ' с'; fig.appendChild(cap); g.appendChild(fig);
+    }
+    return { w: v.w, h: v.h, shown: out.size };
+})();
+</script></body></html>

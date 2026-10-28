@@ -66,7 +66,7 @@
     };
 
     SC.resize = () => {
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const dpr = Math.min(window.devicePixelRatio || 1, window.__maxDpr || 2);
         const W = window.innerWidth, H = window.innerHeight;
         SC.dpr = dpr; SC.W = W; SC.H = H;
         SC.canvas.width = Math.round(W * dpr);

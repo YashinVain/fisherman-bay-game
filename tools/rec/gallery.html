@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Снимки</title>
+<style>body { margin: 0; background: #20242c; } .g { display: grid; grid-template-columns: repeat(var(--cols, 3), 1fr); gap: 6px; padding: 6px; } img { width: 100%; display: block; }</style>
+</head><body>
+<!-- Галерея снимков: ?dir=/rec/shots-desktop&files=1-jump.png,2-record.png&cols=3 -->
+<div class="g" id="g"></div>
+<script>
+const q = new URLSearchParams(location.search);
+document.body.style.setProperty('--cols', q.get('cols') || 3);
+(q.get('files') || '').split(',').filter(Boolean).forEach(f => { const i = document.createElement('img'); i.src = q.get('dir') + '/' + f; document.getElementById('g').appendChild(i); });
+</script></body></html>

@@ -3,8 +3,8 @@
 //   1. Берёт index.html и все подключённые в нём скрипты (в том же порядке)
 //   2. Склеивает их в один game.js — меньше запросов, быстрее загрузка
 //   3. Убирает комментарии (исходники не трогает)
-//   4. Кладёт в dist/fisherman-bay/: index.html, game.js, css/style.css, fonts/
-//   5. Упаковывает dist/fisherman-bay.zip — его и загружаем в консоль Яндекса
+//   4. Кладёт в dist/fishing-tales/: index.html, game.js, css/style.css, fonts/
+//   5. Упаковывает dist/fishing-tales.zip — его и загружаем в консоль Яндекса
 // Никаких npm-пакетов: ZIP собирается встроенным в Node модулем zlib.
 
 const fs = require('fs');
@@ -13,8 +13,8 @@ const zlib = require('zlib');
 const STRIP = require('./strip.js');
 
 const ROOT = path.join(__dirname, '..');
-const OUT = path.join(ROOT, 'dist', 'fisherman-bay');
-const ZIP = path.join(ROOT, 'dist', 'fisherman-bay.zip');
+const OUT = path.join(ROOT, 'dist', 'fishing-tales');
+const ZIP = path.join(ROOT, 'dist', 'fishing-tales.zip');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
 let html = read('index.html');
@@ -22,7 +22,7 @@ const scripts = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map(m =>
 if (!scripts.length) throw new Error('В index.html нет ни одного <script src>');
 const version = (read('js/game/state.js').match(/FB\.VERSION = '([^']+)'/) || [])[1] || '0';
 
-const bundle = [`// Рыбацкая бухта ${version}`].concat(scripts.map(src => `\n// ===== ${src} =====\n` + read(src))).join('\n');
+const bundle = [`// Рыбацкие байки ${version}`].concat(scripts.map(src => `\n// ===== ${src} =====\n` + read(src))).join('\n');
 const first = html.indexOf('<script src=');
 const last = html.lastIndexOf('</script>') + '</script>'.length;
 html = html.slice(0, first) + `<script src="game.js?v=${version}"></script>` + html.slice(last);
@@ -84,4 +84,4 @@ const kb = (n) => (n / 1024).toFixed(1) + ' КБ';
 const total = files.reduce((s, f) => s + fs.statSync(path.join(OUT, f)).size, 0);
 console.log(`Версия ${version}: ${files.length} файлов, ${kb(total)} без сжатия, архив ${kb(fs.statSync(ZIP).size)}`);
 files.forEach(f => console.log('  ' + f));
-console.log('Готово: dist/fisherman-bay.zip — его загружаем в черновик игры в консоли Яндекс Игр');
+console.log('Готово: dist/fishing-tales.zip — его загружаем в черновик игры в консоли Яндекс Игр');

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Раскладка кадров</title>
+<style>
+    body { margin: 0; background: #20242c; font: 12px sans-serif; color: #fff; }
+    .g { display: grid; grid-template-columns: repeat(var(--cols, 4), 1fr); gap: 4px; padding: 4px; }
+    figure { margin: 0; position: relative; }
+    img { width: 100%; display: block; }
+    figcaption { position: absolute; left: 4px; top: 4px; background: rgba(0,0,0,.6); padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<!-- Раскладка кадров записи: ?film=test&from=0&to=300&step=30&cols=4 -->
+<div class="g" id="g"></div>
+<script>
+const q = new URLSearchParams(location.search);
+const film = q.get('film') || 'test', from = +(q.get('from') || 0), to = +(q.get('to') || 300), step = +(q.get('step') || 30);
+document.body.style.setProperty('--cols', q.get('cols') || 4);
+const g = document.getElementById('g');
+for (let f = from; f < to; f += step) {
+    const fig = document.createElement('figure');
+    fig.innerHTML = '<img src="/rec/' + film + '/frames/' + String(f).padStart(5, '0') + '.jpg"><figcaption>' + f + ' · ' + (f / 30).toFixed(1) + ' с</figcaption>';
+    g.appendChild(fig);
+}
+</script>
+</body>
+</html>

@@ -23,7 +23,7 @@ sandbox.window = sandbox;
 sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
 const load = (f) => vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), sandbox, { filename: f });
-['js/core/util.js', 'js/core/i18n.js', 'js/data/fish.js', 'js/data/gear.js', 'js/core/sdk.js',
+['js/core/util.js', 'js/core/i18n.js', 'js/data/fish.js', 'js/data/gear.js', 'js/core/sdk.js', 'js/core/music.js',
     'js/game/week.js', 'js/game/catch.js', 'js/game/state.js', 'js/game/quests.js', 'js/game/tourney.js',
     'js/game/shop.js', 'js/game/fishing.js', 'js/game/drift.js', 'js/game/places.js', 'js/game/events.js', 'js/game/aqua.js'].forEach(load);
 const FB = sandbox.FB;
@@ -237,6 +237,7 @@ FB.tourney.checkWeek().then(r => {
     aquaChecks();
     sonarChecks();
     packChecks();
+    musicChecks();
     finish();
 });
 
@@ -697,6 +698,70 @@ function packChecks() {
     const fresh = FB.FISH.find(f => !FB.S.album[f.id]);
     FB.state.applyCatch({ kind: 'fish', fish: fresh, g: fresh.w[0] }, { pond: fresh.pond }, true);
     ok(Object.keys(FB.S.album).length >= 20 && FB.S.owned.includes('fr_fisher'), '20 видов — рамка «Рыбья карусель»');
+}
+
+// ---------- Музыка и громкость ----------
+function musicChecks() {
+    section('Музыка');
+    const MU = FB.music;
+    ok(MU && MU.compose && MU.styleFor, 'музыка подключена');
+    ['day', 'evening', 'night', 'rain', 'fog', 'arena'].forEach(k => ok(MU.STYLES[k], 'есть стиль ' + k));
+    ok(MU.styleFor('village', 'sun') === 'day' && MU.styleFor('river', 'evening') === 'evening' && MU.styleFor('sea', 'night') === 'night', 'стиль по погоде');
+    ok(MU.styleFor('swamp', 'rain') === 'rain' && MU.styleFor('mountain', 'fog') === 'fog' && MU.styleFor('arena', 'night') === 'arena', 'дождь, туман, турнир');
+    const INST = Object.keys(MU._instruments).concat(['pad']);
+    let seed = 7;
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    const SC = { major: [0, 2, 4, 5, 7, 9, 11], minor: [0, 2, 3, 5, 7, 8, 10], dorian: [0, 2, 3, 5, 7, 9, 10] };
+    Object.keys(MU.STYLES).forEach(k => {
+        ['village', 'sea', 'mountain'].forEach(theme => {
+            for (let n = 0; n < 4; n++) {
+                const song = MU.compose(k, theme, rnd);
+                const sec = song.steps * 60 / song.bpm / 2;
+                const tag = k + '/' + theme + '#' + n;
+                if (!(sec > 60 && sec < 170)) { ok(false, tag + ': длина песни ' + Math.round(sec) + ' с'); return; }
+                const bad = song.ev.find(e => !(e[0] >= 0 && e[0] < song.steps) || !INST.includes(e[1]) || !(e[3] > 0 && e[3] <= 0.3) || !(e[4] > 0) ||
+                    (Array.isArray(e[2]) ? e[2].some(m => !(m >= 28 && m <= 100)) : (e[1] !== 'kick' && e[1] !== 'rim' && e[1] !== 'shaker' && !(e[2] >= 28 && e[2] <= 100))));
+                if (bad) { ok(false, tag + ': кривая нота ' + JSON.stringify(bad)); return; }
+                const lead = song.ev.filter(e => e[6] === 'lead');
+                const introEnd = song.form[0][1] * 8;
+                if (lead.length < 20 || lead.some(e => e[0] < introEnd)) { ok(false, tag + ': мелодия ' + lead.length + ' нот или звучит во вступлении'); return; }
+                // Сильные доли мелодии — ноты аккорда; все ноты — из лада
+                const off = lead.filter(e => e[0] % 4 === 0).filter(e => {
+                    const pcs = song.bars[Math.floor(e[0] / 8)];
+                    return !pcs.some(p => (p % 12) === (((e[2] - song.key) % 12) + 12) % 12);
+                });
+                const outScale = lead.filter(e => !SC[song.mode].includes((((e[2] - song.key) % 12) + 12) % 12));
+                if (off.length || outScale.length) { ok(false, tag + ': мелодия мимо аккордов (' + off.length + ') или лада (' + outScale.length + ')'); return; }
+                // Плотность: в такте не больше ~12 событий на голос (не «каша»)
+                const perBar = {};
+                song.ev.forEach(e => { const b = Math.floor(e[0] / 8); perBar[b] = (perBar[b] || 0) + 1; });
+                const maxBar = Math.max.apply(null, Object.values(perBar));
+                if (maxBar > 60) { ok(false, tag + ': слишком густо — ' + maxBar + ' нот в такте'); return; }
+                ok(true);
+            }
+        });
+    });
+    const a = MU.compose('day', 'village', rnd), b = MU.compose('day', 'village', rnd);
+    ok(a.key !== b.key || JSON.stringify(a.ev.slice(40, 80)) !== JSON.stringify(b.ev.slice(40, 80)), 'песни не повторяются');
+    ok(MU.compose('day', 'sea', rnd).ev.some(e => e[1] === 'uke') && !MU.compose('day', 'village', rnd).ev.some(e => e[1] === 'uke'), 'у моря — укулеле');
+    ok(MU.compose('arena', 'arena', rnd).ev.some(e => e[1] === 'kick') && MU.compose('rain', 'river', rnd).ev.some(e => e[1] === 'kick'), 'на турнире и в дождь есть ритм');
+    ok(!MU.compose('night', 'village', rnd).ev.some(e => e[1] === 'kick'), 'ночью без барабанов');
+
+    section('Громкость');
+    const old = FB.state.merge(FB.state.fresh(), FB.state.migrate({ settings: { sound: true, music: false, lang: 'ru' } }));
+    FB.S = old; FB.state.fix();
+    ok(FB.S.settings.musicVol === 0 && FB.S.settings.soundVol === 80 && !FB.S.settings.music && FB.S.settings.sound, 'выключенная музыка из старого сохранения — громкость 0');
+    const old2 = FB.state.merge(FB.state.fresh(), FB.state.migrate({ settings: { sound: false, music: true } }));
+    FB.S = old2; FB.state.fix();
+    ok(FB.S.settings.soundVol === 0 && FB.S.settings.musicVol === 60 && !FB.S.settings.sound, 'выключенные звуки — громкость 0');
+    const kept = FB.state.merge(FB.state.fresh(), FB.state.migrate({ settings: { sound: true, music: true, musicVol: 35, soundVol: 100 } }));
+    FB.S = kept; FB.state.fix();
+    ok(FB.S.settings.musicVol === 35 && FB.S.settings.soundVol === 100, 'своя громкость сохраняется');
+    FB.S = FB.state.fresh(); FB.S.settings.musicVol = 250; FB.S.settings.soundVol = -5; FB.state.fix();
+    ok(FB.S.settings.musicVol === 100 && FB.S.settings.soundVol === 0 && !FB.S.settings.sound, 'громкость в пределах 0–100');
+    FB.S = FB.state.fresh(); FB.state.fix();
+    ok(FB.S.settings.musicVol === 60 && FB.S.settings.soundVol === 80 && FB.S.settings.music && FB.S.settings.sound, 'новый игрок: музыка 60, звуки 80');
+    ok(FB.DICT.ru.vol_off && FB.DICT.en.vol_off, 'текст «выкл»');
 }
 
 function finish() {

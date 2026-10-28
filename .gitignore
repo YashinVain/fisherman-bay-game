@@ -15,3 +15,10 @@ tools/scenarios/out/
 
 # Журнал консоли, который пишет tools/shot.js рядом со снимками
 docs/promo/console.txt
+
+
+# Готовые ролики для консоли Яндекса (большие, собираются tools/rec)
+docs/promo/video/
+
+# Снимки-проверки из tools/rec (раскладки кадров)
+tools/rec/out/

@@ -1,4 +1,4 @@
-/* style.css — весь интерфейс «Рыбацкой бухты».
+/* style.css — весь интерфейс «Рыбацких баек».
    Стиль: тёплый, «сочный», округлый. Кремовые окна, объёмные кнопки с нижней
    кромкой, толстые надписи с обводкой, мягкие тени и пружинистые анимации. */
 
@@ -43,7 +43,14 @@ html, body {
     user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
     touch-action: none; overscroll-behavior: none;
 }
-canvas#game { position: fixed; inset: 0; display: block; }
+canvas#game { position: fixed; inset: 0; display: block; will-change: transform; }
+/* Виньетка камеры: тёмные края в напряжённые моменты, красные — когда леска на пределе */
+.cam-vig { position: fixed; inset: 0; pointer-events: none; opacity: 0;
+    background: radial-gradient(ellipse 78% 72% at 50% 55%, transparent 52%, rgba(8, 18, 42, .6) 100%); }
+.cam-vig::after { content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity .25s;
+    background: radial-gradient(ellipse 78% 72% at 50% 55%, transparent 48%, rgba(190, 24, 24, .6) 100%); }
+.cam-vig.danger::after { opacity: 1; animation: camPulse .55s ease-in-out infinite; }
+@keyframes camPulse { 50% { opacity: .5; } }
 #ui { position: fixed; inset: 0; pointer-events: none; z-index: 2; }
 #ui > * { pointer-events: auto; }
 button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; padding: 0; }
@@ -83,6 +90,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
     font-size: clamp(54px, 15vmin, 128px); font-weight: 900; text-transform: uppercase; letter-spacing: .03em;
     color: #ffc22a; paint-order: stroke fill; -webkit-text-stroke: .16em #0d4f72;
     text-shadow: 0 .07em 0 #0d4f72, 0 .14em .2em rgba(0,0,0,.3);
+    margin-top: .3em;   /* место для «Й», чтобы не налезала на верхнее слово */
 }
 .logo-big::after {
     content: attr(data-t); position: absolute; left: 0; top: 0; right: 0;
@@ -178,7 +186,7 @@ div.pill { cursor: default; }
 .pill.streak small { margin-left: 6px; font-size: 13px; color: #b8600a; }
 /* Жор */
 .frenzy {
-    position: absolute; top: calc(122px + var(--safe-t)); left: 50%; transform: translateX(-50%);
+    position: absolute; top: calc(var(--chip-b, 114px) + 8px); left: 50%; transform: translateX(-50%);
     display: flex; align-items: center; gap: 6px; padding: 3px 12px 3px 6px; border-radius: 14px; white-space: nowrap;
     background: linear-gradient(#ff9a3a, #e8601a); color: #fff; font-size: 12px; box-shadow: 0 3px 8px rgba(120,40,0,.25);
     animation: frenzyGlow 1.2s ease-in-out infinite; pointer-events: none !important; z-index: 1;
@@ -205,8 +213,8 @@ div.pill { cursor: default; }
 .tourney-chip .fishw img { width: 34px; height: auto; display: block; }
 .tourney-chip.dim { opacity: .55; }
 .tourney-chip.up { top: calc(18px + var(--safe-t)); }
-.toasts { top: calc(124px + var(--safe-t)) !important; }
-.frenzy-on .toasts { top: calc(156px + var(--safe-t)) !important; }
+.toasts { top: calc(var(--chip-b, 114px) + 10px) !important; }
+.frenzy-on .toasts { top: calc(var(--chip-b, 114px) + 42px) !important; }
 .chip-up .toasts { top: calc(64px + var(--safe-t)) !important; }
 .chip-up .frenzy { top: calc(62px + var(--safe-t)); }
 .chip-up.frenzy-on .toasts { top: calc(96px + var(--safe-t)) !important; }
@@ -932,10 +940,31 @@ div.pill { cursor: default; }
 .set-row .l { display: flex; align-items: center; gap: 10px; font-size: 17px; }
 .set-row .l .ic { width: 30px; height: 30px; }
 .set-row small { display: block; font-size: 13px; color: var(--ink-soft); font-weight: 700; }
+/* Переключатель (тряска камеры) */
 .switch { position: relative; width: 62px; height: 34px; border-radius: 17px; background: #c8d0d8; box-shadow: inset 0 2px 4px rgba(0,0,0,.2); transition: background .2s; flex: none; }
 .switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 28px; height: 28px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.3); transition: transform .25s cubic-bezier(.3,1.5,.5,1); }
 .switch.on { background: var(--leaf); }
 .switch.on::after { transform: translateX(28px); }
+/* Ползунки громкости */
+.vol-row { justify-content: flex-start; gap: 12px; --vc: var(--leaf); --vd: var(--leaf-d); }
+.vol-row.m { --vc: var(--sea); --vd: var(--sea-d); }
+.vol-ic { position: relative; width: 46px; height: 46px; flex: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: linear-gradient(#fff, #f3ead6); box-shadow: 0 3px 0 var(--cream-3); transition: transform .1s; }
+.vol-ic:active { transform: translateY(2px); }
+.vol-ic .ic { width: 28px; height: 28px; transition: opacity .2s; }
+.vol-ic.off .ic { opacity: .35; filter: grayscale(1); }
+.vol-ic.off::after { content: ''; position: absolute; left: 9px; right: 9px; top: 50%; height: 4px; margin-top: -2px; border-radius: 2px; background: var(--coral); transform: rotate(-40deg); box-shadow: 0 0 0 2px #fff; }
+.vol-main { flex: 1; min-width: 0; }
+.vol-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 17px; font-weight: 900; }
+.vol-val { font-size: 14px; color: var(--vd); min-width: 40px; text-align: right; }
+input.vol { -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 32px; margin: 0; background: transparent; cursor: pointer; touch-action: pan-y; --v: 50%; }
+input.vol:focus { outline: none; }
+input.vol::-webkit-slider-runnable-track { height: 14px; border-radius: 7px; background: linear-gradient(var(--vc), var(--vd)) 0 0 / var(--v) 100% no-repeat, #e6d8bc; box-shadow: inset 0 2px 3px rgba(0,0,0,.15); }
+input.vol::-webkit-slider-thumb { -webkit-appearance: none; width: 30px; height: 30px; margin-top: -8px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, #f4f4f4 55%, #dedede); box-shadow: 0 3px 0 rgba(0,0,0,.18), 0 0 0 4px var(--vc); transition: transform .12s; }
+input.vol:active::-webkit-slider-thumb { transform: scale(1.12); }
+input.vol:focus-visible::-webkit-slider-thumb { box-shadow: 0 3px 0 rgba(0,0,0,.18), 0 0 0 4px var(--vc), 0 0 0 9px rgba(255,210,90,.55); }
+input.vol::-moz-range-track { height: 14px; border-radius: 7px; background: #e6d8bc; box-shadow: inset 0 2px 3px rgba(0,0,0,.15); }
+input.vol::-moz-range-progress { height: 14px; border-radius: 7px; background: var(--vc); }
+input.vol::-moz-range-thumb { width: 26px; height: 26px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 3px 0 rgba(0,0,0,.18), 0 0 0 4px var(--vc); }
 .seg { display: flex; border-radius: 14px; overflow: hidden; box-shadow: 0 3px 0 var(--cream-3); }
 .seg button { padding: 8px 14px; background: var(--cream-2); font-weight: 900; }
 .seg button.on { background: var(--sea); color: #fff; }

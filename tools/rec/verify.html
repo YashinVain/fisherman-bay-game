@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Проверка MP4</title></head>
+<body>
+<!-- Проверка готового MP4 «по-настоящему»: разбираем контейнер, декодируем ВСЕ кадры H.264
+     (WebCodecs) и считаем: сколько кадров, размер, длительность, как часто картинка меняется
+     (замёрзшее видео сразу видно), есть ли звуковая дорожка и стоит ли moov в начале.
+     ?v=/docs/promo/video/ad-baika-h.mp4 — результат в window.__verify -->
+<script>
+window.__verify = (async () => {
+    const url = new URLSearchParams(location.search).get('v');
+    const buf = new Uint8Array(await (await fetch(url)).arrayBuffer());
+    const dv = new DataView(buf.buffer);
+    const tag = (o) => String.fromCharCode(buf[o + 4], buf[o + 5], buf[o + 6], buf[o + 7]);
+    const all = (from, to, t) => { const r = []; let o = from; while (o + 8 <= to) { const s = dv.getUint32(o); if (s < 8) break; if (!t || tag(o) === t) r.push({ o, e: Math.min(to, o + s), t: tag(o) }); o += s; } return r; };
+    const one = (from, to, t) => all(from, to, t)[0];
+    const topBoxes = all(0, buf.length);
+    const res = { bytes: buf.length, moovFirst: topBoxes.findIndex(b => b.t === 'moov') < topBoxes.findIndex(b => b.t === 'mdat'), tracks: [] };
+    const moov = one(0, buf.length, 'moov');
+    let video = null;
+    for (const tr of all(moov.o + 8, moov.e, 'trak')) {
+        const mdia = one(tr.o + 8, tr.e, 'mdia');
+        const hdlr = one(mdia.o + 8, mdia.e, 'hdlr');
+        const kind = String.fromCharCode(buf[hdlr.o + 16], buf[hdlr.o + 17], buf[hdlr.o + 18], buf[hdlr.o + 19]);
+        const mdhd = one(mdia.o + 8, mdia.e, 'mdhd');
+        const scale = dv.getUint32(mdhd.o + 20), dur = dv.getUint32(mdhd.o + 24);
+        const minf = one(mdia.o + 8, mdia.e, 'minf');
+        const stbl = one(minf.o + 8, minf.e, 'stbl');
+        const stsz = one(stbl.o + 8, stbl.e, 'stsz');
+        const info = { kind, seconds: +(dur / scale).toFixed(2), samples: dv.getUint32(stsz.o + 16) };
+        if (kind === 'vide') {
+            const stsd = one(stbl.o + 8, stbl.e, 'stsd'), stco = one(stbl.o + 8, stbl.e, 'stco'), stss = one(stbl.o + 8, stbl.e, 'stss'), stts = one(stbl.o + 8, stbl.e, 'stts');
+            info.w = dv.getUint16(stsd.o + 48); info.h = dv.getUint16(stsd.o + 50);
+            const entry = stsd.o + 16;
+            const avcC = one(entry + 86, stsd.e, 'avcC');
+            const desc = buf.slice(avcC.o + 8, avcC.e);
+            const hex = (n) => n.toString(16).padStart(2, '0');
+            info.codec = 'avc1.' + hex(desc[1]) + hex(desc[2]) + hex(desc[3]);
+            const sizes = [], offs = [];
+            for (let i = 0; i < info.samples; i++) { sizes.push(dv.getUint32(stsz.o + 20 + i * 4)); offs.push(dv.getUint32(stco.o + 16 + i * 4)); }
+            const keys = new Set(); const nk = dv.getUint32(stss.o + 12);
+            for (let i = 0; i < nk; i++) keys.add(dv.getUint32(stss.o + 16 + i * 4) - 1);
+            info.keyframes = nk;
+            video = { info, sizes, offs, keys, desc, delta: dv.getUint32(stts.o + 20), scale };
+        }
+        res.tracks.push(info);
+    }
+    // Декодируем всё видео подряд
+    const c = document.createElement('canvas'); c.width = 96; c.height = 54;
+    const cx = c.getContext('2d', { willReadFrequently: true });
+    let decoded = 0, last = null, diffs = [], frozen = 0, err = null;
+    const dec = new VideoDecoder({
+        output: (f) => {
+            if (decoded % 5 === 0) {
+                cx.drawImage(f, 0, 0, 96, 54);
+                const d = cx.getImageData(0, 0, 96, 54).data;
+                if (last) { let s = 0; for (let i = 0; i < d.length; i += 4) s += Math.abs(d[i] - last[i]) + Math.abs(d[i + 1] - last[i + 1]) + Math.abs(d[i + 2] - last[i + 2]); const v = s / (d.length / 4) / 3; diffs.push(v); if (v < 0.05) frozen++; }
+                last = d;
+            }
+            decoded++; f.close();
+        },
+        error: (e) => { err = String(e); }
+    });
+    dec.configure({ codec: video.info.codec, description: video.desc });
+    for (let i = 0; i < video.info.samples; i++) {
+        dec.decode(new EncodedVideoChunk({ type: video.keys.has(i) ? 'key' : 'delta', timestamp: Math.round(i * video.delta / video.scale * 1e6), data: buf.subarray(video.offs[i], video.offs[i] + video.sizes[i]) }));
+        while (dec.decodeQueueSize > 30) await new Promise(r => setTimeout(r, 4));
+    }
+    await dec.flush();
+    res.decoded = decoded; res.decodeError = err;
+    res.sampledPairs = diffs.length; res.frozenPairs = frozen;
+    res.avgChange = +(diffs.reduce((a, b) => a + b, 0) / Math.max(1, diffs.length)).toFixed(2);
+    return res;
+})();
+</script></body></html>

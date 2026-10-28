@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Лёгкая копия ролика</title>
+<style>body { margin: 0; background: #20242c; } canvas { width: 480px; display: block; }</style></head>
+<body>
+<!-- Из готового MP4 делает лёгкую копию под загрузку через адресную строку: кадры уменьшаются
+     (короткая сторона s, по умолчанию 720), видео кодируется заново так, чтобы файл влез в mb мегабайт,
+     звук переезжает как есть, без пережатия.
+     ?v=/docs/promo/video/ad-baika-h.mp4&s=720&mb=4.9 — результат в window.__result (Blob) и window.__info -->
+<canvas id="cv"></canvas>
+<script src="mp4.js"></script>
+<script>
+window.__progress = '';
+const log = (s) => { window.__progress = s; };
+const wait = (ms) => new Promise(r => setTimeout(r, ms));
+
+async function main() {
+    const q = new URLSearchParams(location.search);
+    const short = +q.get('s') || 720, limit = (+q.get('mb') || 4.9) * 1e6;
+    const buf = new Uint8Array(await (await fetch(q.get('v'))).arrayBuffer());
+    const dv = new DataView(buf.buffer);
+    const tag = (o) => String.fromCharCode(buf[o + 4], buf[o + 5], buf[o + 6], buf[o + 7]);
+    const all = (from, to, t) => { const r = []; let o = from; while (o + 8 <= to) { const s = dv.getUint32(o); if (s < 8) break; if (!t || tag(o) === t) r.push({ o, e: Math.min(to, o + s) }); o += s; } return r; };
+    const one = (a, b, t) => all(a, b, t)[0];
+
+    // --- Разбор исходного файла: видео (кадры, ключевые, avcC) и звук (кадры AAC, настройка кодека)
+    const moov = one(0, buf.length, 'moov');
+    let video = null, audio = null;
+    for (const tr of all(moov.o + 8, moov.e, 'trak')) {
+        const mdia = one(tr.o + 8, tr.e, 'mdia'), hdlr = one(mdia.o + 8, mdia.e, 'hdlr');
+        const kind = String.fromCharCode(buf[hdlr.o + 16], buf[hdlr.o + 17], buf[hdlr.o + 18], buf[hdlr.o + 19]);
+        const mdhd = one(mdia.o + 8, mdia.e, 'mdhd'), minf = one(mdia.o + 8, mdia.e, 'minf'), stbl = one(minf.o + 8, minf.e, 'stbl');
+        const stsz = one(stbl.o + 8, stbl.e, 'stsz'), stco = one(stbl.o + 8, stbl.e, 'stco'), stsd = one(stbl.o + 8, stbl.e, 'stsd'), stts = one(stbl.o + 8, stbl.e, 'stts');
+        const n = dv.getUint32(stsz.o + 16), sizes = [], offs = [];
+        for (let i = 0; i < n; i++) { sizes.push(dv.getUint32(stsz.o + 20 + i * 4)); offs.push(dv.getUint32(stco.o + 16 + i * 4)); }
+        const scale = dv.getUint32(mdhd.o + 20);
+        if (kind === 'vide') {
+            const stss = one(stbl.o + 8, stbl.e, 'stss');
+            const keys = new Set();
+            for (let i = 0, k = dv.getUint32(stss.o + 12); i < k; i++) keys.add(dv.getUint32(stss.o + 16 + i * 4) - 1);
+            const avcC = one(stsd.o + 16 + 86, stsd.e, 'avcC'), desc = buf.slice(avcC.o + 8, avcC.e);
+            const hex = (x) => x.toString(16).padStart(2, '0');
+            video = { n, sizes, offs, keys, desc, codec: 'avc1.' + hex(desc[1]) + hex(desc[2]) + hex(desc[3]), w: dv.getUint16(stsd.o + 48), h: dv.getUint16(stsd.o + 50), fps: Math.round(scale / dv.getUint32(stts.o + 20)) };
+        } else if (kind === 'soun') {
+            // esds: ES (0x03) → DecoderConfig (0x04, ещё 13 байт) → DecoderSpecificInfo (0x05) с настройкой AAC
+            const esds = one(stsd.o + 16 + 36, stsd.e, 'esds');
+            const rd = (o) => { let len = 0, p = o + 1; for (let i = 0; i < 4; i++) { const b = buf[p++]; len = (len << 7) | (b & 127); if (!(b & 128)) break; } return { tag: buf[o], len, start: p }; };
+            const es = rd(esds.o + 12), dc = rd(es.start + 3), ds = rd(dc.start + 13);
+            if (es.tag !== 3 || dc.tag !== 4 || ds.tag !== 5) throw new Error('не разобрал esds');
+            audio = { n, sizes, offs, asc: buf.slice(ds.start, ds.start + ds.len), sampleRate: scale, bitrate: dv.getUint32(dc.start + 9) };
+        }
+    }
+    if (!video || !audio) throw new Error('в файле нет видео или звука');
+    const k = short / Math.min(video.w, video.h);
+    const W = Math.round(video.w * k / 2) * 2, H = Math.round(video.h * k / 2) * 2;
+    const fps = video.fps, dur = video.n / fps;
+    let audioBytes = 0;
+    for (const s of audio.sizes) audioBytes += s;
+    const videoBudget = limit - audioBytes - 40000;   // 40 КБ — заголовок moov
+    log(`${video.w}x${video.h} → ${W}x${H}, ${dur.toFixed(1)} с, на видео ${(videoBudget / 1e6).toFixed(2)} МБ`);
+
+    // --- Одна попытка: декодируем исходник, уменьшаем, кодируем под заданный битрейт
+    async function attempt(bitrate, label) {
+        const cv = document.getElementById('cv');
+        cv.width = W; cv.height = H;
+        const ctx = cv.getContext('2d');
+        ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+        const chunks = [];
+        let vdesc = null, bytes = 0, out = 0, err = null;
+        const ve = new VideoEncoder({
+            output: (c, meta) => { if (meta && meta.decoderConfig && meta.decoderConfig.description) vdesc = meta.decoderConfig.description; const d = new Uint8Array(c.byteLength); c.copyTo(d); chunks.push({ d, key: c.type === 'key', ts: c.timestamp }); bytes += d.length; },
+            error: (e) => { err = e; }
+        });
+        ve.configure({ codec: 'avc1.640028', width: W, height: H, bitrate: Math.round(bitrate), framerate: fps, avc: { format: 'avc' }, latencyMode: 'quality' });
+        const dec = new VideoDecoder({
+            output: (fr) => {
+                ctx.drawImage(fr, 0, 0, W, H);
+                fr.close();
+                // Порядок на выходе декодера — порядок показа, время считаем сами
+                const vf = new VideoFrame(cv, { timestamp: Math.round(out * 1e6 / fps), duration: Math.round(1e6 / fps) });
+                ve.encode(vf, { keyFrame: out % (fps * 2) === 0 });
+                vf.close();
+                out++;
+            },
+            error: (e) => { err = e; }
+        });
+        dec.configure({ codec: video.codec, description: video.desc });
+        for (let i = 0; i < video.n; i++) {
+            if (err) throw err;
+            dec.decode(new EncodedVideoChunk({ type: video.keys.has(i) ? 'key' : 'delta', timestamp: Math.round(i / fps * 1e6), data: buf.subarray(video.offs[i], video.offs[i] + video.sizes[i]) }));
+            while (dec.decodeQueueSize > 20 || ve.encodeQueueSize > 8) await wait(4);
+            if (i % 60 === 0) log(`${label}: кадр ${i} / ${video.n}`);
+        }
+        await dec.flush(); await ve.flush();
+        dec.close(); ve.close();
+        if (err) throw err;
+        if (out !== video.n) throw new Error('кадров на выходе ' + out + ' вместо ' + video.n);
+        return { chunks, vdesc, bytes };
+    }
+
+    // --- Подбираем битрейт, пока файл не ляжет в предел (обычно хватает двух попыток)
+    let bitrate = videoBudget * 8 / dur * 0.93, best = null;
+    for (let a = 1; a <= 4; a++) {
+        const r = await attempt(bitrate, `попытка ${a} (${(bitrate / 1e6).toFixed(2)} Мбит/с)`);
+        const total = r.bytes + audioBytes + 40000;
+        log(`попытка ${a}: ${(total / 1e6).toFixed(2)} МБ`);
+        if (total <= limit && (!best || total > best.total)) best = Object.assign(r, { total, bitrate });
+        // Хорошо, если влезло и занято не меньше 92% предела
+        if (total <= limit && total >= limit * 0.92) break;
+        bitrate = bitrate * (videoBudget * 0.97) / r.bytes;
+    }
+    if (!best) throw new Error('не удалось уложиться в ' + (limit / 1e6) + ' МБ');
+
+    log('упаковываю…');
+    const mux = new MP4Muxer({ width: W, height: H, fps, videoDesc: best.vdesc, sampleRate: audio.sampleRate, channels: 2, audioDesc: audio.asc, audioBitrate: audio.bitrate || 192000 });
+    best.chunks.forEach(c => mux.addVideo(c.d, c.key, c.ts));
+    audio.sizes.forEach((s, i) => mux.addAudio(buf.subarray(audio.offs[i], audio.offs[i] + s)));
+    window.__result = mux.finish();
+    window.__info = { size: window.__result.size, w: W, h: H, frames: best.chunks.length, seconds: +dur.toFixed(2), videoMbps: +(best.bitrate / 1e6).toFixed(2) };
+    log('готово: ' + (window.__result.size / 1e6).toFixed(2) + ' МБ');
+    window.__done = true;
+}
+main().catch(e => { console.error(e); window.__error = String(e && e.stack || e); log('ошибка: ' + e); });
+</script>
+</body></html>

@@ -1,6 +1,6 @@
-// audio.js — звуки и музыка без файлов: всё синтезируется Web Audio прямо в браузере.
-// Так архив остаётся крошечным. Музыка — тихие переборы как на гитаре у костра,
-// плюс еле слышный плеск воды. У каждого звука рыбалки несколько вариантов и
+// audio.js — звуки без файлов: всё синтезируется Web Audio прямо в браузере.
+// Так архив остаётся крошечным. Музыку сочиняет music.js, здесь — её шина
+// и громкость, плюс еле слышный плеск воды. У каждого звука рыбалки несколько вариантов и
 // случайный разброс высоты — чтобы не надоедало. Фон зависит от места и погоды:
 // птицы днём, сверчки вечером и ночью, лягушки на болоте, чайки у моря, дождь.
 
@@ -8,7 +8,7 @@
     const A = FB.audio = {};
     let ctx = null, master = null, sfxBus = null, musicBus = null;
     let muted = false;          // пауза (реклама, свёрнутая вкладка)
-    let musicTimer = null, waterNode = null;
+    let waterNode = null;
 
     A.unlock = () => {
         if (ctx) { if (ctx.state === 'suspended' && !muted) ctx.resume(); return; }
@@ -24,17 +24,20 @@
         musicBus.gain.value = 0;
         musicBus.connect(master);
         A.apply();
-        startMusic();
+        startWater();
+        if (FB.music) { FB.music.setScene(scene.theme, scene.weather); FB.music.start(ctx, musicBus); }
         rain(scene.weather === 'rain');
         ambTimer = setInterval(ambient, 1300);
     };
 
-    // Включить/выключить по настройкам
+    // Громкость по ползункам настроек (0–100). Кривая — чтобы середина ползунка
+    // и на слух была серединой
+    A.level = (v) => Math.pow(Math.max(0, Math.min(100, v || 0)) / 100, 1.6);
     A.apply = () => {
         if (!ctx || !FB.S) return;
-        const t = ctx.currentTime;
-        sfxBus.gain.setTargetAtTime(FB.S.settings.sound ? 0.8 : 0, t, 0.05);
-        musicBus.gain.setTargetAtTime(FB.S.settings.music ? 0.32 : 0, t, 0.4);
+        const t = ctx.currentTime, st = FB.S.settings;
+        sfxBus.gain.setTargetAtTime(A.level(st.soundVol) * 1.05, t, 0.05);
+        musicBus.gain.setTargetAtTime(A.level(st.musicVol) * 0.6, t, 0.15);
     };
 
     A.pause = () => { muted = true; if (ctx && ctx.state === 'running') ctx.suspend(); };
@@ -158,7 +161,7 @@
         // Отличная подсечка: звонкое «дзынь»
         perfect: () => { tone(1568, 0.12, { type: 'triangle', vol: 0.2 }); tone(2093, 0.22, { type: 'triangle', vol: 0.18, delay: 0.07 }); },
         // Начался жор: весёлый наигрыш
-        frenzy: () => [523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, { type: 'triangle', vol: 0.2, delay: i * 0.07 })),
+        frenzy: () => { duck(0.35, 1.2); [523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, { type: 'triangle', vol: 0.2, delay: i * 0.07 })); },
         // Серия выросла / сгорела
         streak: (n) => tone(660 + Math.min(10, n || 1) * 60, 0.12, { type: 'triangle', vol: 0.14 }),
         snap: () => { tone(pick([900, 1100, 760]), 0.25, { type: 'sawtooth', to: 120, vol: 0.18 }); noise(0.2, { freq: 3000, vol: 0.15 }); tone(70, 0.3, { to: 45, vol: 0.12, delay: 0.05 }); },
@@ -168,8 +171,28 @@
             tone(v[1], 0.28, { to: v[2], vol: 0.2, delay: 0.12 });
         },
         splash: (size) => splashOf(size),
+        // Удар камеры: глухой «бум» снизу, щелчок сверху — к тряске на поклёвке, подсечке, рыбе на мостках.
+        // k — сила (0..1+): лёгкое вздрагивание на пробе, тяжёлый удар на подсечке
+        impact: (k) => {
+            k = Math.max(0.15, Math.min(1.3, k || 0.6));
+            tone(rnd(100, 125), 0.35 + k * 0.25, { to: 36, vol: 0.32 * k });
+            tone(rnd(58, 66), 0.5 + k * 0.3, { type: 'triangle', to: 38, vol: 0.14 * k, delay: 0.01 });
+            noise(0.22 + k * 0.2, { filter: 'lowpass', freq: 420, to: 70, q: 0.7, vol: 0.16 * k });
+            if (k > 0.5) noise(0.05, { freq: rnd(2600, 3400), q: 1.2, vol: 0.05 * k });
+        },
+        // Сердце стучит: «тук-тук» на поклёвке, пока не подсёк
+        beat: (k) => {
+            k = k || 0.7;
+            tone(70, 0.16, { to: 45, vol: 0.3 * k });
+            tone(64, 0.2, { to: 42, vol: 0.22 * k, delay: 0.17 });
+        },
+        // Время замедлилось (свечка): воздух проносится мимо
+        whoosh: () => {
+            noise(0.6, { freq: 2400, to: 380, q: 0.8, vol: 0.13, attack: 0.08 });
+            tone(210, 0.6, { to: 58, vol: 0.08, attack: 0.05 });
+        },
         coin: () => { tone(1320, 0.08, { type: 'triangle', vol: 0.2 }); tone(1760, 0.14, { type: 'triangle', vol: 0.2, delay: 0.06 }); },
-        level: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.3, { type: 'triangle', vol: 0.25, delay: i * 0.09 })),
+        level: () => { duck(0.3, 1.4); [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.3, { type: 'triangle', vol: 0.25, delay: i * 0.09 })); },
         // Находки со дна звучат по-своему
         junk: (id) => {
             if (id === 'chest' || id === 'bottle') { [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.25, { type: 'triangle', vol: 0.18, delay: i * 0.07 })); return; }
@@ -182,6 +205,7 @@
     // Фанфара улова: чем реже рыба, тем длиннее и выше. Для каждой редкости — пара мелодий
     S.catch = (order) => {
         order = Math.max(0, Math.min(4, order || 0));
+        duck(0.3, 1.1 + order * 0.3);
         const tunes = [
             [[523, 659, 784], [587, 698, 880], [523, 784, 659, 1047]],
             [[523, 659, 784, 1047], [587, 740, 880, 1175], [659, 784, 988, 1319]],
@@ -201,6 +225,7 @@
     let rainNode = null, rainGain = null, ambTimer = null;
     A.setScene = (theme, weather) => {
         scene = { theme, weather };
+        if (FB.music) FB.music.setScene(theme, weather);
         if (!ctx) return;
         rain(weather === 'rain');
     };
@@ -244,47 +269,41 @@
         if (weather === 'fog' || theme === 'mountain') roll(0.05, 'wind');
         if (weather === 'rain') roll(0.25, 'drip');
     }
+    // Гул борьбы: низкий шум и басовая нота, громкость — по силе тряски (0..1).
+    // Вызывается каждый кадр из камеры; без вызова сам затихает
+    let rumbleNodes = null;
+    A.rumble = (level) => {
+        if (!ctx || !sfxBus) return;
+        level = FB.S && FB.S.settings.sound ? Math.max(0, Math.min(1, level || 0)) : 0;
+        if (!rumbleNodes) {
+            if (level < 0.02) return;
+            const buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+            const d = buf.getChannelData(0);
+            let last = 0;
+            for (let i = 0; i < d.length; i++) { last = last * 0.96 + (Math.random() * 2 - 1) * 0.04; d[i] = last * 5; }
+            const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+            const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 150;
+            const g = ctx.createGain(); g.gain.value = 0;
+            const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = 46;
+            const og = ctx.createGain(); og.gain.value = 0;
+            src.connect(f); f.connect(g); g.connect(sfxBus);
+            o.connect(og); og.connect(sfxBus);
+            src.start(); o.start();
+            rumbleNodes = { g, og, o };
+        }
+        const t = ctx.currentTime, l2 = level * level;
+        rumbleNodes.g.gain.setTargetAtTime(l2 * 0.5, t, 0.08);
+        rumbleNodes.og.gain.setTargetAtTime(l2 * 0.16, t, 0.12);
+        rumbleNodes.o.frequency.setTargetAtTime(42 + level * 14, t, 0.2);
+    };
+
     A.play = (name, arg) => { try { S[name] && S[name](arg); } catch (e) { /* звук не важнее игры */ } };
 
-    // ---------- Музыка ----------
-    // Медленный перебор по пентатонике: аккорды меняются раз в 2 такта
-    const CHORDS = [[196, 247, 294, 392], [165, 196, 247, 330], [175, 220, 262, 349], [147, 185, 220, 294]];
-    const MELODY = [392, 440, 494, 587, 659, 587, 494, 440];
-    let step = 0, beat = 0.42;
-    // Настроение музыки: во время жора — бодрее
-    A.setMood = (m) => {
-        beat = m === 'frenzy' ? 0.26 : 0.42;
-        if (musicTimer) { clearInterval(musicTimer); musicTimer = null; startMusic(true); }
-    };
-    function startMusic(noWater) {
-        if (musicTimer) return;
-        if (!noWater) startWater();
-        musicTimer = setInterval(() => {
-            if (!ctx || muted || !FB.S || !FB.S.settings.music) return;
-            const chord = CHORDS[Math.floor(step / 8) % CHORDS.length];
-            const i = step % 8;
-            // Перебор: бас на первую долю, дальше струны по очереди
-            const f = i === 0 ? chord[0] / 2 : chord[[1, 2, 3, 2][i % 4]];
-            pluck(f, i === 0 ? 0.16 : 0.09);
-            // Иногда — нотка мелодии сверху
-            if (i % 4 === 2 && Math.random() < 0.45) pluck(MELODY[Math.floor(Math.random() * MELODY.length)], 0.06, 0.05);
-            step++;
-        }, beat * 1000);
-    }
-    function pluck(freq, vol, delay) {
-        const t = ctx.currentTime + (delay || 0);
-        const o = ctx.createOscillator(), o2 = ctx.createOscillator();
-        const g = ctx.createGain();
-        const f = ctx.createBiquadFilter();
-        o.type = 'triangle'; o2.type = 'sine';
-        o.frequency.value = freq; o2.frequency.value = freq * 2.003;
-        f.type = 'lowpass'; f.frequency.value = 1800;
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + 1.6);
-        o.connect(f); o2.connect(f); f.connect(g); g.connect(musicBus);
-        o.start(t); o2.start(t); o.stop(t + 1.7); o2.stop(t + 1.7);
-    }
+    // ---------- Музыка (сочиняется в music.js) ----------
+    // Настроение: во время жора — бодрее
+    A.setMood = (m) => { if (FB.music) FB.music.setMood(m); };
+    const duck = (level, sec) => { if (FB.music) FB.music.duck(level, sec); };
+
     // Тихий плеск: шум через фильтр, громкость медленно «дышит»
     function startWater() {
         const buf = ctx.createBuffer(1, ctx.sampleRate * 3, ctx.sampleRate);
@@ -295,11 +314,11 @@
         src.buffer = buf; src.loop = true;
         const f = ctx.createBiquadFilter();
         f.type = 'lowpass'; f.frequency.value = 500;
-        const g = ctx.createGain(); g.gain.value = 0.12;
+        const g = ctx.createGain(); g.gain.value = 0.05;
         const lfo = ctx.createOscillator(), lg = ctx.createGain();
-        lfo.frequency.value = 0.12; lg.gain.value = 0.07;
+        lfo.frequency.value = 0.12; lg.gain.value = 0.03;
         lfo.connect(lg); lg.connect(g.gain);
-        src.connect(f); f.connect(g); g.connect(musicBus);
+        src.connect(f); f.connect(g); g.connect(sfxBus);
         src.start(); lfo.start();
         waterNode = src;
     }

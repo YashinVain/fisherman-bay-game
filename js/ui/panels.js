@@ -236,22 +236,57 @@
     };
 
     // ---------- Настройки ----------
+    const lastVol = {};   // громкость до выключения значком
     PN.settings = () => {
         const render = () => {
             const S = FB.S;
             const box = UI.el('div');
-            const toggle = (icon, key, label, sub) => {
-                const sw = UI.el('button.switch' + (S.settings[key] ? '.on' : ''), { onclick: () => {
-                    S.settings[key] = !S.settings[key];
+            // Громкость: ползунок 0–100; нажатие на значок — выключить и вернуть как было
+            const slider = (icon, key, label, kind) => {
+                const st = S.settings;
+                const ic = UI.el('button.vol-ic', { html: FB.ic(icon), title: label, 'aria-label': label });
+                const val = UI.el('b.vol-val');
+                const input = UI.el('input.vol', { type: 'range', min: '0', max: '100', step: '5', 'aria-label': label });
+                input.value = st[key];
+                const show = () => {
+                    const v = st[key];
+                    input.style.setProperty('--v', v + '%');
+                    val.textContent = v ? v + '%' : FB.t('vol_off');
+                    ic.classList.toggle('off', !v);
+                };
+                const set = (v, save) => {
+                    st[key] = v;
+                    st.music = st.musicVol > 0;
+                    st.sound = st.soundVol > 0;
                     FB.audio.apply();
-                    FB.state.save();
+                    show();
+                    if (save) FB.state.save();
+                };
+                input.addEventListener('input', () => set(+input.value));
+                input.addEventListener('change', () => { set(+input.value, true); if (key === 'soundVol') FB.audio.play('coin'); });
+                ic.addEventListener('click', () => {
+                    const v = st[key];
+                    if (v) lastVol[key] = v;
+                    set(v ? 0 : (lastVol[key] || (key === 'musicVol' ? 60 : 80)), true);
+                    input.value = st[key];
                     FB.audio.play('click');
-                    UI.refresh();
-                } });
-                return UI.el('div.card.set-row', {}, [UI.el('div.l', { html: FB.ic(icon) + '<div>' + label + (sub ? '<small>' + sub + '</small>' : '') + '</div>' }), sw]);
+                });
+                show();
+                return UI.el('div.card.set-row.vol-row.' + kind, {}, [ic, UI.el('div.vol-main', {}, [
+                    UI.el('div.vol-top', {}, [UI.el('span', { text: label }), val]), input])]);
             };
-            box.appendChild(toggle('sound', 'sound', FB.t('set_sound')));
-            box.appendChild(toggle('music', 'music', FB.t('set_music')));
+            box.appendChild(slider('music', 'musicVol', FB.t('set_music'), 'm'));
+            box.appendChild(slider('sound', 'soundVol', FB.t('set_sound'), 's'));
+            // Тряска камеры: кому-то от неё неуютно — можно выключить
+            const sw = UI.el('button.switch' + (S.settings.shake !== false ? '.on' : ''), { 'aria-label': FB.t('set_shake'), onclick: () => {
+                S.settings.shake = S.settings.shake === false;
+                if (!S.settings.shake) FB.cam.reset();
+                FB.state.save();
+                FB.audio.play('click');
+                if (S.settings.shake) { FB.cam.kick(0.5); FB.cam.punch(0.03); }
+                UI.refresh();
+            } });
+            box.appendChild(UI.el('div.card.set-row', {}, [UI.el('div.l', { html: FB.ic('fish') + '<div>' + FB.t('set_shake') + '<small>' + FB.t('set_shake_sub') + '</small></div>' }), sw]));
             const seg = UI.el('div.seg');
             [['ru', 'Русский'], ['en', 'English']].forEach(([l, n]) => {
                 seg.appendChild(UI.el('button' + (FB.lang === l ? '.on' : ''), { text: n, onclick: () => {

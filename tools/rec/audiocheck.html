@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Проверка звука видео</title></head>
+<body>
+<!-- Проверка звука готового MP4: ?v=/docs/promo/video/ad-baika-h.mp4 — громкость по полусекундам, пик, перегруз -->
+<script>
+window.__audio = (async () => {
+    const url = new URLSearchParams(location.search).get('v');
+    const buf = await (await fetch(url)).arrayBuffer();
+    const ctx = new OfflineAudioContext(2, 48000, 48000);
+    const a = await ctx.decodeAudioData(buf);
+    const L = a.getChannelData(0), R = a.numberOfChannels > 1 ? a.getChannelData(1) : L, sr = a.sampleRate;
+    const win = Math.round(sr * 0.5), rms = [];
+    let peak = 0, clip = 0;
+    for (let i = 0; i < L.length; i += win) {
+        let s = 0, n = 0;
+        for (let j = i; j < Math.min(L.length, i + win); j++) { const x = (L[j] + R[j]) / 2; s += x * x; n++; const m = Math.max(Math.abs(L[j]), Math.abs(R[j])); if (m > peak) peak = m; if (m > 0.995) clip++; }
+        rms.push(+(Math.sqrt(s / Math.max(1, n)) * 100).toFixed(1));
+    }
+    return { dur: +a.duration.toFixed(2), ch: a.numberOfChannels, sr, peak: +peak.toFixed(3), clipSamples: clip, rms };
+})();
+</script>
+</body></html>

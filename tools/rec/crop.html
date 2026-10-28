@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Вырезки кадров</title>
+<style>body { margin: 0; background: #20242c; } .g { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; } figure { margin: 0; position: relative; } canvas { display: block; } figcaption { position: absolute; left: 3px; top: 3px; background: rgba(0,0,0,.6); color: #fff; font: 12px sans-serif; padding: 1px 4px; border-radius: 3px; }</style>
+</head><body>
+<!-- Вырезки одного места из кадров исходника: ?film=src-h&frames=1100,1110,1120&x=0.9&y=0.75&w=0.1&h=0.2&zoom=3 -->
+<div class="g" id="g"></div>
+<script>
+(async () => {
+    const q = new URLSearchParams(location.search);
+    const film = q.get('film') || 'src-h', zoom = +(q.get('zoom') || 3);
+    const x = +q.get('x'), y = +q.get('y'), w = +q.get('w'), h = +q.get('h');
+    for (const f of (q.get('frames') || '').split(',').filter(Boolean)) {
+        const b = await (await fetch('/rec/' + film + '/frames/' + String(f).padStart(5, '0') + '.jpg')).blob();
+        const bm = await createImageBitmap(b);
+        const c = document.createElement('canvas');
+        const sw = bm.width * w, sh = bm.height * h;
+        c.width = Math.round(sw * zoom / (bm.width / 1000)); c.height = Math.round(sh * zoom / (bm.width / 1000));
+        c.getContext('2d').drawImage(bm, bm.width * x, bm.height * y, sw, sh, 0, 0, c.width, c.height);
+        const fig = document.createElement('figure');
+        fig.appendChild(c);
+        const cap = document.createElement('figcaption'); cap.textContent = f; fig.appendChild(cap);
+        document.getElementById('g').appendChild(fig);
+    }
+})();
+</script></body></html>

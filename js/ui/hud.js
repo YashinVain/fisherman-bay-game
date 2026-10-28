@@ -151,6 +151,15 @@
         const up = w > 0 && mid - w / 2 >= left + 14 && mid + w / 2 <= right - 14;
         c.classList.toggle('up', up);
         document.body.classList.toggle('chip-up', up);
+        // Счётчики на узком экране переносятся на 2–3 строки: плашка встаёт под них, а не поверх
+        c.style.top = '';
+        if (!up) {
+            const b = Math.max(els.pills.parentNode.getBoundingClientRect().bottom, els.lvl.getBoundingClientRect().bottom + 8);
+            const t = Math.ceil(b + 6);
+            if (t > c.offsetTop) c.style.top = t + 'px';
+        }
+        if (c.offsetHeight) document.body.style.setProperty('--chip-b', (c.offsetTop + c.offsetHeight) + 'px');
+        else document.body.style.removeProperty('--chip-b');
     }
 
     // Плашка турнира: где и какая рыба недели, а в месте турнира — мои очки

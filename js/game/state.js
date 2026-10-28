@@ -6,7 +6,7 @@
 (function (FB) {
     const ST = FB.state = {};
     const U = FB.U;
-    FB.VERSION = '0.19.0';
+    FB.VERSION = '0.20.0';
 
     ST.fresh = () => ({
         v: 1,
@@ -33,7 +33,7 @@
         daily: null,          // см. quests.js
         season: { id: FB.SEASON.id, pts: 0, free: [], gold: [], pass: false },
         buy: { noAds: false, starter: false, supporter: false },
-        settings: { sound: true, music: true, lang: null },
+        settings: { sound: true, music: true, soundVol: 80, musicVol: 60, shake: true, lang: null },   // громкость 0–100
         tut: 0,               // шаг обучения (tutor.js): 0 — не начато, 99 — пройдено
         tips: {},             // разовые подсказки, которые уже показаны
         luck: 0,              // серия удачи: уловов подряд без срыва (отличная подсечка — за два)
@@ -72,14 +72,29 @@
             const c = cloud.data;
             if (!local || (c.saved || 0) > (local.saved || 0) || ((c.saved || 0) === (local.saved || 0) && (c.xp || 0) > (local.xp || 0))) pick = c;
         }
-        FB.S = ST.merge(ST.fresh(), pick);
+        FB.S = ST.merge(ST.fresh(), ST.migrate(pick));
         ST.fix();
         return FB.S;
+    };
+
+    // Старые сохранения: вместо «вкл/выкл» звука и музыки теперь громкость 0–100
+    ST.migrate = (d) => {
+        const st = d && d.settings;
+        if (st && typeof st === 'object') {
+            if (typeof st.musicVol !== 'number') st.musicVol = st.music === false ? 0 : 60;
+            if (typeof st.soundVol !== 'number') st.soundVol = st.sound === false ? 0 : 80;
+            if (typeof st.shake !== 'boolean') st.shake = true;
+        }
+        return d;
     };
 
     // Защита от «сломанных» значений после обновлений
     ST.fix = () => {
         const S = FB.S;
+        const st = S.settings;
+        ['musicVol', 'soundVol'].forEach(k => { st[k] = Math.max(0, Math.min(100, Math.round(+st[k] || 0))); });
+        st.music = st.musicVol > 0;
+        st.sound = st.soundVol > 0;
         if (!FB.pondById[S.pond]) S.pond = 'village';
         if (!FB.rodById[S.rod]) S.rod = 'bamboo';
         if (!FB.baitById[S.bait]) S.bait = 'worm';

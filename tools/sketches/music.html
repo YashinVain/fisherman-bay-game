@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Музыка — стенд</title>
+<style>
+    body { margin: 0; padding: 24px; font: 15px/1.4 system-ui, sans-serif; background: #f6efe0; color: #2a3550; }
+    h1 { font-size: 22px; margin: 0 0 6px; }
+    p { margin: 0 0 16px; color: #6a7488; }
+    .row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 14px; margin-bottom: 8px; border-radius: 14px; background: #fff; box-shadow: 0 2px 0 #ecd6ae; }
+    .row b { width: 90px; }
+    button { font: inherit; padding: 6px 14px; border: 0; border-radius: 10px; background: #1c8fd0; color: #fff; cursor: pointer; }
+    button.alt { background: #8a6ae0; }
+    select { font: inherit; padding: 4px 8px; border-radius: 8px; }
+    .st { font-family: ui-monospace, monospace; font-size: 13px; color: #445; }
+</style>
+</head>
+<body>
+<h1>Музыка игры</h1>
+<p>Каждая кнопка сочиняет новую песню этого стиля. «WAV» — скачать отрисованный кусок (для видео).</p>
+<label>Место: <select id="theme">
+    <option>village</option><option>river</option><option>swamp</option><option>sea</option><option>tropic</option><option>mountain</option><option>arena</option>
+</select></label>
+<div id="list" style="margin-top:12px"></div>
+<script>window.FB = {};</script>
+<script src="../../js/core/music.js"></script>
+<script>
+    const SR = 44100;
+    let playing = null;
+    async function renderStyle(style, theme, sec) {
+        const off = new OfflineAudioContext(2, SR * sec, SR);
+        const plan = FB.music.render(off, style, theme, sec - 0.5);
+        const buf = await off.startRendering();
+        return { buf, plan };
+    }
+    // Пик, средняя громкость и доля «тишины» (окна по 100 мс)
+    function stats(buf, from) {
+        let peak = 0, sum = 0, n = 0, quiet = 0, wins = 0;
+        const a = buf.getChannelData(0), b = buf.getChannelData(1), w = SR / 10;
+        for (let i = Math.floor(from * SR); i + w <= a.length; i += w) {
+            let ws = 0;
+            for (let j = i; j < i + w; j++) {
+                const v = Math.max(Math.abs(a[j]), Math.abs(b[j]));
+                if (v > peak) peak = v;
+                ws += a[j] * a[j] + b[j] * b[j];
+            }
+            sum += ws; n += 2 * w;
+            wins++;
+            if (Math.sqrt(ws / (2 * w)) < 0.002) quiet++;
+        }
+        return { peak: +peak.toFixed(3), rms: +Math.sqrt(sum / n).toFixed(4), quiet: +(quiet / wins).toFixed(2) };
+    }
+    function wav(buf) {
+        const len = buf.length, out = new DataView(new ArrayBuffer(44 + len * 4));
+        const str = (o, s) => { for (let i = 0; i < s.length; i++) out.setUint8(o + i, s.charCodeAt(i)); };
+        str(0, 'RIFF'); out.setUint32(4, 36 + len * 4, true); str(8, 'WAVEfmt '); out.setUint32(16, 16, true);
+        out.setUint16(20, 1, true); out.setUint16(22, 2, true); out.setUint32(24, SR, true); out.setUint32(28, SR * 4, true);
+        out.setUint16(32, 4, true); out.setUint16(34, 16, true); str(36, 'data'); out.setUint32(40, len * 4, true);
+        const a = buf.getChannelData(0), b = buf.getChannelData(1);
+        for (let i = 0; i < len; i++) {
+            out.setInt16(44 + i * 4, Math.max(-1, Math.min(1, a[i])) * 32767, true);
+            out.setInt16(46 + i * 4, Math.max(-1, Math.min(1, b[i])) * 32767, true);
+        }
+        return new Blob([out], { type: 'audio/wav' });
+    }
+    // Для автопроверки: все стили, по 30 с
+    window.checkAll = async (theme) => {
+        const res = {};
+        for (const k of Object.keys(FB.music.STYLES)) {
+            const { buf, plan } = await renderStyle(k, k === 'arena' ? 'arena' : (theme || 'village'), 34);
+            // пропускаем вступление наполовину: смотрим, как звучит с мелодией
+            res[k] = Object.assign(stats(buf, 0.5), { bpm: Math.round(plan.bpm), sec: Math.round(plan.steps * 30 / plan.bpm) });
+        }
+        return res;
+    };
+    const list = document.getElementById('list');
+    Object.keys(FB.music.STYLES).forEach(k => {
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML = '<b>' + k + '</b>';
+        const st = document.createElement('span'); st.className = 'st';
+        const play = document.createElement('button'); play.textContent = '▶ 40 с';
+        const dl = document.createElement('button'); dl.className = 'alt'; dl.textContent = 'WAV 90 с';
+        play.onclick = async () => {
+            if (playing) playing.stop();
+            st.textContent = 'сочиняю…';
+            const theme = document.getElementById('theme').value;
+            const { buf, plan } = await renderStyle(k, theme, 40);
+            const ac = new AudioContext();
+            const src = ac.createBufferSource(); src.buffer = buf; src.connect(ac.destination); src.start();
+            playing = src;
+            st.textContent = JSON.stringify(Object.assign(stats(buf, 0), { bpm: Math.round(plan.bpm) }));
+        };
+        dl.onclick = async () => {
+            st.textContent = 'рисую 90 с…';
+            const { buf } = await renderStyle(k, document.getElementById('theme').value, 90);
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(wav(buf)); a.download = 'music-' + k + '.wav'; a.click();
+            st.textContent = 'готово';
+        };
+        row.append(play, dl, st);
+        list.appendChild(row);
+    });
+</script>
+</body>
+</html>

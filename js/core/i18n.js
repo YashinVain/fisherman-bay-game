@@ -5,8 +5,8 @@
     const FB = root.FB = root.FB || {};
 
     const RU = {
-        title: 'Рыбацкая бухта',
-        logo_top: 'Рыбацкая', logo_big: 'бухта',
+        title: 'Рыбацкие байки',
+        logo_top: 'Рыбацкие', logo_big: 'байки',
         play: 'Играть',
         unit_g: 'г', unit_kg: 'кг', unit_d: 'д', unit_h: 'ч', unit_min: 'мин',
         mock_ad: 'Тестовая реклама', you: 'Ты', loading: 'Загрузка…',
@@ -41,7 +41,7 @@
         angler: 'Рыбак', fame: 'Слава', to_next_level: 'До следующего уровня', profile: 'Профиль', stats: 'Статистика', trophies: 'Награды турниров',
         st_catches: 'уловов', st_species: 'видов', st_biggest: 'самая большая', st_total: 'всего поймано', st_released: 'отпущено', st_casts: 'забросов',
         week_n: 'неделя {n}', no_trophies: 'Пока пусто. Войди в топ-20 недельного турнира — и здесь появится медаль!',
-        settings: 'Настройки', set_sound: 'Звуки', set_music: 'Музыка',
+        settings: 'Настройки', set_sound: 'Звуки', set_shake: 'Тряска камеры', set_shake_sub: 'Вздрагивает на поклёвке и в борьбе с рыбой', set_music: 'Музыка', vol_off: 'выкл',
         set_lang: 'Язык', login: 'Войти в Яндекс', login_sub: 'Чтобы попасть в топы и не потерять улов', login_btn: 'Войти', version: 'Версия',
         lb_week: 'Неделя', lb_anglers: 'Слава', lb_record: 'Рекорд',
         lb_desc_anglers: 'Слава копится за каждый улов и за каждый новый вид в альбоме — чем реже рыба, тем больше.', lb_desc_record: 'Самая тяжёлая рыба, которую рыбак поймал за всё время.',
@@ -216,8 +216,8 @@
     };
 
     const EN = {
-        title: 'Fisherman Bay',
-        logo_top: 'Fisherman', logo_big: 'Bay',
+        title: 'Fishing Tales',
+        logo_top: 'Fishing', logo_big: 'Tales',
         play: 'Play',
         unit_g: 'g', unit_kg: 'kg', unit_d: 'd', unit_h: 'h', unit_min: 'min',
         mock_ad: 'Test ad', you: 'You', loading: 'Loading…',
@@ -252,7 +252,7 @@
         angler: 'Angler', fame: 'Fame', to_next_level: 'To the next level', profile: 'Profile', stats: 'Stats', trophies: 'Tournament awards',
         st_catches: 'catches', st_species: 'species', st_biggest: 'biggest', st_total: 'total caught', st_released: 'released', st_casts: 'casts',
         week_n: 'week {n}', no_trophies: 'Nothing yet. Get into the top 20 of a weekly tournament to earn a medal!',
-        settings: 'Settings', set_sound: 'Sounds', set_music: 'Music',
+        settings: 'Settings', set_sound: 'Sounds', set_shake: 'Camera shake', set_shake_sub: 'Shakes on a bite and while fighting a fish', set_music: 'Music', vol_off: 'off',
         set_lang: 'Language', login: 'Sign in to Yandex', login_sub: 'To get into the tops and keep your catch', login_btn: 'Sign in', version: 'Version',
         lb_week: 'Week', lb_anglers: 'Fame', lb_record: 'Record',
         lb_desc_anglers: 'Fame grows with every catch and every new species in the album — the rarer the fish, the more.', lb_desc_record: 'The heaviest fish an angler has ever caught.',

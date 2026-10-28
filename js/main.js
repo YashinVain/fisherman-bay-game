@@ -150,8 +150,11 @@
         last = now;
         if (paused) return;
         if (FB.S) FB.S.stats.playMs += dt * 1000;
-        if (playing && !UI.isOpen() && !FB.tutor.blocking()) FB.fishing.update(dt);
-        FB.scene.render(dt, FB.fishing.draw);
+        // Камера: тряска, наезды и замедление (на свечке рыбы время идёт медленнее)
+        FB.cam.update(dt);
+        const gdt = dt * FB.cam.timeScale();
+        if (playing && !UI.isOpen() && !FB.tutor.blocking()) FB.fishing.update(gdt);
+        FB.scene.render(gdt, FB.fishing.draw);
         if (playing) { FB.hud.frame(); FB.tutor.frame(dt); }
     }
 

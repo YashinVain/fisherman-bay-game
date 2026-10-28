@@ -4,8 +4,13 @@
         { "size": [512, 512, 1] },
         { "open": "http://127.0.0.1:8940/tools/promo.html?what=icon", "wait": 1500 },
         { "shot": "icon-512.png" },
+        { "open": "http://127.0.0.1:8940/tools/promo.html?what=maskable", "wait": 1500 },
+        { "shot": "icon-maskable-512.png" },
         { "size": [800, 470, 1] },
         { "open": "http://127.0.0.1:8940/tools/promo.html?what=cover", "wait": 1500 },
-        { "shot": "cover-800x470.png" }
+        { "shot": "cover-800x470.png" },
+        { "size": [1560, 520, 1] },
+        { "open": "http://127.0.0.1:8940/tools/promo.html?what=wide", "wait": 1500 },
+        { "shot": "cover-wide-1560x520.png" }
     ]
 }

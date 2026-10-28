@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Передача файлов в консоль</title>
+<style>body { font: 16px sans-serif; background: #1e2430; color: #e8eef6; padding: 24px; } b { color: #ffd84a; } li { margin: 2px 0; }</style>
+</head>
+<body>
+<!-- Помощник для загрузки материалов в консоль Яндекс Игр из встроенного браузера.
+     Консоль не даёт обратиться к локальному серверу (её CSP), а в поле загрузки файл
+     скриптом не вставить без самого File. Поэтому эта страница забирает файлы со своего
+     сервера, кодирует их в base64url и кладёт в адрес перехода (#feed=...): адрес не
+     уходит на сервер и целиком доживает до страницы консоли (проверено до 1,5 МБ),
+     а там короткий скрипт собирает из него File и подставляет в поле загрузки.
+     Параметры: files=путь1,путь2   jpeg=1 (пережать PNG в JPEG)   limit=1900000 (макс. длина данных)
+                go=адрес (по умолчанию — черновик игры)  dry=1 (только показать размеры, без перехода)
+     Помещается не всё — остаток не берётся; список взятых показан здесь и лежит в sessionStorage. -->
+<div id="log">Готовлю файлы…</div>
+<ul id="list"></ul>
+<script>
+(async () => {
+    const log = (s) => { document.getElementById('log').innerHTML = s; };
+    const q = new URLSearchParams(location.search);
+    // Большой файл по частям: part=путь&i=номер&size=байт → в адрес уходит
+    // #feed=имя*всего_частей*номер*данные (по одной части за переход)
+    if (q.get('part')) {
+        const path = q.get('part'), idx = +(q.get('i') || 0), size = +(q.get('size') || 1400000);
+        const go = q.get('go') || 'https://games.yandex.ru/console/application/636581';
+        const r = await fetch('/' + path, { cache: 'no-store' });
+        const buf = await r.arrayBuffer();
+        const total = Math.ceil(buf.byteLength / size);
+        const blob = new Blob([buf.slice(idx * size, Math.min(buf.byteLength, (idx + 1) * size))]);
+        const data = await new Promise((res) => {
+            const fr = new FileReader();
+            fr.onload = () => res(String(fr.result).split(',')[1].replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''));
+            fr.readAsDataURL(blob);
+        });
+        log('Часть <b>' + (idx + 1) + '</b> из ' + total + ' файла ' + path.split('/').pop() + ' (' + (buf.byteLength / 1e6).toFixed(1) + ' МБ)');
+        location.href = go + '#feed=' + path.split('/').pop() + '*' + total + '*' + idx + '*' + data;
+        return;
+    }
+    const files = (q.get('files') || '').split(',').filter(Boolean);
+    const jpeg = q.get('jpeg') === '1';
+    const limit = +(q.get('limit') || 1900000);
+    const go = q.get('go') || 'https://games.yandex.ru/console/application/636581';
+    const quality = +(q.get('q') || 0.9);
+    const parts = [];
+    const taken = [], skipped = [];
+    let total = 0;
+    const b64url = (blob) => new Promise((res) => {
+        const fr = new FileReader();
+        fr.onload = () => res(String(fr.result).split(',')[1].replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''));
+        fr.readAsDataURL(blob);
+    });
+    for (const f of files) {
+        const r = await fetch('/' + f, { cache: 'no-store' });
+        if (!r.ok) { skipped.push(f + ' (' + r.status + ')'); continue; }
+        let blob = await r.blob();
+        let name = f.split('/').pop();
+        if (jpeg && /\.png$/i.test(name)) {
+            const bmp = await createImageBitmap(blob);
+            const c = document.createElement('canvas');
+            c.width = bmp.width; c.height = bmp.height;
+            const x = c.getContext('2d');
+            x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+            x.drawImage(bmp, 0, 0);
+            blob = await new Promise((res) => c.toBlob(res, 'image/jpeg', quality));
+            name = name.replace(/\.png$/i, '.jpg');
+        }
+        const entry = name + '*' + (blob.type || 'application/octet-stream') + '*' + await b64url(blob);
+        if (total + entry.length + 1 > limit) { skipped.push(f + ' (не влезло, ' + (entry.length / 1e6).toFixed(2) + ' МБ)'); continue; }
+        total += entry.length + 1;
+        parts.push(entry);
+        taken.push(name + ' · ' + (blob.size / 1e3).toFixed(0) + ' КБ');
+        log('Забрано: <b>' + taken.length + '</b> из ' + files.length + ' (' + (total / 1e6).toFixed(2) + ' МБ в адресе)');
+    }
+    document.getElementById('list').innerHTML = taken.map(t => '<li>✓ ' + t + '</li>').concat(skipped.map(t => '<li>✗ ' + t + '</li>')).join('');
+    try { sessionStorage.setItem('feeder:last', JSON.stringify({ taken, skipped, total })); } catch (e) { /* не страшно */ }
+    if (q.get('dry') === '1') return log('Проба: <b>' + taken.length + '</b> файлов, ' + (total / 1e6).toFixed(2) + ' МБ');
+    log('Готово (' + taken.length + ' файлов), перехожу в консоль…');
+    location.href = go + '#feed=' + parts.join('!');
+})();
+</script>
+</body>
+</html>

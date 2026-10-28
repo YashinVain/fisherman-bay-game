@@ -22,7 +22,9 @@
 <script>
 const U = FB.U, TAU = Math.PI * 2;
 const what = new URLSearchParams(location.search).get('what') || 'icon';
-const W = what === 'cover' ? 800 : 512, H = what === 'cover' ? 470 : 512;
+const EN = new URLSearchParams(location.search).get('lang') === 'en';
+const SIZES = { icon: [512, 512], maskable: [512, 512], cover: [800, 470], wide: [1560, 520] };
+const [W, H] = SIZES[what] || SIZES.icon;
 const cv = document.getElementById('c');
 cv.width = W; cv.height = H;
 const ctx = cv.getContext('2d');
@@ -101,11 +103,11 @@ function rodTo(hx, hy, h, fx, fy) {
 }
 
 // Золотой карп выпрыгивает из воды: брызги и сияние
-function fish(x, y, size, rot) {
+function fish(x, y, size, rot, id) {
     const glow = ctx.createRadialGradient(x, y, size * 0.1, x, y, size * 0.9);
     glow.addColorStop(0, 'rgba(255,230,140,0.55)'); glow.addColorStop(1, 'rgba(255,230,140,0)');
     ctx.fillStyle = glow; ctx.fillRect(x - size, y - size, size * 2, size * 2);
-    const img = FB.fishArt.canvas('goldcarp', 300);
+    const img = FB.fishArt.canvas(id || 'goldcarp', 300);
     ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(-1, 1);
     ctx.drawImage(img, -size * 0.75, -size * 0.75 * img.height / img.width, size * 1.5, size * 1.5 * img.height / img.width);
     ctx.restore();
@@ -125,9 +127,44 @@ function sparkle(x, y, r) {
     ctx.closePath(); ctx.fill();
 }
 
-if (what === 'icon') {
-    // Иконка: рыбак крупно слева, золотой карп выпрыгивает справа
+// Облачко рыбацкой байки: белое, с хвостиком к рыбаку
+function bubble(x, y, text, size, tailX, tailY) {
+    ctx.font = '900 ' + size + 'px Nunito, sans-serif';
+    const w = ctx.measureText(text).width + size * 1.1, h = size * 1.6;
+    const r = h * 0.45;
+    ctx.save();
+    ctx.shadowColor = 'rgba(40,20,60,0.35)'; ctx.shadowBlur = size * 0.5; ctx.shadowOffsetY = size * 0.15;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x + w * 0.16, y + h - 2); ctx.lineTo(tailX, tailY); ctx.lineTo(x + w * 0.32, y + h - 2); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = '#e8402a'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(text, x + w / 2, y + h * 0.52);
+    ctx.textBaseline = 'alphabetic';
+}
+
+// Название: «Рыбацкие» белым и «БАЙКИ» золотом, с толстой обводкой
+function title(tx, y1, s1, y2, s2) {
+    ctx.textAlign = 'center';
+    const word = (text, size, y, fillTop, fillBot, stroke) => {
+        ctx.font = '900 ' + size + 'px Nunito, sans-serif';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = size * 0.24; ctx.strokeStyle = stroke;
+        ctx.strokeText(text, tx, y + size * 0.08);
+        ctx.strokeText(text, tx, y);
+        const g = ctx.createLinearGradient(0, y - size * 0.8, 0, y);
+        g.addColorStop(0, fillTop); g.addColorStop(1, fillBot);
+        ctx.fillStyle = g; ctx.fillText(text, tx, y);
+    };
+    word(EN ? 'Fishing' : 'Рыбацкие', s1, y1, '#ffffff', '#ffe6d0', '#2a1e48');
+    word(EN ? 'TALES' : 'БАЙКИ', s2, y2, '#fff6c0', '#ff9a1a', '#2a1e48');
+}
+
+if (what === 'icon' || what === 'maskable') {
+    // Иконка: рыбак крупно слева, золотой карп выпрыгивает справа.
+    // Maskable — то же, но всё важное собрано в круг в центре (края могут обрезать)
     background(H * 0.5, W * 0.78);
+    if (what === 'maskable') { ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(0.74, 0.74); ctx.translate(-W / 2 + 18, -H / 2 + 6); }
     const h = 300, x = 150, y = 400;
     pier(x, y, h);
     splash(W * 0.74, H * 0.62, 70);
@@ -135,8 +172,27 @@ if (what === 'icon') {
     rodTo(hand[0], hand[1], h, W * 0.74 - 190 * 0.5, H * 0.37 + 190 * 0.08);
     fish(W * 0.74, H * 0.37, 190, -0.45);
     sparkle(W * 0.9, H * 0.25, 12); sparkle(W * 0.6, H * 0.2, 9); sparkle(W * 0.92, H * 0.48, 7);
+    if (what === 'maskable') ctx.restore();
+} else if (what === 'wide') {
+    // Обложка на витрину 1560×520: рыбак с байкой слева, название в центре, трофеи справа
+    background(H * 0.56, W * 0.5);
+    const h = 300, x = 210, y = 410;
+    pier(x, y, h);
+    splash(W * 0.31, H * 0.7, 66);
+    const hand = hero(x, y, h, 'happy');
+    rodTo(hand[0], hand[1], h, W * 0.31 - 160 * 0.5, H * 0.43 + 160 * 0.08);
+    fish(W * 0.31, H * 0.43, 160, -0.45);
+    splash(W * 0.8, H * 0.74, 60);
+    fish(W * 0.8, H * 0.46, 190, -0.3, 'swordfish');
+    splash(W * 0.93, H * 0.8, 44);
+    fish(W * 0.93, H * 0.55, 120, 0.35, 'salmon');
+    sparkle(W * 0.38, H * 0.25, 10); sparkle(W * 0.72, H * 0.22, 12); sparkle(W * 0.88, H * 0.3, 9); sparkle(W * 0.24, H * 0.18, 8);
+    document.fonts.ready.then(() => {
+        title(W * 0.555, 150, 74, 312, 140);
+        bubble(272, 30, EN ? 'This big!' : 'Во-о-от такая!', 34, 250, 118);
+    });
 } else {
-    // Обложка: название справа сверху, рыбак слева, карп над водой
+    // Обложка: название справа сверху, рыбак слева с байкой, карп над водой
     background(H * 0.52, W * 0.62);
     const h = 240, x = 140, y = 360;
     pier(x, y, h);
@@ -146,20 +202,8 @@ if (what === 'icon') {
     fish(W * 0.52, H * 0.42, 150, -0.45);
     sparkle(W * 0.62, H * 0.3, 9); sparkle(W * 0.42, H * 0.24, 7);
     document.fonts.ready.then(() => {
-        ctx.textAlign = 'center';
-        const tx = W * 0.79;
-        const word = (text, size, y, fillTop, fillBot, stroke) => {
-            ctx.font = '900 ' + size + 'px Nunito, sans-serif';
-            ctx.lineJoin = 'round';
-            ctx.lineWidth = size * 0.24; ctx.strokeStyle = stroke;
-            ctx.strokeText(text, tx, y + size * 0.08);
-            ctx.strokeText(text, tx, y);
-            const g = ctx.createLinearGradient(0, y - size * 0.8, 0, y);
-            g.addColorStop(0, fillTop); g.addColorStop(1, fillBot);
-            ctx.fillStyle = g; ctx.fillText(text, tx, y);
-        };
-        word('Рыбацкая', 46, 92, '#ffffff', '#ffe6d0', '#2a1e48');
-        word('БУХТА', 82, 170, '#fff6c0', '#ff9a1a', '#2a1e48');
+        title(W * 0.79, 86, 46, 178, 82);
+        bubble(30, 22, EN ? 'This big!' : 'Во-о-от такая!', 27, 120, 98);
     });
 }
 </script>

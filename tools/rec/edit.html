@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Монтажка</title>
+<link rel="stylesheet" href="../../css/style.css">
+<style>html, body { margin: 0; background: #111; color: #ddd; font: 14px sans-serif; overflow: hidden; } canvas { display: none; } #log { padding: 8px; }</style>
+<!-- Монтажка рекламных роликов: tools/rec/edit.html?edit=имя (запускает tools/rec/edit.js).
+     Берёт кадры «исходников» (tools/rec/films/src.js), двигает по ним камеру,
+     склеивает переходами, рисует поверх графику (tools/rec/gfx.js), собирает звук:
+     музыка игры + звуки игры по журналу + свои «вжухи». На выходе — MP4. -->
+<script src="timemachine.js"></script>
+<script>
+    window.FB = { S: { settings: { sound: true, music: true, musicVol: 0, soundVol: 85, lang: 'ru' } }, emit() {}, on() {}, lang: 'ru', t: (k) => k };
+</script>
+<script src="../../js/core/util.js"></script>
+<script src="../../js/core/audio.js"></script>
+<script src="../../js/core/music.js"></script>
+<script src="../../js/data/fish.js"></script>
+<script src="../../js/data/gear.js"></script>
+<script src="../../js/view/fishart.js"></script>
+<script src="mp4.js"></script>
+<script src="gfx.js"></script>
+</head>
+<body>
+<div id="log">готовлюсь…</div>
+<canvas id="cv"></canvas>
+<script>
+const q = new URLSearchParams(location.search);
+const NAME = q.get('edit');
+const log = (s) => { document.getElementById('log').textContent = s; window.__progress = s; };
+window.__progress = 'start';
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const easeIO = GFX.ease.easeIO, easeOut = GFX.ease.easeOut;
+
+// Шум для тряски камеры: гладкий, одинаковый при каждой сборке
+const noise = (x, s) => Math.sin(x * 1.7 + s) * 0.5 + Math.sin(x * 3.1 + s * 2.3) * 0.3 + Math.sin(x * 5.9 + s * 0.7) * 0.2;
+
+// ---------- Кадры исходников ----------
+const srcs = {};
+async function loadSrc(name) {
+    if (srcs[name]) return srcs[name];
+    const man = await (await fetch('/rec/' + name + '/manifest.json')).json();
+    const ptr = new Map(man.ptr.map(p => [p[0], p]));
+    const anc = new Map((man.anc || []).map(a => [a[0], a]));
+    srcs[name] = { man, ptr, anc, cache: new Map() };
+    return srcs[name];
+}
+function frameUrl(name, f) { return '/rec/' + name + '/frames/' + String(f).padStart(5, '0') + '.jpg'; }
+function want(name, f) {
+    const s = srcs[name];
+    f = clamp(f, 0, s.man.frames - 1);
+    if (!s.cache.has(f)) s.cache.set(f, fetch(frameUrl(name, f)).then(r => r.blob()).then(b => createImageBitmap(b)));
+    return s.cache.get(f);
+}
+function forget(name, below) {
+    const s = srcs[name];
+    for (const [f, p] of s.cache) if (f < below) { p.then(b => b.close()); s.cache.delete(f); }
+}
+
+// ---------- Камера ----------
+// Ключи камеры: [t, zoom, cx, cy] — t в секундах клипа, cx/cy — доля кадра исходника
+function camAt(c, lt) {
+    const keys = c.cam || [[0, 1, 0.5, 0.5]];
+    if (lt <= keys[0][0]) return keys[0].slice(1);
+    for (let i = 1; i < keys.length; i++) {
+        if (lt <= keys[i][0]) {
+            const a = keys[i - 1], b = keys[i], k = easeIO((lt - a[0]) / Math.max(0.001, b[0] - a[0]));
+            return [a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k, a[3] + (b[3] - a[3]) * k];
+        }
+    }
+    return keys[keys.length - 1].slice(1);
+}
+// Слежение за рыбой/головой: сглаженное положение якоря рядом с кадром
+function anchorAt(s, f, which) {
+    let sx = 0, sy = 0, n = 0;
+    for (let d = -6; d <= 6; d++) {
+        const a = s.anc.get(f + d);
+        if (!a) continue;
+        const x = which === 'head' ? a[1] : a[3], y = which === 'head' ? a[2] : a[4];
+        if (x < 0) continue;
+        sx += x; sy += y; n++;
+    }
+    if (!n) return null;
+    const css = s.man.css;
+    return [sx / n / css[0], sy / n / css[1]];
+}
+function shakeAt(c, lt) {
+    let a = 0;
+    for (const [t, amp, len] of c.shake || []) {
+        if (lt >= t && lt < t + len) a = Math.max(a, amp * (1 - (lt - t) / len));
+    }
+    return a;
+}
+// Как клип ложится в кадр: прямоугольник исходника и смещение
+function viewOf(c, lt, s) {
+    let [z, cx, cy] = camAt(c, lt);
+    if (c.follow) {
+        const p = anchorAt(s, srcFrame(c, lt), c.follow);
+        if (p) { const k = c.followAmt === undefined ? 0.6 : c.followAmt; cx = cx + (p[0] - cx) * k + (c.fdx || 0) * k; cy = cy + (p[1] - cy) * k + (c.fdy || 0) * k; }
+    }
+    const SW = s.man.width, SH = s.man.height;
+    const amp = shakeAt(c, lt);
+    if (amp) z *= 1 + amp * 0.04;
+    if (c.pulse && ED && ED.beat) { const tg = c.start + lt, ph = (((tg - 0.05) % ED.beat) + ED.beat) % ED.beat / ED.beat; z *= 1 + c.pulse * Math.pow(1 - ph, 5); }
+    const sw = SW / z, sh = SH / z;
+    let sx = clamp(cx * SW - sw / 2, 0, SW - sw), sy = clamp(cy * SH - sh / 2, 0, SH - sh);
+    let ox = 0, oy = 0, rot = 0;
+    if (amp) {
+        const m = Math.min(OUT.W, OUT.H);
+        ox = noise(lt * 26, 1) * amp * m * 0.03; oy = noise(lt * 31, 4) * amp * m * 0.03; rot = noise(lt * 17, 9) * amp * 0.012;
+    }
+    return { sx, sy, sw, sh, ox, oy, rot };
+}
+function srcFrame(c, lt) { if (c.freeze !== undefined) lt = Math.min(lt, c.freeze); return Math.floor(c.fromF + lt * OUT.fps * (c.speed || 1)); }
+
+const OUT = { W: 1920, H: 1080, fps: 30 };
+let ED = null;       // сценарий монтажа (для пульса и общего вида)
+let layA, layB;
+function mkLayer() { const c = document.createElement('canvas'); c.width = OUT.W; c.height = OUT.H; return c; }
+
+// Нарисовать клип в слой: кадр с камерой, затемнение/размытие, палец
+async function drawClip(lay, c, lt) {
+    const s = srcs[c.src];
+    const f = srcFrame(c, lt);
+    const img = await want(c.src, f);
+    for (let k = 1; k <= 8; k++) want(c.src, f + k);
+    const x = lay.getContext('2d');
+    const v = viewOf(c, lt, s);
+    x.save();
+    x.fillStyle = '#000'; x.fillRect(0, 0, OUT.W, OUT.H);
+    x.translate(OUT.W / 2 + v.ox, OUT.H / 2 + v.oy); x.rotate(v.rot); x.translate(-OUT.W / 2, -OUT.H / 2);
+    const filt = [];
+    if (c.blur) filt.push('blur(' + c.blur + 'px)');
+    if (c.sat) filt.push('saturate(' + c.sat + ')');
+    if (c.bright) filt.push('brightness(' + c.bright + ')');
+    if (filt.length) x.filter = filt.join(' ');
+    x.drawImage(img, v.sx, v.sy, v.sw, v.sh, 0, 0, OUT.W, OUT.H);
+    x.filter = 'none';
+    if (c.dim) { x.fillStyle = 'rgba(8,12,30,' + c.dim + ')'; x.fillRect(0, 0, OUT.W, OUT.H); }
+    // Палец/курсор игрока по журналу записи
+    if (c.finger) {
+        const p = s.ptr.get(f);
+        if (p) {
+            const dpr = s.man.dpr, sc = OUT.W / v.sw;
+            const px = (p[1] * dpr - v.sx) * sc, py = (p[2] * dpr - v.sy) * sc;
+            const touch = s.man.touch;
+            const scale = Math.min(OUT.W, OUT.H) / 1080 * (touch ? 1.5 : 1.25);
+            GFX.finger(x, px, py, p[3], touch ? (p[4] ? 1 : 0) : 1, scale, touch);
+            for (const tf of s.man.taps) {
+                if (tf > f || tf < f - 30) continue;
+                const tp = s.ptr.get(tf);
+                if (!tp) continue;
+                GFX.ring(x, (tp[1] * dpr - v.sx) * sc, (tp[2] * dpr - v.sy) * sc, (f - tf) / (OUT.fps * 0.5 * (c.speed || 1)), scale);
+            }
+        }
+    }
+    x.restore();
+}
+
+// ---------- Переходы ----------
+function composite(ctx, tr, k) {
+    const W = OUT.W, H = OUT.H;
+    const e = easeIO(k);
+    switch (tr) {
+        case 'whip': {
+            // Резкий «смаз» вбок: старый кадр уезжает, новый въезжает, с размытием движения
+            const blurN = 6, spread = W * 0.07 * Math.sin(k * Math.PI);
+            [[layA, -e * W], [layB, (1 - e) * W]].forEach(([l, dx]) => {
+                for (let i = 0; i < blurN; i++) {
+                    ctx.globalAlpha = 1 / (i + 1) * (i === 0 ? 1 : 0.6);
+                    ctx.drawImage(l, dx + (i - blurN / 2) * spread / blurN, 0);
+                }
+            });
+            ctx.globalAlpha = 1;
+            break;
+        }
+        case 'zoom': {
+            // Наезд сквозь кадр: старый улетает в камеру, вспышка, новый проявляется
+            ctx.save();
+            const z1 = 1 + easeOut(k) * 1.4;
+            ctx.globalAlpha = 1 - k;
+            ctx.translate(W / 2, H / 2); ctx.scale(z1, z1); ctx.translate(-W / 2, -H / 2);
+            ctx.drawImage(layA, 0, 0);
+            ctx.restore();
+            ctx.save();
+            const z2 = 1.35 - 0.35 * easeOut(k);
+            ctx.globalAlpha = k;
+            ctx.translate(W / 2, H / 2); ctx.scale(z2, z2); ctx.translate(-W / 2, -H / 2);
+            ctx.drawImage(layB, 0, 0);
+            ctx.restore();
+            ctx.fillStyle = 'rgba(255,255,255,' + (0.45 * Math.sin(k * Math.PI)) + ')';
+            ctx.fillRect(0, 0, W, H);
+            break;
+        }
+        case 'wave': {
+            // Волна воды снизу вверх открывает новый кадр
+            ctx.drawImage(layA, 0, 0);
+            const y = H * (1.15 - e * 1.3);
+            const amp = H * 0.035;
+            const path = new Path2D();
+            path.moveTo(0, H); path.lineTo(0, y);
+            for (let i = 0; i <= 24; i++) { const xx = i / 24 * W; path.lineTo(xx, y + Math.sin(i * 0.9 + k * 9) * amp); }
+            path.lineTo(W, H); path.closePath();
+            ctx.save(); ctx.clip(path); ctx.drawImage(layB, 0, 0); ctx.restore();
+            ctx.save();
+            ctx.strokeStyle = 'rgba(235,250,255,0.95)'; ctx.lineWidth = H * 0.03; ctx.lineJoin = 'round';
+            ctx.shadowColor = 'rgba(80,190,255,0.8)'; ctx.shadowBlur = H * 0.04;
+            ctx.beginPath();
+            for (let i = 0; i <= 24; i++) { const xx = i / 24 * W; const yy = y + Math.sin(i * 0.9 + k * 9) * amp; i ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); }
+            ctx.stroke();
+            ctx.restore();
+            break;
+        }
+        case 'flash':
+            ctx.drawImage(layB, 0, 0);
+            ctx.fillStyle = 'rgba(255,255,255,' + (0.9 * (1 - easeOut(k))) + ')';
+            ctx.fillRect(0, 0, W, H);
+            break;
+        case 'fade':
+        default:
+            ctx.drawImage(layA, 0, 0);
+            ctx.globalAlpha = e; ctx.drawImage(layB, 0, 0); ctx.globalAlpha = 1;
+    }
+}
+
+// ---------- Свои звуки ролика: вжухи, удары, попы ----------
+let NOISE = null;
+function sfx(rc, out, t, name, vol) {
+    vol = vol || 1;
+    if (!NOISE) { NOISE = rc.createBuffer(1, rc.sampleRate * 2, rc.sampleRate); const d = NOISE.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    const g = rc.createGain(); g.connect(out);
+    const nz = (dur, type, f0, f1, q) => {
+        const s = rc.createBufferSource(); s.buffer = NOISE; s.loop = true;
+        const f = rc.createBiquadFilter(); f.type = type; f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + dur); f.Q.value = q || 1;
+        s.connect(f); f.connect(g); s.start(t, Math.random()); s.stop(t + dur + 0.05);
+    };
+    const tone = (type, f0, f1, dur, v) => {
+        const o = rc.createOscillator(), og = rc.createGain();
+        o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+        og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(v, t + 0.01); og.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        o.connect(og); og.connect(out); o.start(t); o.stop(t + dur + 0.05);
+    };
+    switch (name) {
+        case 'whoosh':
+            g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5 * vol, t + 0.12); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.38);
+            nz(0.4, 'bandpass', 500, 3800, 0.8); break;
+        case 'swish':
+            g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35 * vol, t + 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+            nz(0.22, 'bandpass', 2500, 900, 1.2); break;
+        case 'boom':
+            tone('sine', 140, 38, 0.6, 0.9 * vol);
+            g.gain.setValueAtTime(0.4 * vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+            nz(0.35, 'lowpass', 900, 120, 0.7); break;
+        case 'hit':
+            tone('triangle', 220, 90, 0.18, 0.5 * vol);
+            g.gain.setValueAtTime(0.45 * vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+            nz(0.16, 'highpass', 1800, 1200, 0.7); break;
+        case 'pop': tone('sine', 520, 1250, 0.09, 0.4 * vol); break;
+        case 'ding': tone('triangle', 1568, 1560, 0.35, 0.35 * vol); setTimeout(() => {}, 0); tone('triangle', 2093, 2090, 0.5, 0.3 * vol); break;
+        case 'riser':
+            g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35 * vol, t + 0.9); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.05);
+            nz(1.05, 'bandpass', 300, 6000, 2); break;
+        case 'splash':
+            g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5 * vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+            nz(0.6, 'bandpass', 1600, 300, 0.6); break;
+        case 'tape':
+            for (let i = 0; i < 14; i++) { const o = rc.createOscillator(), og = rc.createGain(), ti = t + i * 0.03; o.type = 'square'; o.frequency.value = 900 + i * 40; og.gain.setValueAtTime(0.06 * vol, ti); og.gain.exponentialRampToValueAtTime(0.0001, ti + 0.02); o.connect(og); og.connect(out); o.start(ti); o.stop(ti + 0.03); }
+            break;
+        case 'tick': tone('square', 1800, 1700, 0.03, 0.12 * vol); break;
+    }
+}
+
+// ---------- Звук ----------
+async function soundtrack(ed) {
+    const SR = 48000, dur = ed.duration;
+    // Музыка: песня игры в нужном стиле, отрисованная заранее
+    const seeded = GFX.seeded;
+    const mctx = new OfflineAudioContext(2, Math.ceil((dur + 2) * SR), SR);
+    FB.music.render(mctx, ed.music.style, ed.music.theme || 'arena', dur + 2, seeded(ed.music.seed || 7));
+    const mbuf = await mctx.startRendering();
+    log('звук: музыка готова');
+    const len = Math.ceil(dur * SR);
+    class RecCtx extends OfflineAudioContext {
+        constructor() {
+            super(2, len, SR);
+            this._mix = this.createGain();
+            const comp = this.createDynamicsCompressor();
+            comp.threshold.value = -22; comp.knee.value = 10; comp.ratio.value = 4; comp.attack.value = 0.004; comp.release.value = 0.18;
+            this._mix.connect(comp); comp.connect(super.destination);
+        }
+        get destination() { return this._mix; }
+        get currentTime() { return performance.now() / 1000; }
+    }
+    const rc = new RecCtx();
+    window.AudioContext = function () { return rc; };
+    window.webkitAudioContext = window.AudioContext;
+    FB.music.start = () => {};          // музыку игры заменяет наша дорожка
+    const g = rc._mix.gain;
+    g.setValueAtTime(0, 0); g.linearRampToValueAtTime(1, 0.08);
+    g.setValueAtTime(1, Math.max(0.3, dur - 0.6)); g.linearRampToValueAtTime(0, dur);
+    // Музыка с приглушениями
+    const ms = rc.createBufferSource(); ms.buffer = mbuf;
+    const mg = rc.createGain(); mg.gain.value = ed.music.gain || 1;
+    ms.connect(mg); mg.connect(rc._mix);
+    ms.start(ed.music.at || 0, ed.music.offset || 0);
+    for (const [t, level, len2] of ed.duck || []) {
+        mg.gain.setTargetAtTime((ed.music.gain || 1) * level, t, 0.05);
+        mg.gain.setTargetAtTime(ed.music.gain || 1, t + len2, 0.3);
+    }
+    // Свои звуки
+    const sg = rc.createGain(); sg.gain.value = 0.9; sg.connect(rc._mix);
+    for (const [t, name, vol] of ed.sfx || []) sfx(rc, sg, t, name, vol);
+    // Звуки игры: по журналу каждого клипа, во времени ролика
+    const byFrame = new Map();
+    const push = (f, e) => { if (!byFrame.has(f)) byFrame.set(f, []); byFrame.get(f).push(e); };
+    for (const c of ed.clips) {
+        if (c.sound === false) continue;
+        const s = srcs[c.src], sp = c.speed || 1;
+        const fromF = c.fromF, toF = c.fromF + Math.round((c.freeze !== undefined ? Math.min(c.dur, c.freeze) : c.dur) * OUT.fps * sp);
+        // Сцена (птицы, сверчки, дождь) — как была в исходнике на начале клипа
+        const sc = s.man.events.filter(e => e.fn === 'setScene' && e.f <= fromF).pop();
+        if (sc) push(Math.round(c.start * OUT.fps), sc);
+        for (const e of s.man.events) {
+            if (e.fn !== 'play' || e.f < fromF || e.f >= toF) continue;
+            if (c.mute && c.mute.includes(e.args[0])) continue;
+            push(Math.round((c.start + (e.f - fromF) / (OUT.fps * sp)) * OUT.fps), e);
+        }
+    }
+    FB.audio.unlock();
+    const N = Math.round(dur * OUT.fps);
+    for (let f = 0; f < N; f++) {
+        for (const e of byFrame.get(f) || []) { try { FB.audio[e.fn](...e.args); } catch (err) { console.error(err); } }
+        // Гул борьбы — как был в исходнике в этот момент
+        if (FB.audio.rumble) {
+            const t = f / OUT.fps;
+            const c = ed.clips.find(cc => t >= cc.start && t < cc.start + cc.dur);
+            const rum = c && c.sound !== false && srcs[c.src].man.rum;
+            FB.audio.rumble(rum ? (rum[srcFrame(c, t - c.start)] || 0) : 0);
+        }
+        await window.__tm.step(1000 / OUT.fps, false);
+        if (f % 90 === 0) log('звук: ' + f + ' / ' + N);
+    }
+    log('звук: рендер…');
+    const buf = await rc.startRendering();
+    let peak = 0, sum = 0, n = 0;
+    for (let ch = 0; ch < buf.numberOfChannels; ch++) { const d = buf.getChannelData(ch); for (let i = 0; i < d.length; i += 2) { peak = Math.max(peak, Math.abs(d[i])); sum += d[i] * d[i]; n++; } }
+    const rms = Math.sqrt(sum / Math.max(1, n));
+    const gain = rms > 0 ? Math.min(10, (ed.loud || 0.13) / rms) : 1;
+    const lim = (y) => { const a = Math.abs(y); return a < 0.6 ? y : Math.sign(y) * (0.6 + 0.37 * Math.tanh((a - 0.6) / 0.37)); };
+    for (let ch = 0; ch < buf.numberOfChannels; ch++) { const d = buf.getChannelData(ch); for (let i = 0; i < d.length; i++) d[i] = lim(d[i] * gain); }
+    window.__audioPeak = { peak, gain, rms };
+    return buf;
+}
+async function encodeAudio(buf) {
+    const chunks = [];
+    let desc = null;
+    const ae = new AudioEncoder({
+        output: (c, meta) => { if (meta && meta.decoderConfig && meta.decoderConfig.description) desc = meta.decoderConfig.description; const d = new Uint8Array(c.byteLength); c.copyTo(d); chunks.push(d); },
+        error: (e) => { throw e; }
+    });
+    ae.configure({ codec: 'mp4a.40.2', sampleRate: buf.sampleRate, numberOfChannels: 2, bitrate: 192000 });
+    const N = buf.length, step = 4800, L = buf.getChannelData(0), R = buf.getChannelData(1);
+    for (let i = 0; i < N; i += step) {
+        const n = Math.min(step, N - i), data = new Float32Array(n * 2);
+        data.set(L.subarray(i, i + n), 0); data.set(R.subarray(i, i + n), n);
+        const ad = new AudioData({ format: 'f32-planar', sampleRate: buf.sampleRate, numberOfFrames: n, numberOfChannels: 2, timestamp: Math.round(i / buf.sampleRate * 1e6), data });
+        ae.encode(ad); ad.close();
+    }
+    await ae.flush(); ae.close();
+    return { chunks, desc: desc || new Uint8Array([0x11, 0x90]).buffer };
+}
+
+// ---------- Главное ----------
+async function main() {
+    const ed = await (await fetch('/rec/' + NAME + '/edit.json')).json();
+    ED = ed;
+    OUT.W = ed.size[0]; OUT.H = ed.size[1]; OUT.fps = ed.fps || 30;
+    for (const c of ed.clips) await loadSrc(c.src);
+    await document.fonts.load('900 64px Nunito'); await document.fonts.load('900 64px Nunito', 'Рыбацкие БАЙКИ');
+    await document.fonts.ready;
+    const buf = await soundtrack(ed);
+    const audio = await encodeAudio(buf);
+    log('звук готов');
+
+    const cv = document.getElementById('cv');
+    cv.width = OUT.W; cv.height = OUT.H;
+    const ctx = cv.getContext('2d');
+    layA = mkLayer(); layB = mkLayer();
+    const vchunks = [];
+    let vdesc = null;
+    const ve = new VideoEncoder({
+        output: (c, meta) => { if (meta && meta.decoderConfig && meta.decoderConfig.description) vdesc = meta.decoderConfig.description; const d = new Uint8Array(c.byteLength); c.copyTo(d); vchunks.push({ d, key: c.type === 'key', ts: c.timestamp }); },
+        error: (e) => { throw e; }
+    });
+    ve.configure({ codec: 'avc1.640028', width: OUT.W, height: OUT.H, bitrate: ed.bitrate || 14e6, framerate: OUT.fps, avc: { format: 'avc' }, latencyMode: 'quality' });
+    const N = Math.round(ed.duration * OUT.fps);
+    const preview = new Set((ed.preview || []).map(t => Math.round(t * OUT.fps)));
+    window.__previews = [];
+    for (let f = 0; f < N; f++) {
+        const t = f / OUT.fps;
+        // Текущий клип и, во время перехода, предыдущий
+        let ci = ed.clips.findIndex(c => t >= c.start && t < c.start + c.dur);
+        if (ci < 0) ci = ed.clips.length - 1;
+        const c = ed.clips[ci], lt = t - c.start;
+        const tr = ci > 0 && c.trans && c.trans !== 'cut' && lt < (c.transDur || 0.3) ? c.trans : null;
+        await drawClip(layB, c, lt);
+        if (tr) {
+            const p = ed.clips[ci - 1];
+            await drawClip(layA, p, t - p.start);
+            ctx.fillStyle = '#000'; ctx.fillRect(0, 0, OUT.W, OUT.H);
+            composite(ctx, tr, lt / (c.transDur || 0.3));
+        } else ctx.drawImage(layB, 0, 0);
+        // Подсказки «ДЕРЖИ / ОТПУСТИ» по пальцу из журнала
+        if (c.prompts) {
+            const s = srcs[c.src], fr = srcFrame(c, lt), p = s.ptr.get(fr);
+            if (p && lt >= c.prompts[0] && lt <= c.prompts[1]) {
+                // Сколько уже длится текущее состояние пальца
+                let back = 0;
+                while (back < 60 && s.ptr.get(fr - back - 1) && s.ptr.get(fr - back - 1)[3] === p[3]) back++;
+                GFX.prompt(ctx, { hold: !!p[3], x: c.promptX || 0.5, y: c.promptY || 0.26, size: c.promptSize || 0.1, dur: 9 }, back / (OUT.fps * (c.speed || 1)), OUT.W, OUT.H);
+            }
+        }
+        // Графика поверх
+        for (const g of ed.gfx) {
+            if (t < g.at || t >= g.at + (g.dur || 1)) continue;
+            try { GFX[g.type](ctx, g, t - g.at, OUT.W, OUT.H); } catch (e) { console.error(g.type, e); }
+        }
+        if (ed.vignette) GFX.vignette(ctx, { alpha: ed.vignette, dur: 999 }, 50, OUT.W, OUT.H);
+        const vf = new VideoFrame(cv, { timestamp: Math.round(f * 1e6 / OUT.fps), duration: Math.round(1e6 / OUT.fps) });
+        ve.encode(vf, { keyFrame: f % (OUT.fps * 2) === 0 });
+        vf.close();
+        if (preview.has(f)) window.__previews.push(cv.toDataURL('image/jpeg', 0.8));
+        while (ve.encodeQueueSize > 6) await window.__tm.realWait(4);
+        for (const name in srcs) forget(name, srcFrame(c, lt) - 40);
+        if (f % 30 === 0) log('видео: ' + f + ' / ' + N);
+    }
+    await ve.flush(); ve.close();
+    log('упаковываю…');
+    const mux = new MP4Muxer({ width: OUT.W, height: OUT.H, fps: OUT.fps, videoDesc: vdesc, sampleRate: 48000, channels: 2, audioDesc: audio.desc, audioBitrate: 192000 });
+    vchunks.forEach(c => mux.addVideo(c.d, c.key, c.ts));
+    audio.chunks.forEach(c => mux.addAudio(c));
+    window.__result = mux.finish();
+    window.__info = { size: window.__result.size, frames: vchunks.length, aac: audio.chunks.length, peak: window.__audioPeak };
+    log('готово: ' + (window.__result.size / 1e6).toFixed(1) + ' МБ');
+    window.__done = true;
+}
+main().catch(e => { console.error(e); window.__error = String(e && e.stack || e); log('ошибка: ' + e); });
+</script>
+</body>
+</html>

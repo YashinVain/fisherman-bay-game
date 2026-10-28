@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Кадры из MP4</title>
+<style>body { margin: 0; background: #20242c; font: 12px sans-serif; color: #fff; } canvas { display: block; }</style>
+</head>
+<body>
+<!-- Раскладка кадров готового MP4 (проверка роликов): ?v=/docs/promo/video/x.mp4&n=24&cols=6&w=300
+     Читает таблицы MP4 сам и декодирует видео через WebCodecs; результат — window.__done, info -->
+<canvas id="c"></canvas>
+<script>
+const q = new URLSearchParams(location.search);
+const url = q.get('v'), N = +(q.get('n') || 24), COLS = +(q.get('cols') || 6), CW = +(q.get('w') || 300);
+const u32 = (b, o) => (b[o] << 24 | b[o + 1] << 16 | b[o + 2] << 8 | b[o + 3]) >>> 0;
+const tag = (b, o) => String.fromCharCode(b[o], b[o + 1], b[o + 2], b[o + 3]);
+function boxes(b, s, e) {
+    const out = []; let o = s;
+    while (o + 8 <= e) {
+        let size = u32(b, o), hdr = 8;
+        if (size === 1) { size = u32(b, o + 12); hdr = 16; }
+        if (size === 0) size = e - o;
+        if (size < hdr) break;
+        out.push({ type: tag(b, o + 4), s: o, hdr, e: Math.min(e, o + size) });
+        o += size;
+    }
+    return out;
+}
+const kids = (b, x) => boxes(b, x.s + x.hdr, x.e);
+const get = (b, list, t) => list.find(x => x.type === t);
+(async () => {
+    try {
+        const b = new Uint8Array(await (await fetch(url)).arrayBuffer());
+        const moov = get(b, boxes(b, 0, b.length), 'moov');
+        let vt = null;
+        for (const trak of kids(b, moov).filter(x => x.type === 'trak')) {
+            const mdia = get(b, kids(b, trak), 'mdia'), mk = kids(b, mdia);
+            const hd = get(b, mk, 'hdlr');
+            if (tag(b, hd.s + hd.hdr + 8) === 'vide') { vt = { mdia, mk }; break; }
+        }
+        const minf = get(b, vt.mk, 'minf'), stbl = get(b, kids(b, minf), 'stbl'), sk = kids(b, stbl);
+        // Кодек и avcC
+        const stsd = get(b, sk, 'stsd');
+        const avc1 = boxes(b, stsd.s + stsd.hdr + 8, stsd.e)[0];
+        const w = (b[avc1.s + avc1.hdr + 24] << 8) | b[avc1.s + avc1.hdr + 25], h = (b[avc1.s + avc1.hdr + 26] << 8) | b[avc1.s + avc1.hdr + 27];
+        const avcC = get(b, boxes(b, avc1.s + avc1.hdr + 78, avc1.e), 'avcC');
+        const desc = b.slice(avcC.s + avcC.hdr, avcC.e);
+        const codec = 'avc1.' + [desc[1], desc[2], desc[3]].map(x => x.toString(16).padStart(2, '0')).join('');
+        // Размеры, куски, ключевые
+        const stsz = get(b, sk, 'stsz'); const fixed = u32(b, stsz.s + stsz.hdr + 4), n = u32(b, stsz.s + stsz.hdr + 8);
+        const sizes = []; for (let i = 0; i < n; i++) sizes.push(fixed || u32(b, stsz.s + stsz.hdr + 12 + i * 4));
+        const stco = get(b, sk, 'stco'), co64 = get(b, sk, 'co64');
+        const cn = u32(b, (stco || co64).s + (stco || co64).hdr + 4);
+        const chunkOff = []; for (let i = 0; i < cn; i++) chunkOff.push(stco ? u32(b, stco.s + stco.hdr + 8 + i * 4) : u32(b, co64.s + co64.hdr + 8 + i * 8 + 4));
+        const stsc = get(b, sk, 'stsc'); const sn = u32(b, stsc.s + stsc.hdr + 4);
+        const rules = []; for (let i = 0; i < sn; i++) rules.push([u32(b, stsc.s + stsc.hdr + 8 + i * 12), u32(b, stsc.s + stsc.hdr + 12 + i * 12)]);
+        const offs = []; let si = 0;
+        for (let c = 0; c < cn && si < n; c++) {
+            let per = rules[0][1]; for (const r of rules) if (c + 1 >= r[0]) per = r[1];
+            let o = chunkOff[c];
+            for (let k = 0; k < per && si < n; k++, si++) { offs.push(o); o += sizes[si]; }
+        }
+        const stss = get(b, sk, 'stss'); const keys = new Set();
+        if (stss) { const kn = u32(b, stss.s + stss.hdr + 4); for (let i = 0; i < kn; i++) keys.add(u32(b, stss.s + stss.hdr + 8 + i * 4) - 1); }
+        const isKey = (i) => stss ? keys.has(i) : true;
+        const mdhd = get(b, vt.mk, 'mdhd'); const ts = u32(b, mdhd.s + mdhd.hdr + (b[mdhd.s + mdhd.hdr] === 1 ? 20 : 12));
+        // Кадры, которые нужно снять
+        const want = new Set(); for (let i = 0; i < N; i++) want.add(Math.min(n - 1, Math.round((i + 0.5) * n / N)));
+        const CH = Math.round(CW * h / w), rows = Math.ceil(N / COLS);
+        const cv = document.getElementById('c'); cv.width = COLS * CW; cv.height = rows * CH;
+        const ctx = cv.getContext('2d'); ctx.fillStyle = '#111'; ctx.fillRect(0, 0, cv.width, cv.height);
+        const order = [...want].sort((a, c) => a - c); let slot = 0, outIdx = 0;
+        const dec = new VideoDecoder({
+            output: (f) => {
+                if (want.has(outIdx)) {
+                    const x = (slot % COLS) * CW, y = Math.floor(slot / COLS) * CH; slot++;
+                    ctx.drawImage(f, x, y, CW, CH);
+                    ctx.fillStyle = 'rgba(0,0,0,.65)'; ctx.fillRect(x + 2, y + 2, 66, 16);
+                    ctx.fillStyle = '#fff'; ctx.font = '12px sans-serif'; ctx.fillText((outIdx / (n / (u32(b, mdhd.s + mdhd.hdr + 16) / ts)) ).toFixed(1) + ' с · ' + outIdx, x + 5, y + 14);
+                }
+                outIdx++; f.close();
+            },
+            error: (e) => { window.__error = String(e); }
+        });
+        dec.configure({ codec, description: desc });
+        for (let i = 0; i < n; i++) {
+            dec.decode(new EncodedVideoChunk({ type: isKey(i) ? 'key' : 'delta', timestamp: Math.round(i * 1e6 / 30), data: b.subarray(offs[i], offs[i] + sizes[i]) }));
+            if (dec.decodeQueueSize > 30) await new Promise(r => setTimeout(r, 5));
+        }
+        await dec.flush();
+        window.__info = { w, h, n, codec, shown: slot };
+        window.__done = true;
+    } catch (e) { window.__error = String(e && e.stack || e); }
+})();
+</script>
+</body>
+</html>

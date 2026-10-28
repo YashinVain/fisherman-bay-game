@@ -122,16 +122,18 @@
     // ---------- Покупки за реальные деньги (Яндекс) ----------
     // id должны совпадать с товарами, созданными в консоли Яндекс Игр (docs/YANDEX_SETUP.md).
     // kind: 'consumable' — можно покупать много раз (жемчуг), 'permanent' — один раз
+    // Цены нарочно маленькие: игра новая, первая покупка должна быть «почему бы и нет».
+    // Самое дешёвое — 29–33 ян, самое дорогое — 99 ян.
     FB.PRODUCTS = [
-        { id: 'pearls_s', kind: 'consumable', pearls: 60, price: 29, n: { ru: 'Горсть жемчуга', en: 'Handful of Pearls' } },
-        { id: 'pearls_m', kind: 'consumable', pearls: 180, price: 79, n: { ru: 'Мешочек жемчуга', en: 'Bag of Pearls' }, tag: 'popular' },
-        { id: 'pearls_l', kind: 'consumable', pearls: 500, price: 199, n: { ru: 'Сундук жемчуга', en: 'Chest of Pearls' }, tag: 'best' },
-        { id: 'starter', kind: 'permanent', pearls: 100, price: 49, n: { ru: 'Набор новичка', en: 'Starter Pack' }, items: ['bt_red', 'pet_dog'] },
-        { id: 'captain', kind: 'permanent', pearls: 200, price: 149, n: { ru: 'Набор капитана', en: 'Captain Pack' }, items: ['fr_royal', 'hat_captain', 'jk_navy', 'pet_raccoon'] },
-        { id: 'no_ads', kind: 'permanent', price: 99, n: { ru: 'Без рекламы', en: 'No Ads' } },
+        { id: 'pearls_s', kind: 'consumable', pearls: 70, price: 29, n: { ru: 'Горсть жемчуга', en: 'Handful of Pearls' } },
+        { id: 'pearls_m', kind: 'consumable', pearls: 180, price: 59, n: { ru: 'Мешочек жемчуга', en: 'Bag of Pearls' }, tag: 'popular' },
+        { id: 'pearls_l', kind: 'consumable', pearls: 400, price: 99, n: { ru: 'Сундук жемчуга', en: 'Chest of Pearls' }, tag: 'best' },
+        { id: 'starter', kind: 'permanent', pearls: 100, price: 33, n: { ru: 'Набор новичка', en: 'Starter Pack' }, items: ['bt_red', 'pet_dog'] },
+        { id: 'captain', kind: 'permanent', pearls: 200, price: 79, n: { ru: 'Набор капитана', en: 'Captain Pack' }, items: ['fr_royal', 'hat_captain', 'jk_navy', 'pet_raccoon'] },
+        { id: 'no_ads', kind: 'permanent', price: 49, n: { ru: 'Без рекламы', en: 'No Ads' } },
         // Пропуск привязан к сезону: после покупки он «расходуется» (consume), чтобы
         // в следующем сезоне его можно было купить снова. Хранится в сохранении.
-        { id: 'season_pass', kind: 'consumable', price: 149, n: { ru: 'Золотой пропуск', en: 'Golden Pass' } }
+        { id: 'season_pass', kind: 'consumable', price: 69, n: { ru: 'Золотой пропуск', en: 'Golden Pass' } }
     ];
     FB.productById = {}; FB.PRODUCTS.forEach(p => { FB.productById[p.id] = p; });
 
